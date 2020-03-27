@@ -11,6 +11,16 @@
       $Destr_m$ : $(t_{1_m}:B_{1_m},\dots,t_{n_m}: B_{n_m})$ -> /Name/ $\sigma_{m_1}\dots \sigma_{m_n}$ -> $A_i[Name/X]$
 
   "/Name/" , "$Constr_1\dots Contr_m$" and "$Destr_1\dots Destr_m$" are arbitrary distinct names
+
+  The statements correspond to $\rho(X:\Gamma\rightarrow*;\vec\sigma;\vec{A}):\Gamma\rightarrow*$ as follows.
+  + $t_1: B_1,\dots,t_n: B_n$ is $\Gamma$
+  + /Name/ is X
+  + $Constr_1,\dots, Contr_m$ stands for $\alpha_1^{\mu(X:\Gamma\rightarrow *;\vec\sigma;\vec A)},\dots,\alpha_m^{\mu(X:\Gamma\rightarrow *;\vec\sigma;\vecA)}$
+  + $Destr_1,\dots, Destr_m$ stands for $\xi_1^{\mu(X:\Gamma\rightarrow *;\vec\sigma;\vec A)},\dots,\xi_m^{\mu(X:\Gamma\rightarrow *;\vec\sigma;\vec A)}$
+  + $Name_i$ is $A_i[\Gamma/X]$
+  + $(t_{1_1}:B_{1_1},\dots,t_{n_1}: B_{n_1}),\dots,(t_{1_m}:B_{1_m},\dots,t_{n_m}:B_{n_m})$ stands for $\Gamma_1,\dots,\Gamma_m$
+
+  We take $B_1\rightarrow\dots\rightarrow B_n)$ as syntactic sugar for $(\_:B_1,\dots,\_:B_n)$ where _ stands for a unused termvariable
 * Terminal Object
   *codata* Terminal : Set
      terminal : Terminal -> Terminal
