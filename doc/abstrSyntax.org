@@ -1,11 +1,16 @@
 * Data decleration
   /statement/ =
-    *data* /Name/ (t_1 : B_1,...t_n : B_n) -> Set
-      (/Name_i/ : expr* expr -> /Name/ expr*)* , /Name/ $\in$ TypeNames
-                                               , /Name_i/ $\in$ ConstrNames
-    *codata* /Name/ (t_1 : B_1,...t_n : B_n) -> Set
-      (/Name_i/ expr* -> /Name/ expr* -> expr)* , /Name/ $\in$ TypeNames
-                                                , /Name_i/ $\in$ ConstrNames
+    *data* /Name/ $(t_1 : B_1,\dots,t_n : B_n)$ -> Set
+      $Constr_1$ : $(t_{1_1}:B_{i_1},\dots t_{i_{n_1}}: B_{i_n_i})$ -> $A_1[Name/X]$ -> /Name/ $\sigma_{1_1}\dots \sigma_{1_n}$
+             $\vdots$                $\vdots$             $\vdots$            $\vdots$
+      $Constr_m$ : $(t_{1_m}:B_{1_m},\dots t_{i_{n_m}}: B_{i_n_m})$ -> $A_i[Name/X]$ -> /Name/ $\sigma_{m_1}\dots \sigma_{m_n}$
+   \|
+    *codata* /Name/ $(t_1 : B_1,\dots,t_n : B_n)$ -> Set
+      $Destr_1$ : $(t_{1_1}:B_{i_1},\dots t_{i_{n_1}}: B_{i_n_i})$ -> /Name/ $\sigma_{1_1}\dots \sigma_{1_n}$ -> $A_1[Name/X]$
+             $\vdots$                $\vdots$             $\vdots$            $\vdots$
+      $Destr_m$ : $(t_{1_m}:B_{1_m},\dots t_{i_{n_m}}: B_{i_n_m})$ -> /Name/ $\sigma_{m_1}\dots \sigma_{m_n}$ -> $A_i[Name/X]$
+
+  "/Name/" , "$Constr_1\dots Contr_m$" and "$Destr_1\dots Destr_m$" are arbitrary distinct names
 * Terminal Object
   *codata* Terminal : Set
      terminal : Terminal -> Terminal
