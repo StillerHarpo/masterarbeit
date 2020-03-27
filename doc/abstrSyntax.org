@@ -1,11 +1,11 @@
 * Data decleration
   /statement/ =
     *data* /Name/ (t_1 : B_1,...t_n : B_n) -> Set
-    (/Name_i/ : expr* expr -> /Name/ expr*)* , /Name/ $\in$ TypeNames
-                                             , /Name_i/ $\in$ ConstrNames
+      (/Name_i/ : expr* expr -> /Name/ expr*)* , /Name/ $\in$ TypeNames
+                                               , /Name_i/ $\in$ ConstrNames
     *codata* /Name/ (t_1 : B_1,...t_n : B_n) -> Set
-    (/Name_i/ expr* -> /Name/ expr* -> expr)* , /Name/ $\in$ TypeNames
-                                              , /Name_i/ $\in$ ConstrNames
+      (/Name_i/ expr* -> /Name/ expr* -> expr)* , /Name/ $\in$ TypeNames
+                                                , /Name_i/ $\in$ ConstrNames
 * Terminal Object
   *codata* Terminal : Set
      terminal : Terminal -> Terminal
