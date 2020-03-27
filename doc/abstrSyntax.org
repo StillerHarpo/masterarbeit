@@ -22,14 +22,14 @@
 
   We take $B_1\rightarrow\dots\rightarrow B_n)$ as syntactic sugar for $(\_:B_1,\dots,\_:B_n)$ where _ stands for a unused termvariable
 * Terminal Object
-  *codata* Terminal : Set
+  *codata* Terminal : Set where
      terminal : Terminal -> Terminal
      
 * Intial Object
-  *data* Initial : Set
+  *data* Initial : Set where
      terminal : Terminal -> Terminal
 
 * Natural Numbers
-  *data* Nat : Set
+  *data* Nat : Set where
      zero : Terminal -> Nat
      succ : Nat -> Nat
