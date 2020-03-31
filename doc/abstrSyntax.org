@@ -81,3 +81,21 @@
   lambda A B x g = (corec Unit where
                       Apply' A B x _ = g) @ ()
   apply t x = Apply' x t
+
+* List
+  List A =  $\nu(X:*;\epsilon_2;(\textbf{1},X))$
+  + $\Gamma_1=\emptyset$
+  + $\Gamma_2=A$
+
+  *data* List A : Set where
+     Nil : Terminal -> List
+     Cons : A -> List -> List
+
+$(A_1)(A_2)\ny(X:\Gamma\rightarrow*;(id_\Gamma,id_\Gamma);(A_1,A_2))@id_\Gamma : *$
+
+* Rose Tree
+  Rose Tree A = $\nu(X:*;\epsilon_2;(\textbf{1},List X)
+
+  *data* RoseTree A : Set where
+     Leaf : Terminal -> RoseTree
+     Branch : List RoseTree -> RoseTree
