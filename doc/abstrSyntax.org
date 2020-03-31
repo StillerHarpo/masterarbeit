@@ -58,3 +58,12 @@
      Zero' : Terminal -> Nat
      Succ : Nat -> Nat
   zero = Zero'
+
+* Binary Product
+  *codata* Product A B : Set where
+     Fst : Product -> A
+     Snd : Product -> B
+  pair x y = (corec Unit where
+                Fst _ -> x
+                Snd _ -> y) @ ()
+
