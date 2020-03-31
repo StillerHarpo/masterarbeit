@@ -1,0 +1,6 @@
+dist-newstyle/
+resources/
+**/*.pdf
+**/*.tex
+doc/auto/
+doc/ltximg/
