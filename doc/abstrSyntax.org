@@ -1,4 +1,4 @@
-* Data decleration
+* Statements
   /statement/ =
     *data* /Name/ $C_1\dots C_n$ $(x_1 : B_1,\dots,x_n : B_n)$ -> Set where
       $Constr_1$ : $(x_{1_1}:B_{1_1},\dots,x_{n_1}: B_{n_1})$ -> $A_1[Name/X]$ -> /Name/ $\sigma_{1_1}\dots \sigma_{1_n}$
@@ -9,6 +9,7 @@
       $Destr_1$ : $(x_{1_1}:B_{i_1},\dots,x_{n_1}: B_{n_1})$ -> /Name/ $\sigma_{1_1}\dots \sigma_{1_n}$ -> $A_1[Name/X]$
              $\vdots$                $\vdots$             $\vdots$            $\vdots$
       $Destr_m$ : $(x_{1_m}:B_{1_m},\dots,x_{n_m}: B_{n_m})$ -> /Name/ $\sigma_{m_1}\dots \sigma_{m_n}$ -> $A_i[Name/X]$
+   \| /name/ $x_1 \dots x_n$ = /expr/
 
   "/Name/" , "$Constr_1\dots Contr_m$" and "$Destr_1\dots Destr_m$" are arbitrary distinct names
 
