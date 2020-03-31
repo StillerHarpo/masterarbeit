@@ -86,6 +86,11 @@
   *data* Sigma A B : Set where
      Exists : (x:A) -> B -> Sigma
 
+* Vectors
+  *data* Vector A : (n:Nat) -> Set where
+    Nil' : Unit -> Vector 0
+    Cons : (k:Nat) -> Product A (Vector k) -> Vector (Succ k)
+  nil = Nil' ()
 * List
   List A =  $\nu(X:*;\epsilon_2;(\textbf{1},X))$
   + $\Gamma_1=\emptyset$
