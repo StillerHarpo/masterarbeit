@@ -43,13 +43,18 @@
   $x_{1_1},\dots, x_{n_m}$ are termvariables
 * Terminal Object
   *codata* Terminal : Set where
-     terminal : Terminal -> Terminal
+     Terminal : Terminal -> Terminal
+  terminal' = (corec (y:Unit) where
+                 Terminal x = x) @ ()
      
 * Intial Object
   *data* Initial : Set where
-     terminal : Terminal -> Terminal
+     Initial : Intial -> Intial
+  edfalsum = rec (y:Initial) where
+                 Initial x = x
 
 * Natural Numbers
   *data* Nat : Set where
-     zero : Terminal -> Nat
-     succ : Nat -> Nat
+     Zero' : Terminal -> Nat
+     Succ : Nat -> Nat
+  zero = Zero'
