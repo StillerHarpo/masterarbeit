@@ -82,6 +82,10 @@
                       Apply' A B x _ = g) @ ()
   apply t x = Apply' x t
 
+* Sigma Type
+  *data* Sigma A B : Set where
+     Exists : (x:A) -> B -> Sigma
+
 * List
   List A =  $\nu(X:*;\epsilon_2;(\textbf{1},X))$
   + $\Gamma_1=\emptyset$
