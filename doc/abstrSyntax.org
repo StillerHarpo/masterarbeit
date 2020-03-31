@@ -28,11 +28,13 @@
   We will also need a extra context which relates constructors to their types
 * (Co)rec
   /expr/ =
-    rec /expr/ where
-      $Constr_1$ : $t_{1_1}$ $\dots$ $t_{n_1}$ $g_1$ = /expr/
+    rec C where
+      $Constr_1$  $x_{1_1}$ $\dots$ $x_{n_1}$ $y_1$ = $g_1$
          $\vdots$      $\vdots$      $\vdots$        $\vdots$
-      $Constr_m$ : $t_{1_m}$ $\dots$ $t_{n_m}$ $g_m$ = /expr/
+      $Constr_m$  $x_{1_m}$ $\dots$ $x_{n_m}$ $y_m$ = $g_m$
 
+  $t_1,\dots,t_m,g_1,\dots,g_k are /expr/
+  $x_{1_1},\dots, x_{n_m}$ are termvariables
 * Terminal Object
   *codata* Terminal : Set where
      terminal : Terminal -> Terminal
