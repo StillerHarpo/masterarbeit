@@ -91,6 +91,18 @@
     Nil' : Unit -> Vector 0
     Cons : (k:Nat) -> Product A (Vector k) -> Vector (Succ k)
   nil = Nil' ()
+
+* Extended Naturals
+  *codata* ExNat : Set where
+     Prec : ExNat -> Coproduct Unit ExNat
+  succE = corec ExNat where
+            Prec x -> Right x
+
+* Streams
+  *codata* PStr A : (n: ExNat) -> Set where
+     hd : (k : ExNat) -> PStr A (succE k) -> A
+     tl : (k : ExNat) -> PStr A (succE k) -> PStr A k
+
 * List
   List A =  $\nu(X:*;\epsilon_2;(\textbf{1},X))$
   + $\Gamma_1=\emptyset$
