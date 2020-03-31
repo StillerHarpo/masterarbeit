@@ -67,3 +67,10 @@
                 Fst _ -> x
                 Snd _ -> y) @ ()
 
+* Binary Coproduct
+  *data* Coproduct A B : Set where
+     Left : A -> Coproduct
+     Right : B -> Coproduct
+  coproduct x y C = rec C where
+                      Left _ -> x
+                      Right _ -> y
