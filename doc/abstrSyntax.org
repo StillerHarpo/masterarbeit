@@ -37,6 +37,7 @@
       $Destr_1$  $x_{1_1}$ $\dots$ $x_{n_1}$ $y_1$ = $g_1$
          $\vdots$      $\vdots$      $\vdots$        $\vdots$
       $Destr_m$  $x_{1_m}$ $\dots$ $x_{n_m}$ $y_m$ = $g_m$
+  \| /expr/ @ /expr/ \| () | Unit \| /Constr/ /expr/\* \| /Destr/ /expr/\*
 
   $t_1,\dots,t_m,g_1,\dots,g_k are /expr/
   $x_{1_1},\dots, x_{n_m}$ are termvariables
