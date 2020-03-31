@@ -74,3 +74,10 @@
   coproduct x y C = rec C where
                       Left _ -> x
                       Right _ -> y
+
+* Pi Type
+  *codata* Pi A B : Set where
+     Apply' : (x: A) -> Pi -> B @ x
+  lambda A B x g = (corec Unit where
+                      Apply' A B x _ = g) @ ()
+  apply t x = Apply' x t
