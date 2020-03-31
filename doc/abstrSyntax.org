@@ -25,7 +25,7 @@
 
   We take $B_1\rightarrow\dots\rightarrow B_n)$ as syntactic sugar for $(\_:B_1,\dots,\_:B_n)$ where _ stands for a unused termvariable
 
-  We will also need a extra which relates constructors to their types
+  We will also need a extra context which relates constructors to their types
 * (Co)rec
   /expr/ =
     rec /expr/ where
