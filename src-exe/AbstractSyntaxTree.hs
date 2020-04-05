@@ -5,33 +5,34 @@ module AbstractSyntaxTree where
 import Data.Text (Text)
 import Data.Map (Map)
 
-data Expr = ExprVar Text -- term variables
+data Expr = VerumType -- verum value
           | VerumExpr -- verum type
-          | VerumType -- verum value
+          | ExprVar Text -- Ctx-- term variables
           | Expr :@: Expr
           | Abstr Text Expr
-          | Constructor Text -- constructor for values of inductivly defined types
-          | Destructror Text
-          | Inductive Text [Expr] [Expr]
-          | Coinductive Text [Expr] [Expr]
+          | TypeVar Text
+          | Constructor [Expr] Text
+          | Destructror [Expr] Text
+          | Inductive Ctx -- Gamma
+                      [[Expr]] -- sigmas
+                      [Expr] -- As
+                      [Ctx] -- gamma1s
+          | Coinductive Ctx -- Gamma
+                        [[Expr]] -- sigmas
+                        [Expr] -- As
+                        [Ctx] -- gamma1s
           | Rec Expr [Expr]
           | Corec Expr [Expr]
-          | VarC Text -- TyVar
-          | Star
-          | ConstructorV Ctx -- constructor for values
-          | ConstructorT Ctx -- constructor for types
   deriving (Eq, Show)
 
-newtype Ctx = Ctx (Map Text Expr)
-  deriving (Eq, Show)
+type Ctx = Map Text Expr
 
-newtype TyCtx = TyCtx (Map Text Ctx)
-  deriving (Eq, Show)
+-- | TyCtx contains only inductive coninductive types for now
+type TyCtx = Map Text Expr
 
 -- | Con/Destructor Context
 -- maps Con/Destructor Names to their type names
-newtype StrCtx = StrCtx (Map Text Text)
-  deriving (Eq, Show)
+type StrCtx = Map Text Text
 
-data Judgement = Judgement Ctx TyCtx StrCtx Expr
+data Judgment = Judgment Ctx TyCtx StrCtx Expr
   deriving (Eq, Show)
