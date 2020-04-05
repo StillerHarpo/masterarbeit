@@ -19,8 +19,12 @@ extra-source-files:  README.md, CHANGELOG.md
 
 executable masterarbeit
   main-is:             Main.hs
-  -- other-modules:
+  other-modules:       AbstractSyntaxTree,
+                       Parser
   -- other-extensions:
-  build-depends:       base >=4.12 && <4.13, megaparsec
+  build-depends:       base,
+                       megaparsec,
+                       text,
+                       containers
   hs-source-dirs:      src-exe
   default-language:    Haskell2010
