@@ -43,6 +43,10 @@ main = hspec $ do
       parse parseStatement "" "x = ()"
       `shouldParse`
       ExprVariable "x" UnitExpr
+    it "parses data" $
+      parse parseStatement "" "data A : Set where; C1 : A -> A"
+      `shouldParse`
+      DataVariable "A" ["C1"] (Inductive Map.empty [[]] [TypeVar "A"] [Map.empty])
     it "parses judgments" $
       parse parseJudgment "" "y = (); y"
       `shouldParse`

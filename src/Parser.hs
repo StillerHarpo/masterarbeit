@@ -11,10 +11,12 @@ import Control.Monad (void)
 import Control.Monad.Combinators.Expr
 
 import Data.Char (isAlphaNum)
-import Data.Text (Text,cons)
+import Data.Text (Text)
+import qualified Data.Text as T
 import Data.Void
 import Text.Megaparsec
-import Text.Megaparsec.Char
+import Text.Megaparsec.Char hiding (newline)
+import qualified Text.Megaparsec.Char as Parsec
 import qualified Text.Megaparsec.Char.Lexer as L
 
 type Parser = Parsec Void Text
@@ -22,6 +24,10 @@ type Parser = Parsec Void Text
 data Variable = ExprVariable Text Expr
               | DataVariable Text [Text] Expr
   deriving (Eq, Show)
+
+-- | customized newline which treats ';' as newline
+newline :: Parser Char
+newline = Parsec.newline <|> char ';'
 
 -- | The space consumer
 sc :: Parser ()
@@ -40,7 +46,7 @@ symbols :: [Text] -> Parser [Text]
 symbols = traverse symbol
 
 parseExprVarT :: Parser Text
-parseExprVarT = cons
+parseExprVarT = T.cons
   <$> lowerChar
   <*> takeWhileP Nothing isAlphaNum
 
@@ -50,9 +56,9 @@ parseExprVar = ExprVar
   -- <*> many (lexeme parseTypeVar)
 
 parseTypeVarT :: Parser Text
-parseTypeVarT = cons
+parseTypeVarT = T.cons
   <$> upperChar
-  <*> takeWhile1P Nothing isAlphaNum
+  <*> takeWhileP Nothing isAlphaNum
 
 parseStructorVarT :: Parser Text
 parseStructorVarT = parseTypeVarT
@@ -67,20 +73,12 @@ parseUnitExpr :: Parser Expr
 parseUnitExpr = UnitExpr <$ string "()"
 
 parseAbstr :: Parser (Expr -> Expr)
-parseAbstr = (\par1 ty1 pars ->
+parseAbstr = (\((par1,ty1):pars) ->
                 foldl (\abstrf (par,ty) -> abstrf . Abstr par ty)
                       (Abstr par1 ty1)
-                      pars)
-  <$ symbol "("
-  <*> lexeme parseExprVarT
-  <* symbol ":"
-  <*> lexeme parseExpr
-  <*> many ((,) <$ symbol ","
-                <*> lexeme parseExprVarT
-                <* symbol ":"
-                <*> lexeme parseExpr)
-  <* symbol ")"
-  <* symbol "."
+                      pars) . Map.toList
+  <$> parseCtxNE
+  <* char '.'
 
 parseDefinition :: Parser Variable
 parseDefinition = ExprVariable
@@ -88,15 +86,26 @@ parseDefinition = ExprVariable
   <* symbol "="
   <*> parseExpr
 
-parseCtx :: Parser Ctx
-parseCtx = Map.fromList
+parseCtxNE :: Parser Ctx
+parseCtxNE = ((.).(.)) Map.fromList (:)
   <$ symbol "("
-  <*> many ((,) <$> lexeme parseExprVarT <* symbol "," <*> lexeme parseExpr)
+  <*> ((,)
+       <$> lexeme parseExprVarT
+       <* symbol ":"
+       <*> lexeme parseExpr)
+  <*> many ((,)
+            <$ symbol ","
+            <*> lexeme parseExprVarT
+            <* symbol ":"
+            <*> lexeme parseExpr)
   <* char ')'
+
+parseCtx :: Parser Ctx
+parseCtx = parseCtxNE <|> pure Map.empty
 
 withPredicate
   :: (a -> Bool)       -- ^ The check to perform on parsed input
-  -> String            -- ^ Message to print when the check fails
+  -> Text              -- ^ Message to print when the check fails
   -> Parser a          -- ^ Parser to run
   -> Parser a          -- ^ Resulting parser that performs the check
 withPredicate f msg p = do
@@ -104,18 +113,21 @@ withPredicate f msg p = do
   r <- p
   if f r
     then return r
-    else parseError (FancyError o (Set.singleton (ErrorFail msg)))
+    else parseError (FancyError o (Set.singleton (ErrorFail $ T.unpack msg)))
 
 parseConstructorDef :: Text -> Parser (Text, Ctx, Expr, [Expr])
-parseConstructorDef name = (,,,)
-  <$> lexeme parseStructorVarT
-  <* symbol ":"
-  <*> lexeme parseCtx
-  <* symbol "->"
-  <*> lexeme parseExpr
-  <* symbol "->"
-  <* lexeme (withPredicate (== name) "Should be the same as type" parseTypeVarT)
-  <*> many (lexeme parseExpr)
+parseConstructorDef nameX = do
+  nameC <- lexeme parseStructorVarT
+  void $ symbol ":"
+  gamma1 <- lexeme parseCtx
+  void $ if null gamma1
+         then pure ""
+         else symbol "->"
+  a <- lexeme parseExpr
+  void $ symbol "->"
+  void $ lexeme (withPredicate (== nameX) "Should be the same as type" parseTypeVarT)
+  sigma <- many (lexeme parseExpr)
+  return (nameC, gamma1, a, sigma)
 
 parseDestructorDef :: Text -> Parser (Text, Ctx, [Expr], Expr)
 parseDestructorDef name = (,,,)
@@ -123,7 +135,7 @@ parseDestructorDef name = (,,,)
   <* symbol ":"
   <*> lexeme parseCtx
   <* symbol "->"
-  <* lexeme (withPredicate (== name) "Should be the same as type" parseTypeVarT)
+  <* lexeme (withPredicate (== name) ("should be equal to type name " `T.append` name) parseTypeVarT)
   <*> many (lexeme parseExpr)
   <* symbol "->"
   <*> lexeme parseExpr
@@ -132,16 +144,23 @@ unzip4 :: [(a,b,c,d)] -> ([a], [b], [c], [d])
 unzip4 = foldl (\(as, bs, cs, ds) (a, b ,c ,d) -> (a:as,b:bs,c:cs,d:ds))
                ([],[],[],[])
 
+seperatedBy :: Parser a -> Parser b -> Parser [a]
+seperatedBy p ps = (:) <$> lexeme p <*> many (lexeme ps *> p) <|> pure []
+
 parseData :: Parser Variable
 parseData = do
   void $ symbol "data"
   nameX <- lexeme parseTypeVarT
-  typeParameters <- many (lexeme parseTypeVarT)
+  typeParameters <- many $ lexeme parseTypeVarT
+  void $ symbol ":"
   gamma <- parseCtx
-  void $ symbols ["->", "Set", "where"]
-  void $ lexeme $ newline <|> char ';'
-  constructors <- many (lexeme (parseConstructorDef nameX)
-                        <* lexeme (newline <|> char ';')) -- Constructors
+  void $ if (null gamma)
+         then symbols ["Set", "where"]
+         else symbols ["->", "Set", "where"]
+  void $ lexeme newline
+  constructors <- lexeme $ parseConstructorDef nameX
+                           `seperatedBy`
+                           newline
   let (constrNames, gamma1s, as, sigmas) = unzip4 constructors
   pure $ DataVariable nameX constrNames $ Inductive gamma sigmas as gamma1s
 
@@ -152,9 +171,10 @@ parseCodata = do
   typeParameters <- many (lexeme parseTypeVarT)
   gamma <- parseCtx
   void $ symbols ["->", "Set", "where"]
-  void $ lexeme $ newline <|> char ';'
-  destructors <- many (lexeme (parseDestructorDef nameX)
-                        <* lexeme (newline <|> char ';')) -- Constructors
+  void $ lexeme newline
+  destructors <- lexeme $ parseDestructorDef nameX
+                          `seperatedBy`
+                          newline
   let (constrNames, gamma1s, sigmas, as) = unzip4 destructors
   pure $ DataVariable nameX constrNames $ Coinductive gamma sigmas as gamma1s
 
@@ -208,5 +228,5 @@ buildJudgment (DataVariable tyVar strVars exprV:vars) expr =
 
 parseJudgment :: Parser Judgment
 parseJudgment = buildJudgment
-  <$> many (try $ lexeme $ parseStatement <* (newline <|> char ';'))
+  <$> many (try $ lexeme $ parseStatement <* newline)
   <*> parseExpr
