@@ -19,14 +19,22 @@ main = hspec $ do
     it "parses a expression variable" $
       parse parseExpr "" "C1" `shouldParse`  TypeVar "C1"
     it "parses a application" $
-      parse parseExpr "" "x @ y" `shouldParse` (ExprVar "x" :@: ExprVar "y")
+      parse parseExpr "" "x @ y"
+      `shouldParse`
+      (ExprVar "x" :@: ExprVar "y")
     it "parses a abstraction" $
-      parse parseExpr "" "(x:Unit).()" `shouldParse` (Abstr "x" UnitType UnitExpr)
+      parse parseExpr "" "(x:Unit).()"
+      `shouldParse`
+      Abstr "x" UnitType UnitExpr
     it "parses a abstraction with multiple arguments" $
       parse parseExpr "" "(x:Unit,y:Unit).()"
       `shouldParse`
-      (Abstr "x" UnitType (Abstr "y" UnitType UnitExpr))
+      Abstr "x" UnitType (Abstr "y" UnitType UnitExpr)
     it "parse a application left associative" $
-      parse parseExpr "" "x @ z @ y" `shouldParse` (ExprVar "x" :@: ExprVar "z" :@: ExprVar "y")
+      parse parseExpr "" "x @ z @ y"
+      `shouldParse`
+      (ExprVar "x" :@: ExprVar "z" :@: ExprVar "y")
     it "parse a expression with brackets" $
-      parse parseExpr "" "x @ (z @ y)" `shouldParse` (ExprVar "x" :@: (ExprVar "z" :@: ExprVar "y"))
+      parse parseExpr "" "x @ (z @ y)"
+      `shouldParse`
+      (ExprVar "x" :@: (ExprVar "z" :@: ExprVar "y"))
