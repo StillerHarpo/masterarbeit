@@ -64,6 +64,21 @@ parseUnitType = UnitType <$ string "Unit"
 parseUnitExpr :: Parser Expr
 parseUnitExpr = UnitExpr <$ string "()"
 
+parseAbstr :: Parser Expr
+parseAbstr = (\par1 ty1 pars expr -> (foldl (\abstrf (par,ty) -> abstrf . Abstr par ty)
+                                            (Abstr par1 ty1)
+                                            pars) expr)
+  <$ symbol "("
+  <*> lexeme parseExprVarT
+  <* symbol ":"
+  <*> lexeme parseExpr
+  <*> many ((,) <$ symbol ","
+                <*> lexeme parseExprVarT
+                <* symbol ":"
+                <*> lexeme parseExpr)
+  <* symbol ")"
+  <* symbol "."
+  <*> parseExpr
 
 parseDefinition :: Parser Variable
 parseDefinition = ExprVariable
@@ -146,6 +161,7 @@ parseExpr = parseUnitExpr
           <|> parseUnitType
           <|> parseTypeVar
           <|> parseExprVar
+          <|> parseAbstr
 
 parseStatement :: Parser Variable
 parseStatement = parseData
