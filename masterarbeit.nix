@@ -11,7 +11,9 @@ mkDerivation {
     base containers megaparsec parser-combinators text
   ];
   executableHaskellDepends = [ base ];
-  testHaskellDepends = [ base hspec hspec-megaparsec megaparsec ];
+  testHaskellDepends = [
+    base containers hspec hspec-megaparsec megaparsec
+  ];
   testToolDepends = [ hspec-discover ];
   description = "inductive coinductive dependent types interpreter";
   license = stdenv.lib.licenses.bsd3;

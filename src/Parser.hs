@@ -208,5 +208,5 @@ buildJudgment (DataVariable tyVar strVars exprV:vars) expr =
 
 parseJudgment :: Parser Judgment
 parseJudgment = buildJudgment
-  <$> many (parseStatement <* newline)
+  <$> many (try $ lexeme $ parseStatement <* (newline <|> char ';'))
   <*> parseExpr

@@ -2,7 +2,8 @@
 import Test.Hspec
 import Test.Hspec.Megaparsec
 import Text.Megaparsec
--- import Text.Megaparserc.Char
+
+import qualified Data.Map as Map
 
 import Parser
 import AbstractSyntaxTree
@@ -42,3 +43,10 @@ main = hspec $ do
       parse parseStatement "" "x = ()"
       `shouldParse`
       ExprVariable "x" UnitExpr
+    it "parses judgments" $
+      parse parseJudgment "" "y = (); y"
+      `shouldParse`
+      Judgment (Map.fromList [("y",UnitExpr)])
+               Map.empty
+               Map.empty
+               (ExprVar "y")

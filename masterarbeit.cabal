@@ -45,6 +45,7 @@ test-suite tests
                     , hspec
                     , hspec-megaparsec
                     , megaparsec
+                    , containers
                     , masterarbeit
   build-tools:        hspec-discover   >= 2.0 && < 3.0
   default-language:   Haskell2010
