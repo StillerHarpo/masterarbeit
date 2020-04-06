@@ -9,7 +9,7 @@ import AbstractSyntaxTree
 
 main :: IO ()
 main = hspec $ do
-  describe "Parser" $ do
+  describe "Parser works" $ do
     it "parses the unit expression" $
       parse parseExpr "" "()" `shouldParse` UnitExpr
     it "parses the unit type" $
