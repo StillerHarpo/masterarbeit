@@ -39,7 +39,7 @@ symbols = traverse symbol
 
 parseExprVarT :: Parser Text
 parseExprVarT = cons
-  <$> upperChar
+  <$> lowerChar
   <*> takeWhileP Nothing isAlphaNum
 
 parseExprVar :: Parser Expr
@@ -49,7 +49,7 @@ parseExprVar = ExprVar
 
 parseTypeVarT :: Parser Text
 parseTypeVarT = cons
-  <$> lowerChar
+  <$> upperChar
   <*> takeWhile1P Nothing isAlphaNum
 
 parseStructorVarT :: Parser Text
@@ -58,11 +58,11 @@ parseStructorVarT = parseTypeVarT
 parseTypeVar :: Parser Expr
 parseTypeVar = TypeVar <$> parseTypeVarT
 
-parseVerumType :: Parser Expr
-parseVerumType = VerumType <$ string "Void"
+parseUnitType :: Parser Expr
+parseUnitType = UnitType <$ string "Unit"
 
-parseVerumExpr :: Parser Expr
-parseVerumExpr = VerumExpr <$ string "()"
+parseUnitExpr :: Parser Expr
+parseUnitExpr = UnitExpr <$ string "()"
 
 
 parseDefinition :: Parser Variable
@@ -142,7 +142,9 @@ parseCodata = do
   pure $ DataVariable nameX constrNames $ Coinductive gamma sigmas as gamma1s
 
 parseExpr :: Parser Expr
-parseExpr = parseTypeVar
+parseExpr = parseUnitExpr
+          <|> parseUnitType
+          <|> parseTypeVar
           <|> parseExprVar
 
 parseStatement :: Parser Variable

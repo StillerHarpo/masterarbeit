@@ -19,12 +19,32 @@ extra-source-files:  README.md, CHANGELOG.md
 
 executable masterarbeit
   main-is:             Main.hs
-  other-modules:       AbstractSyntaxTree,
-                       Parser
   -- other-extensions:
+  build-depends:       base,
+                       masterarbeit
+  hs-source-dirs:      src-exe
+  default-language:    Haskell2010
+
+library 
+  hs-source-dirs:      src
   build-depends:       base,
                        megaparsec,
                        text,
                        containers
-  hs-source-dirs:      src-exe
-  default-language:    Haskell2010
+  exposed-modules:     AbstractSyntaxTree,
+                       Parser
+  default-language:   Haskell2010
+
+test-suite tests
+  main-is:            Spec.hs
+  hs-source-dirs:     tests
+  type:               exitcode-stdio-1.0
+  -- other-modules:    
+  build-depends:    base 
+                    , hspec
+                    , hspec-megaparsec
+                    , megaparsec
+                    , masterarbeit
+  build-tools:        hspec-discover   >= 2.0 && < 3.0
+  default-language:   Haskell2010
+

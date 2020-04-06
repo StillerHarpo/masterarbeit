@@ -5,8 +5,8 @@ module AbstractSyntaxTree where
 import Data.Text (Text)
 import Data.Map (Map)
 
-data Expr = VerumType -- verum value
-          | VerumExpr -- verum type
+data Expr = UnitType -- verum value
+          | UnitExpr -- verum type
           | ExprVar Text -- Ctx-- term variables
           | Expr :@: Expr
           | Abstr Text Expr
