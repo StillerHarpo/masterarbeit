@@ -1,5 +1,5 @@
 { mkDerivation, base, containers, hspec, hspec-discover
-, hspec-megaparsec, megaparsec, stdenv, text
+, hspec-megaparsec, megaparsec, parser-combinators, stdenv, text
 }:
 mkDerivation {
   pname = "masterarbeit";
@@ -7,7 +7,9 @@ mkDerivation {
   src = ./.;
   isLibrary = true;
   isExecutable = true;
-  libraryHaskellDepends = [ base containers megaparsec text ];
+  libraryHaskellDepends = [
+    base containers megaparsec parser-combinators text
+  ];
   executableHaskellDepends = [ base ];
   testHaskellDepends = [ base hspec hspec-megaparsec megaparsec ];
   testToolDepends = [ hspec-discover ];

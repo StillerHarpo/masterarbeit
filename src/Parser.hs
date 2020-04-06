@@ -8,6 +8,7 @@ import qualified Data.Map as Map
 import qualified Data.Set as Set
 
 import Control.Monad (void)
+import Control.Monad.Combinators.Expr
 
 import Data.Char (isAlphaNum)
 import Data.Text (Text,cons)
@@ -64,10 +65,11 @@ parseUnitType = UnitType <$ string "Unit"
 parseUnitExpr :: Parser Expr
 parseUnitExpr = UnitExpr <$ string "()"
 
-parseAbstr :: Parser Expr
-parseAbstr = (\par1 ty1 pars expr -> (foldl (\abstrf (par,ty) -> abstrf . Abstr par ty)
-                                            (Abstr par1 ty1)
-                                            pars) expr)
+parseAbstr :: Parser (Expr -> Expr)
+parseAbstr = (\par1 ty1 pars ->
+                foldl (\abstrf (par,ty) -> abstrf . Abstr par ty)
+                      (Abstr par1 ty1)
+                      pars)
   <$ symbol "("
   <*> lexeme parseExprVarT
   <* symbol ":"
@@ -78,7 +80,6 @@ parseAbstr = (\par1 ty1 pars expr -> (foldl (\abstrf (par,ty) -> abstrf . Abstr 
                 <*> lexeme parseExpr)
   <* symbol ")"
   <* symbol "."
-  <*> parseExpr
 
 parseDefinition :: Parser Variable
 parseDefinition = ExprVariable
@@ -156,12 +157,29 @@ parseCodata = do
   let (constrNames, gamma1s, sigmas, as) = unzip4 destructors
   pure $ DataVariable nameX constrNames $ Coinductive gamma sigmas as gamma1s
 
+parseTerm :: Parser Expr
+parseTerm = choice
+  [ parseUnitType
+  , parseUnitExpr
+  , parseTypeVar
+  , parseExprVar
+  , parens parseExpr
+  ]
+
+parens :: Parser a -> Parser a
+parens = between (symbol "(") (symbol ")")
+
 parseExpr :: Parser Expr
-parseExpr = parseUnitExpr
-          <|> parseUnitType
-          <|> parseTypeVar
-          <|> parseExprVar
-          <|> parseAbstr
+parseExpr = makeExprParser parseTerm operatorTable
+
+operatorTable :: [[Operator Parser Expr]]
+operatorTable =
+  [ [ Prefix (try parseAbstr)
+    ]
+  , [ InfixL ((:@:) <$ symbol "@")
+    ]
+  ]
+
 
 parseStatement :: Parser Variable
 parseStatement = parseData

@@ -9,7 +9,7 @@ data Expr = UnitType -- verum value
           | UnitExpr -- verum type
           | ExprVar Text -- Ctx-- term variables
           | Expr :@: Expr
-          | Abstr Text Expr
+          | Abstr Text Expr Expr
           | TypeVar Text
           | Constructor [Expr] Text
           | Destructror [Expr] Text

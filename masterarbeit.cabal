@@ -30,7 +30,8 @@ library
   build-depends:       base,
                        megaparsec,
                        text,
-                       containers
+                       containers,
+                       parser-combinators
   exposed-modules:     AbstractSyntaxTree,
                        Parser
   default-language:   Haskell2010
