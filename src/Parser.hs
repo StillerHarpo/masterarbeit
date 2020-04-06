@@ -21,6 +21,7 @@ type Parser = Parsec Void Text
 
 data Variable = ExprVariable Text Expr
               | DataVariable Text [Text] Expr
+  deriving (Eq, Show)
 
 -- | The space consumer
 sc :: Parser ()
@@ -83,7 +84,7 @@ parseAbstr = (\par1 ty1 pars ->
 
 parseDefinition :: Parser Variable
 parseDefinition = ExprVariable
-  <$> lexeme parseTypeVarT
+  <$> lexeme parseExprVarT
   <* symbol "="
   <*> parseExpr
 
@@ -182,8 +183,11 @@ operatorTable =
 
 
 parseStatement :: Parser Variable
-parseStatement = parseData
-               <|> parseDefinition
+parseStatement = choice
+  [ parseData
+  , parseCodata
+  , parseDefinition
+  ]
 
 buildJudgment :: [Variable] -> Expr -> Judgment
 buildJudgment [] expr = Judgment Map.empty

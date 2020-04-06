@@ -38,3 +38,7 @@ main = hspec $ do
       parse parseExpr "" "x @ (z @ y)"
       `shouldParse`
       (ExprVar "x" :@: (ExprVar "z" :@: ExprVar "y"))
+    it "parses definitions" $
+      parse parseStatement "" "x = ()"
+      `shouldParse`
+      ExprVariable "x" UnitExpr
