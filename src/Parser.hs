@@ -1,5 +1,5 @@
-{-# language TupleSections #-}
 {-# language OverloadedStrings #-}
+
 module Parser where
 
 import AbstractSyntaxTree
