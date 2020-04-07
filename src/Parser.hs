@@ -154,7 +154,7 @@ parseData = do
   typeParameters <- many $ lexeme parseTypeVarT
   void $ symbol ":"
   gamma <- parseCtx
-  void $ if (null gamma)
+  void $ if null gamma
          then symbols ["Set", "where"]
          else symbols ["->", "Set", "where"]
   void $ lexeme newline
