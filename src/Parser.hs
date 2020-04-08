@@ -115,27 +115,32 @@ withPredicate f msg p = do
     then return r
     else parseError (FancyError o (Set.singleton (ErrorFail $ T.unpack msg)))
 
-parseConstructorDef :: Text -> Parser (Text, Ctx, Expr, [Expr])
-parseConstructorDef nameX = do
+parseStructorDefHeader :: Parser (Text, Ctx)
+parseStructorDefHeader = do
   nameC <- lexeme parseStructorVarT
   void $ symbol ":"
   gamma1 <- lexeme parseCtx
   void $ if null gamma1
          then pure ""
          else symbol "->"
-  a <- lexeme parseExpr
-  void $ symbol "->"
-  void $ lexeme (withPredicate (== nameX) "Should be the same as type" parseTypeVarT)
-  sigma <- many (lexeme parseExpr)
-  return (nameC, gamma1, a, sigma)
+  pure (nameC, gamma1)
+
+parseConstructorDef :: Text -> Parser (Text, Ctx, Expr, [Expr])
+parseConstructorDef nameX = uncurry (,,,)
+  <$> parseStructorDefHeader
+  <*> lexeme parseExpr
+  <* symbol "->"
+  <* lexeme (withPredicate (== nameX)
+                           ("Should be the same as type " `T.append` nameX)
+                           parseTypeVarT)
+  <*> many (lexeme parseExpr)
 
 parseDestructorDef :: Text -> Parser (Text, Ctx, [Expr], Expr)
-parseDestructorDef name = (,,,)
-  <$> lexeme parseStructorVarT
-  <* symbol ":"
-  <*> lexeme parseCtx
-  <* symbol "->"
-  <* lexeme (withPredicate (== name) ("should be equal to type name " `T.append` name) parseTypeVarT)
+parseDestructorDef nameX = uncurry (,,,)
+  <$> parseStructorDefHeader
+  <* lexeme (withPredicate (== nameX)
+                           ("Should be the same as type " `T.append` nameX)
+                           parseTypeVarT)
   <*> many (lexeme parseExpr)
   <* symbol "->"
   <*> lexeme parseExpr
@@ -147,9 +152,8 @@ unzip4 = foldl (\(as, bs, cs, ds) (a, b ,c ,d) -> (a:as,b:bs,c:cs,d:ds))
 seperatedBy :: Parser a -> Parser b -> Parser [a]
 seperatedBy p ps = (:) <$> lexeme p <*> many (lexeme ps *> p) <|> pure []
 
-parseData :: Parser Variable
-parseData = do
-  void $ symbol "data"
+parseDataHeader :: Parser (Text, [Text], Ctx)
+parseDataHeader = do
   nameX <- lexeme parseTypeVarT
   typeParameters <- many $ lexeme parseTypeVarT
   void $ symbol ":"
@@ -158,6 +162,12 @@ parseData = do
          then symbols ["Set", "where"]
          else symbols ["->", "Set", "where"]
   void $ lexeme newline
+  pure (nameX, typeParameters, gamma)
+
+parseData :: Parser Variable
+parseData = do
+  void $ symbol "data"
+  (nameX, typeParameters, gamma) <- parseDataHeader
   constructors <- lexeme $ parseConstructorDef nameX
                            `seperatedBy`
                            newline
@@ -167,11 +177,7 @@ parseData = do
 parseCodata :: Parser Variable
 parseCodata = do
   void $ symbol "codata"
-  nameX <- lexeme parseTypeVarT
-  typeParameters <- many (lexeme parseTypeVarT)
-  gamma <- parseCtx
-  void $ symbols ["->", "Set", "where"]
-  void $ lexeme newline
+  (nameX, typeParameters, gamma) <- parseDataHeader
   destructors <- lexeme $ parseDestructorDef nameX
                           `seperatedBy`
                           newline
