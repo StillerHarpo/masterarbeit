@@ -21,8 +21,16 @@ data Expr = UnitType -- verum value
                         [[Expr]] -- sigmas
                         [Expr] -- As
                         [Ctx] -- gamma1s
-          | Rec Expr [Expr]
-          | Corec Expr [Expr]
+          | Rec Expr [Match]
+          | Corec Expr [Match]
+  deriving (Eq, Show)
+
+data Match = Match {
+    structorName  :: Text
+  , typeArguments :: [Expr]
+  , exprVars      :: [Text]
+  , expr          :: Expr
+  }
   deriving (Eq, Show)
 
 type Ctx = Map Text Expr

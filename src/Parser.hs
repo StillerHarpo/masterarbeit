@@ -112,6 +112,8 @@ parseTerm :: Parser Expr
 parseTerm = choice
   [ parseUnitType
   , parseUnitExpr
+  , parseRec
+  , parseCorec
   , parseTypeVar
   , parseExprVar
   , parens parseExpr
@@ -152,6 +154,30 @@ parseAbstr = (\((par1,ty1):pars) ->
   <$> parseCtxNE
   <* char '.'
 
+parseRec :: Parser Expr
+parseRec = Rec
+  <$ symbol "rec"
+  <*> lexeme parseExpr
+  <* symbol "where"
+  <* lexeme newline
+  <*> (parseMatch `seperatedBy` newline)
+
+parseCorec :: Parser Expr
+parseCorec = Corec
+  <$ symbol "corec"
+  <*> lexeme parseExpr
+  <* symbol "where"
+  <* lexeme newline
+  <*> (parseMatch `seperatedBy` newline)
+
+parseMatch :: Parser Match
+parseMatch = Match
+  <$> lexeme parseStructorVarT
+  <*> (between "<" ">" (parseExpr `seperatedBy` symbol ",")  <|> pure [])
+  <*> manyLexeme parseExprVarT
+  <* symbol "="
+  <*> parseExpr
+
 parseCtxNE :: Parser Ctx
 parseCtxNE = ((.).(.)) Map.fromList (:)
   <$ symbol "("
@@ -190,6 +216,9 @@ sc = L.space
 lexeme :: Parser a -> Parser a
 lexeme = L.lexeme sc
 
+manyLexeme :: Parser a -> Parser [a]
+manyLexeme = lexeme . many . lexeme
+
 symbol :: Text -> Parser Text
 symbol = L.symbol sc
 
@@ -212,7 +241,7 @@ withPredicate f msg p = do
     else parseError (FancyError o (Set.singleton (ErrorFail $ T.unpack msg)))
 
 seperatedBy :: Parser a -> Parser b -> Parser [a]
-seperatedBy p ps = (:) <$> lexeme p <*> many (lexeme ps *> p) <|> pure []
+seperatedBy p ps = (:) <$> lexeme p <*> manyLexeme (lexeme ps *> p) <|> pure []
 
 buildJudgment :: [Variable] -> Expr -> Judgment
 buildJudgment [] expr = Judgment Map.empty

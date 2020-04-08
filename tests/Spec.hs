@@ -51,6 +51,16 @@ main = hspec $ do
       parse parseStatement "" "codata A : Set where; C1 : A -> A"
       `shouldParse`
       DataVariable "A" ["C1"] (Coinductive Map.empty [[]] [TypeVar "A"] [Map.empty])
+    it "parses match" $
+      parse parseMatch "" "A x = ()" `shouldParse` Match "A" [] ["x"] UnitExpr
+    it "parses rec" $
+      parse parseExpr "" "rec Unit where; A x = ()"
+      `shouldParse`
+      Rec UnitType [Match "A" [] ["x"] UnitExpr]
+    it "parses rec" $
+      parse parseExpr "" "corec Unit where; A x = ()"
+      `shouldParse`
+      Corec UnitType [Match "A" [] ["x"] UnitExpr]
     it "parses judgments" $
       parse parseJudgment "" "y = (); y"
       `shouldParse`
