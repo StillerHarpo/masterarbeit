@@ -57,10 +57,14 @@ main = hspec $ do
       parse parseExpr "" "rec Unit where; A x = ()"
       `shouldParse`
       Rec UnitType [Match "A" [] ["x"] UnitExpr]
-    it "parses rec" $
+    it "parses corec" $
       parse parseExpr "" "corec Unit where; A x = ()"
       `shouldParse`
       Corec UnitType [Match "A" [] ["x"] UnitExpr]
+    it "parses rec with type indexes" $
+      parse parseExpr "" "rec Unit where; A<B,Unit> x = ()"
+      `shouldParse`
+      Rec UnitType [Match "A" [TypeVar "B", UnitType] ["x"] UnitExpr]
     it "parses judgments" $
       parse parseJudgment "" "y = (); y"
       `shouldParse`

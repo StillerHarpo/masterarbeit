@@ -173,7 +173,8 @@ parseCorec = Corec
 parseMatch :: Parser Match
 parseMatch = Match
   <$> lexeme parseStructorVarT
-  <*> (between "<" ">" (parseExpr `seperatedBy` symbol ",")  <|> pure [])
+  <*> lexeme (between "<" ">" (parseExpr `seperatedBy` symbol ",")
+              <|> pure [])
   <*> manyLexeme parseExprVarT
   <* symbol "="
   <*> parseExpr
