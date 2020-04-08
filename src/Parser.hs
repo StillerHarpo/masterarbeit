@@ -25,25 +25,97 @@ data Variable = ExprVariable Text Expr
               | DataVariable Text [Text] Expr
   deriving (Eq, Show)
 
--- | customized newline which treats ';' as newline
-newline :: Parser Char
-newline = Parsec.newline <|> char ';'
+parseJudgment :: Parser Judgment
+parseJudgment = buildJudgment
+  <$> many (try $ lexeme $ parseStatement <* newline)
+  <*> parseExpr
 
--- | The space consumer
-sc :: Parser ()
-sc = L.space
-  space1
-  (L.skipLineComment "--")
-  (L.skipBlockComment "{-" "-}")
+parseStatement :: Parser Variable
+parseStatement = choice
+  [ parseData
+  , parseCodata
+  , parseDefinition
+  ]
 
-lexeme :: Parser a -> Parser a
-lexeme = L.lexeme sc
+parseDefinition :: Parser Variable
+parseDefinition = ExprVariable
+  <$> lexeme parseExprVarT
+  <* symbol "="
+  <*> parseExpr
 
-symbol :: Text -> Parser Text
-symbol = L.symbol sc
+parseData :: Parser Variable
+parseData = do
+  void $ symbol "data"
+  (nameX, typeParameters, gamma) <- parseDataHeader
+  constructors <- lexeme $ parseConstructorDef nameX
+                           `seperatedBy`
+                           newline
+  let (constrNames, gamma1s, as, sigmas) = unzip4 constructors
+  pure $ DataVariable nameX constrNames $ Inductive gamma sigmas as gamma1s
 
-symbols :: [Text] -> Parser [Text]
-symbols = traverse symbol
+parseCodata :: Parser Variable
+parseCodata = do
+  void $ symbol "codata"
+  (nameX, typeParameters, gamma) <- parseDataHeader
+  destructors <- lexeme $ parseDestructorDef nameX
+                          `seperatedBy`
+                          newline
+  let (constrNames, gamma1s, sigmas, as) = unzip4 destructors
+  pure $ DataVariable nameX constrNames $ Coinductive gamma sigmas as gamma1s
+
+parseConstructorDef :: Text -> Parser (Text, Ctx, Expr, [Expr])
+parseConstructorDef nameX = uncurry (,,,)
+  <$> parseStructorDefHeader
+  <*> lexeme parseExpr
+  <* symbol "->"
+  <* lexeme (withPredicate (== nameX)
+                           ("Should be the same as type " `T.append` nameX)
+                           parseTypeVarT)
+  <*> many (lexeme parseExpr)
+
+parseDestructorDef :: Text -> Parser (Text, Ctx, [Expr], Expr)
+parseDestructorDef nameX = uncurry (,,,)
+  <$> parseStructorDefHeader
+  <* lexeme (withPredicate (== nameX)
+                           ("Should be the same as type " `T.append` nameX)
+                           parseTypeVarT)
+  <*> many (lexeme parseExpr)
+  <* symbol "->"
+  <*> lexeme parseExpr
+
+parseDataHeader :: Parser (Text, [Text], Ctx)
+parseDataHeader = do
+  nameX <- lexeme parseTypeVarT
+  typeParameters <- many $ lexeme parseTypeVarT
+  void $ symbol ":"
+  gamma <- parseCtx
+  void $ if null gamma
+         then symbols ["Set", "where"]
+         else symbols ["->", "Set", "where"]
+  void $ lexeme newline
+  pure (nameX, typeParameters, gamma)
+
+parseStructorDefHeader :: Parser (Text, Ctx)
+parseStructorDefHeader = do
+  nameC <- lexeme parseStructorVarT
+  void $ symbol ":"
+  gamma1 <- lexeme parseCtx
+  void $ if null gamma1
+         then pure ""
+         else symbol "->"
+  pure (nameC, gamma1)
+
+parseExpr :: Parser Expr
+parseExpr = makeExprParser parseTerm operatorTable
+
+parseTerm :: Parser Expr
+parseTerm = choice
+  [ parseUnitType
+  , parseUnitExpr
+  , parseTypeVar
+  , parseExprVar
+  , parens parseExpr
+  ]
 
 parseExprVarT :: Parser Text
 parseExprVarT = T.cons
@@ -80,12 +152,6 @@ parseAbstr = (\((par1,ty1):pars) ->
   <$> parseCtxNE
   <* char '.'
 
-parseDefinition :: Parser Variable
-parseDefinition = ExprVariable
-  <$> lexeme parseExprVarT
-  <* symbol "="
-  <*> parseExpr
-
 parseCtxNE :: Parser Ctx
 parseCtxNE = ((.).(.)) Map.fromList (:)
   <$ symbol "("
@@ -103,6 +169,36 @@ parseCtxNE = ((.).(.)) Map.fromList (:)
 parseCtx :: Parser Ctx
 parseCtx = parseCtxNE <|> pure Map.empty
 
+operatorTable :: [[Operator Parser Expr]]
+operatorTable =
+  [ [ Prefix (try parseAbstr)
+    ]
+  , [ InfixL ((:@:) <$ symbol "@")
+    ]
+  ]
+-- | customized newline which treats ';' as newline
+newline :: Parser Char
+newline = Parsec.newline <|> char ';'
+
+-- | The space consumer
+sc :: Parser ()
+sc = L.space
+  space1
+  (L.skipLineComment "--")
+  (L.skipBlockComment "{-" "-}")
+
+lexeme :: Parser a -> Parser a
+lexeme = L.lexeme sc
+
+symbol :: Text -> Parser Text
+symbol = L.symbol sc
+
+symbols :: [Text] -> Parser [Text]
+symbols = traverse symbol
+
+parens :: Parser a -> Parser a
+parens = between (symbol "(") (symbol ")")
+
 withPredicate
   :: (a -> Bool)       -- ^ The check to perform on parsed input
   -> Text              -- ^ Message to print when the check fails
@@ -115,105 +211,8 @@ withPredicate f msg p = do
     then return r
     else parseError (FancyError o (Set.singleton (ErrorFail $ T.unpack msg)))
 
-parseStructorDefHeader :: Parser (Text, Ctx)
-parseStructorDefHeader = do
-  nameC <- lexeme parseStructorVarT
-  void $ symbol ":"
-  gamma1 <- lexeme parseCtx
-  void $ if null gamma1
-         then pure ""
-         else symbol "->"
-  pure (nameC, gamma1)
-
-parseConstructorDef :: Text -> Parser (Text, Ctx, Expr, [Expr])
-parseConstructorDef nameX = uncurry (,,,)
-  <$> parseStructorDefHeader
-  <*> lexeme parseExpr
-  <* symbol "->"
-  <* lexeme (withPredicate (== nameX)
-                           ("Should be the same as type " `T.append` nameX)
-                           parseTypeVarT)
-  <*> many (lexeme parseExpr)
-
-parseDestructorDef :: Text -> Parser (Text, Ctx, [Expr], Expr)
-parseDestructorDef nameX = uncurry (,,,)
-  <$> parseStructorDefHeader
-  <* lexeme (withPredicate (== nameX)
-                           ("Should be the same as type " `T.append` nameX)
-                           parseTypeVarT)
-  <*> many (lexeme parseExpr)
-  <* symbol "->"
-  <*> lexeme parseExpr
-
-unzip4 :: [(a,b,c,d)] -> ([a], [b], [c], [d])
-unzip4 = foldl (\(as, bs, cs, ds) (a, b ,c ,d) -> (a:as,b:bs,c:cs,d:ds))
-               ([],[],[],[])
-
 seperatedBy :: Parser a -> Parser b -> Parser [a]
 seperatedBy p ps = (:) <$> lexeme p <*> many (lexeme ps *> p) <|> pure []
-
-parseDataHeader :: Parser (Text, [Text], Ctx)
-parseDataHeader = do
-  nameX <- lexeme parseTypeVarT
-  typeParameters <- many $ lexeme parseTypeVarT
-  void $ symbol ":"
-  gamma <- parseCtx
-  void $ if null gamma
-         then symbols ["Set", "where"]
-         else symbols ["->", "Set", "where"]
-  void $ lexeme newline
-  pure (nameX, typeParameters, gamma)
-
-parseData :: Parser Variable
-parseData = do
-  void $ symbol "data"
-  (nameX, typeParameters, gamma) <- parseDataHeader
-  constructors <- lexeme $ parseConstructorDef nameX
-                           `seperatedBy`
-                           newline
-  let (constrNames, gamma1s, as, sigmas) = unzip4 constructors
-  pure $ DataVariable nameX constrNames $ Inductive gamma sigmas as gamma1s
-
-parseCodata :: Parser Variable
-parseCodata = do
-  void $ symbol "codata"
-  (nameX, typeParameters, gamma) <- parseDataHeader
-  destructors <- lexeme $ parseDestructorDef nameX
-                          `seperatedBy`
-                          newline
-  let (constrNames, gamma1s, sigmas, as) = unzip4 destructors
-  pure $ DataVariable nameX constrNames $ Coinductive gamma sigmas as gamma1s
-
-parseTerm :: Parser Expr
-parseTerm = choice
-  [ parseUnitType
-  , parseUnitExpr
-  , parseTypeVar
-  , parseExprVar
-  , parens parseExpr
-  ]
-
-parens :: Parser a -> Parser a
-parens = between (symbol "(") (symbol ")")
-
-parseExpr :: Parser Expr
-parseExpr = makeExprParser parseTerm operatorTable
-
-operatorTable :: [[Operator Parser Expr]]
-operatorTable =
-  [ [ Prefix (try parseAbstr)
-    ]
-  , [ InfixL ((:@:) <$ symbol "@")
-    ]
-  ]
-
-
-parseStatement :: Parser Variable
-parseStatement = choice
-  [ parseData
-  , parseCodata
-  , parseDefinition
-  ]
 
 buildJudgment :: [Variable] -> Expr -> Judgment
 buildJudgment [] expr = Judgment Map.empty
@@ -232,7 +231,6 @@ buildJudgment (DataVariable tyVar strVars exprV:vars) expr =
                   (foldr (`Map.insert` tyVar) strCtx strVars)
                   expr
 
-parseJudgment :: Parser Judgment
-parseJudgment = buildJudgment
-  <$> many (try $ lexeme $ parseStatement <* newline)
-  <*> parseExpr
+unzip4 :: [(a,b,c,d)] -> ([a], [b], [c], [d])
+unzip4 = foldl (\(as, bs, cs, ds) (a, b ,c ,d) -> (a:as,b:bs,c:cs,d:ds))
+               ([],[],[],[])
