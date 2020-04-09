@@ -48,7 +48,7 @@ parseData = do
   void $ symbol "data"
   (nameX, typeParameters, gamma) <- parseDataHeader
   constructors <- lexeme $ parseConstructorDef nameX
-                           `seperatedBy`
+                           `sepBy`
                            newline
   let (constrNames, gamma1s, as, sigmas) = unzip4 constructors
   pure $ DataVariable nameX constrNames $ Inductive gamma sigmas as gamma1s
@@ -58,7 +58,7 @@ parseCodata = do
   void $ symbol "codata"
   (nameX, typeParameters, gamma) <- parseDataHeader
   destructors <- lexeme $ parseDestructorDef nameX
-                          `seperatedBy`
+                          `sepBy`
                           newline
   let (constrNames, gamma1s, sigmas, as) = unzip4 destructors
   pure $ DataVariable nameX constrNames $ Coinductive gamma sigmas as gamma1s
@@ -160,7 +160,7 @@ parseRec = Rec
   <*> lexeme parseExpr
   <* symbol "where"
   <* lexeme newline
-  <*> (parseMatch `seperatedBy` newline)
+  <*> (parseMatch `sepBy` newline)
 
 parseCorec :: Parser Expr
 parseCorec = Corec
@@ -168,12 +168,12 @@ parseCorec = Corec
   <*> lexeme parseExpr
   <* symbol "where"
   <* lexeme newline
-  <*> (parseMatch `seperatedBy` newline)
+  <*> (parseMatch `sepBy` newline)
 
 parseMatch :: Parser Match
 parseMatch = Match
   <$> lexeme parseStructorVarT
-  <*> lexeme (between "<" ">" (parseExpr `seperatedBy` symbol ",")
+  <*> lexeme (between "<" ">" (parseExpr `sepBy` symbol ",")
               <|> pure [])
   <*> manyLexeme parseExprVarT
   <* symbol "="
@@ -240,9 +240,6 @@ withPredicate f msg p = do
   if f r
     then return r
     else parseError (FancyError o (Set.singleton (ErrorFail $ T.unpack msg)))
-
-seperatedBy :: Parser a -> Parser b -> Parser [a]
-seperatedBy p ps = (:) <$> lexeme p <*> manyLexeme (lexeme ps *> p) <|> pure []
 
 buildJudgment :: [Variable] -> Expr -> Judgment
 buildJudgment [] expr = Judgment Map.empty
