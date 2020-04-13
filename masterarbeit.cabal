@@ -31,7 +31,8 @@ library
                        megaparsec,
                        text,
                        containers,
-                       parser-combinators
+                       parser-combinators,
+                       mtl
   exposed-modules:     AbstractSyntaxTree,
                        Parser
   default-language:   Haskell2010
@@ -46,6 +47,8 @@ test-suite tests
                     , hspec-megaparsec
                     , megaparsec
                     , containers
+                    , mtl
+                    , text
                     , masterarbeit
   build-tools:        hspec-discover   >= 2.0 && < 3.0
   default-language:   Haskell2010
