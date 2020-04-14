@@ -1,5 +1,6 @@
 {-# language OverloadedStrings #-}
 {-# language RecordWildCards #-}
+{-# language TemplateHaskell #-}
 
 module Parser where
 
@@ -11,6 +12,7 @@ import qualified Data.Set as Set
 import Control.Monad (void)
 import Control.Monad.Combinators.Expr
 import Control.Monad.State.Strict
+import Lens.Micro.Platform
 
 import Data.Char (isAlphaNum)
 import Data.Text (Text)
@@ -22,51 +24,66 @@ import qualified Text.Megaparsec.Char as Parsec
 import qualified Text.Megaparsec.Char.Lexer as L
 
 data ParserState = ParserState {
-    scLineFold :: Parsec Void Text ()
+    _scLineFold :: Parsec Void Text ()
+  , _ctx :: Ctx
+  , _tyCtx :: TyCtx
+  , _strCtx :: StrCtx
   }
+$(makeLenses ''ParserState)
 
 -- | a parser with a space consumer state for line folding
 type Parser = StateT ParserState (Parsec Void Text)
 
-data Variable = ExprVariable Text Expr
-              | DataVariable Text [Text] Expr
-  deriving (Eq, Show)
-
 parseJudgment :: Parsec Void Text Judgment
-parseJudgment = flip evalStateT (ParserState { scLineFold = sc }) $
-  buildJudgment
-  <$> many (try parseStatement)
-  <*> nonIndented (lineFold parseExpr)
-  <* eof
+parseJudgment = flip evalStateT (ParserState { _scLineFold = sc
+                                             , _ctx = Map.empty
+                                             , _tyCtx = Map.empty
+                                             , _strCtx = Map.empty }) $ do
+  void $ many $ try parseStatement
+  ParserState{..} <- get
+  expr <- nonIndented (lineFold parseExpr)
+  pure $ Judgment _ctx _tyCtx _strCtx expr
 
-parseStatement :: Parser Variable
+parseStatement :: Parser ()
 parseStatement = nonIndented $ choice
   [ parseData
   , parseCodata
   , parseDefinition
   ]
 
-parseDefinition :: Parser Variable
-parseDefinition = ExprVariable
-  <$> lexeme parseExprVarT
-  <* symbol "="
-  <*> lineFold parseExpr
+parseDefinition :: Parser ()
+parseDefinition = do
+  ParserState{..} <- get
+  name <- lexeme parseExprVarT
+  void $ symbol "="
+  expr <- lineFold parseExpr
+  if Map.member name _ctx
+  then fancyFailure $ Set.singleton $ ErrorFail "Name already defined"
+  else ctx %= Map.insert name expr
 
-parseData :: Parser Variable
+parseData :: Parser ()
 parseData = nonIndented $ parseBlock
   (symbol "data" *> parseDataHeader)
   (\(nameX, _, _) -> parseConstructorDef nameX)
-  (\(nameX, typeParameters, gamma) constructors ->
+  (\(nameX, typeParameters, gamma) constructors -> do
       let (constrNames, gamma1s, as, sigmas) = unzip4 constructors
-      in DataVariable nameX constrNames $ Inductive gamma sigmas as gamma1s)
+      ParserState{..} <- get
+      if nameX `Map.member` _ctx || any (`Map.member` _strCtx) constrNames
+      then fancyFailure $ Set.singleton $ ErrorFail "Name already defined"
+      else (do tyCtx %= Map.insert nameX (Inductive gamma sigmas as gamma1s)
+               strCtx .= foldr (`Map.insert` nameX) _strCtx constrNames))
 
-parseCodata :: Parser Variable
+parseCodata :: Parser ()
 parseCodata = nonIndented $ parseBlock
   (symbol "codata" *> parseDataHeader)
   (\(nameX, _, _) -> parseDestructorDef nameX)
-  (\(nameX, typeParameters, gamma) destructors ->
-      let (constrNames, gamma1s, sigmas, as) = unzip4 destructors
-      in DataVariable nameX constrNames $ Coinductive gamma sigmas as gamma1s)
+  (\(nameX, typeParameters, gamma) destructors -> do
+      let (destrNames, gamma1s, sigmas, as) = unzip4 destructors
+      ParserState{..} <- get
+      if nameX `Map.member` _ctx || any (`Map.member` _strCtx) destrNames
+      then fancyFailure $ Set.singleton $ ErrorFail "Name already defined"
+      else (do tyCtx %= Map.insert nameX (Coinductive gamma sigmas as gamma1s)
+               strCtx .= foldr (`Map.insert` nameX) _strCtx destrNames))
 
 parseConstructorDef :: Text -> Parser (Text, Ctx, Expr, [Expr])
 parseConstructorDef nameX = uncurry (,,,)
@@ -136,7 +153,6 @@ parseExprVarT = withPredicate (`notElem` keywords)
 parseExprVar :: Parser Expr
 parseExprVar = ExprVar
   <$> lexeme parseExprVarT
-  -- <*> many (lexeme parseTypeVar)
 
 parseTypeVarT :: Parser Text
 parseTypeVarT = withPredicate (`notElem` keywords)
@@ -170,19 +186,18 @@ parseRec = parseBlock (symbol "rec"
                        *> lexeme parseExpr
                        <* symbol "where")
                       (const parseMatch)
-                      Rec
+                      (((.).(.)) pure  Rec)
 
 parseCorec :: Parser Expr
 parseCorec = parseBlock (symbol "corec"
                          *> lexeme parseExpr
                          <* symbol "where")
                          (const parseMatch)
-                         Corec
+                         (((.).(.)) pure Corec)
 
 parseMatch :: Parser Match
 parseMatch = Match
   <$> lexeme parseStructorVarT
-  -- How does between type check?
   <*> lexeme (option [] . between (string "<") (string ">")
                         $ parseExpr `sepBy` symbol ",")
   <*> manyLexeme parseExprVarT
@@ -230,7 +245,8 @@ sc = L.space
 
 nonIndented :: Parser a -> Parser a
 nonIndented p = symbol ";" *> p <|> L.nonIndented (lift scn) p
-parseBlock :: Parser a -> (a -> Parser b) -> (a -> [b] -> c) -> Parser c
+
+parseBlock :: Parser a -> (a -> Parser b) -> (a -> [b] -> Parser c) -> Parser c
 parseBlock pHeader pItems f = try pBrackets <|> L.indentBlock (lift scn) pIndented
     where
       pBrackets = do
@@ -238,34 +254,32 @@ parseBlock pHeader pItems f = try pBrackets <|> L.indentBlock (lift scn) pIndent
         items <- between (symbol "{")
                          (symbol "}")
                          (lexeme (pItems header) `sepBy` symbol ";")
-        pure $ f header items
+        f header items
       pIndented = do
         header <- pHeader
-        pure $ L.IndentMany Nothing (pure . f header) (pItems header)
+        pure $ L.IndentMany Nothing (f header) (pItems header)
 
 lineFold :: Parser a -> Parser a
-lineFold p = lift . L.lineFold scn $
-  \sc' -> evalStateT p (ParserState sc')
+lineFold p = do
+  parserState@ParserState {..} <- get
+  (a, innerState) <- lift $ L.lineFold scn $
+      \sc' -> runStateT p (set scLineFold sc' parserState)
+  put $ set scLineFold _scLineFold innerState
+  pure a
 
 lexeme :: Parser a -> Parser a
-lexeme p = do
-  ParserState{..} <- get
-  L.lexeme lineFolding p
+lexeme = L.lexeme lineFolding
 
 manyLexeme :: Parser a -> Parser [a]
 manyLexeme = lexeme . many . lexeme
 
--- TODO make it work for nested linefolds (maybe use a list of lineFolds)
 lineFolding :: Parser ()
-lineFolding = do
-  ParserState{..} <- get
-  try (lift scLineFold)
-  <|> modify (\x -> x{scLineFold = sc}) *> lift sc <* newline
+lineFolding = (view scLineFold <$> get >>= try . lift)
+            <|> lift sc <* newline
+            <|> lift scn <* eof
 
 symbol :: Text -> Parser Text
-symbol t = do
-  ParserState{..} <- get
-  L.symbol lineFolding t
+symbol = L.symbol lineFolding
 
 symbols :: [Text] -> Parser [Text]
 symbols = traverse symbol
@@ -285,22 +299,6 @@ withPredicate f msg p = do
     then return r
     else parseError (FancyError o (Set.singleton (ErrorFail . T.unpack $ msg r)))
 
-buildJudgment :: [Variable] -> Expr -> Judgment
-buildJudgment [] expr = Judgment Map.empty
-                                 Map.empty
-                                 Map.empty
-                                 expr
-buildJudgment (ExprVariable var exprV:vars) expr =
-  case buildJudgment vars expr of
-    Judgment ctx tyCtx strCtx expr
-      -> Judgment (Map.insert var exprV ctx) tyCtx strCtx expr
-buildJudgment (DataVariable tyVar strVars exprV:vars) expr =
-  case buildJudgment vars expr of
-    Judgment ctx tyCtx strCtx expr
-      -> Judgment ctx
-                  (Map.insert tyVar exprV tyCtx)
-                  (foldr (`Map.insert` tyVar) strCtx strVars)
-                  expr
 
 unzip4 :: [(a,b,c,d)] -> ([a], [b], [c], [d])
 unzip4 = foldl (\(as, bs, cs, ds) (a, b ,c ,d) -> (a:as,b:bs,c:cs,d:ds))

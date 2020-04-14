@@ -15,7 +15,11 @@ import AbstractSyntaxTree
 main :: IO ()
 main = hspec $ do
   describe "Parser works" $ do
-    let parseExprS = evalStateT parseExpr (ParserState sc)
+    let parserState = ParserState { _scLineFold = sc
+                                  , _ctx = Map.empty
+                                  , _tyCtx = Map.empty
+                                  , _strCtx = Map.empty }
+    let parseExprS = evalStateT parseExpr parserState
     it "parses the unit expression" $
       parse parseExprS "" "()" `shouldParse` UnitExpr
     it "parses the unit type" $
@@ -52,20 +56,24 @@ main = hspec $ do
       parse parseExprS "" "x @ (z @ y)"
       `shouldParse`
       (ExprVar "x" :@: (ExprVar "z" :@: ExprVar "y"))
-    let parseStatementS = evalStateT parseStatement (ParserState sc)
+    let parseStatementS =  (\parserState -> (_tyCtx parserState, _strCtx parserState))
+         <$> execStateT parseStatement parserState
+    let parseDefinitionS = _ctx <$> execStateT parseStatement parserState
     it "parses definitions" $
-      parse parseStatementS "" "x = ()"
+      parse parseDefinitionS "" "x = ()"
       `shouldParse`
-      ExprVariable "x" UnitExpr
+      Map.singleton "x" UnitExpr
     it "parses data" $
       parse parseStatementS "" "data A : Set where { C1 : A -> A }"
       `shouldParse`
-      DataVariable "A" ["C1"] (Inductive Map.empty [[]] [TypeVar "A"] [Map.empty])
+      ( Map.singleton "A" (Inductive Map.empty [[]] [TypeVar "A"] [Map.empty])
+      , Map.singleton "C1" "A")
     it "parses codata" $
       parse parseStatementS "" "codata A : Set where { C1 : A -> A }"
       `shouldParse`
-      DataVariable "A" ["C1"] (Coinductive Map.empty [[]] [TypeVar "A"] [Map.empty])
-    let parseMatchS = evalStateT parseMatch (ParserState sc)
+      ( Map.singleton "A" (Coinductive Map.empty [[]] [TypeVar "A"] [Map.empty])
+      , Map.singleton "C1" "A")
+    let parseMatchS = evalStateT parseMatch parserState
     it "parses match" $
       parse parseMatchS "" "A x = ()" `shouldParse` Match "A" [] ["x"] UnitExpr
     it "parses rec" $
@@ -92,14 +100,13 @@ main = hspec $ do
                                           , "  C1 : A -> A"
                                           , "  C2 : (A @ y) -> A"])
       `shouldParse`
-      DataVariable "A"
-                   ["C2", "C1"]
-                   (Inductive (Map.singleton "y" (TypeVar "B"))
-                               [[],[]]
-                               [TypeVar "A" :@: ExprVar "y", TypeVar "A"]
-                               [Map.fromList [], Map.fromList []])
+      ( Map.singleton "A" (Inductive (Map.singleton "y" (TypeVar "B"))
+                                     [[],[]]
+                                     [TypeVar "A" :@: ExprVar "y", TypeVar "A"]
+                                     [Map.fromList [], Map.fromList []])
+      , Map.fromList [("C2","A"), ("C1","A")])
     it "parses a program" $
-      parse parseJudgment "" (T.unlines [ "x = ()"
+      parse (parseJudgment <* scn <* eof) "" (T.unlines [ "x = ()"
                                         , "data A : (y:B) -> Set where"
                                         , "  C1 : A -> A"
                                         , "  C2 : (A @ y) -> A"
