@@ -14,7 +14,8 @@ mkDerivation {
   ];
   executableHaskellDepends = [ base ];
   testHaskellDepends = [
-    base containers hspec hspec-megaparsec megaparsec mtl text
+    base containers hspec hspec-megaparsec megaparsec
+    microlens-platform mtl text
   ];
   testToolDepends = [ hspec-discover ];
   description = "inductive coinductive dependent types interpreter";

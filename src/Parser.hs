@@ -1,5 +1,6 @@
 {-# language OverloadedStrings #-}
 {-# language RecordWildCards #-}
+{-# language TupleSections #-}
 {-# language TemplateHaskell #-}
 
 module Parser where
@@ -7,7 +8,9 @@ module Parser where
 import AbstractSyntaxTree
 
 import qualified Data.Map as Map
+import Data.Map (Map)
 import qualified Data.Set as Set
+import Data.String
 
 import Control.Monad (void)
 import Control.Monad.Combinators.Expr
@@ -23,6 +26,10 @@ import Text.Megaparsec.Char
 import qualified Text.Megaparsec.Char as Parsec
 import qualified Text.Megaparsec.Char.Lexer as L
 
+-- | Con/Destructor Context
+-- maps Con/Destructor Names to their type names
+type StrCtx = Map Text Text
+
 data ParserState = ParserState {
     _scLineFold :: Parsec Void Text ()
   , _ctx :: Ctx
@@ -34,6 +41,9 @@ $(makeLenses ''ParserState)
 -- | a parser with a space consumer state for line folding
 type Parser = StateT ParserState (Parsec Void Text)
 
+instance (Monad m, IsString (m a)) => IsString (StateT s m a) where
+  fromString = lift . fromString
+
 parseJudgment :: Parsec Void Text Judgment
 parseJudgment = flip evalStateT (ParserState { _scLineFold = sc
                                              , _ctx = Map.empty
@@ -42,7 +52,7 @@ parseJudgment = flip evalStateT (ParserState { _scLineFold = sc
   void $ many $ try parseStatement
   ParserState{..} <- get
   expr <- nonIndented (lineFold parseExpr)
-  pure $ Judgment _ctx _tyCtx _strCtx expr
+  pure $ Judgment _ctx _tyCtx expr
 
 parseStatement :: Parser ()
 parseStatement = nonIndented $ choice
@@ -88,11 +98,13 @@ parseCodata = nonIndented $ parseBlock
 parseConstructorDef :: Text -> Parser (Text, Ctx, Expr, [Expr])
 parseConstructorDef nameX = uncurry (,,,)
   <$> parseStructorDefHeader
+  <* (tyCtx %= Map.insert nameX UnitType) -- Dummy
   <*> lexeme parseExpr
+  <* (tyCtx %= Map.delete nameX) -- nameX is only allowed here to make it strctly positve
   <* symbol "->"
   <* lexeme (withPredicate (== nameX)
                            (`T.append` (" should be the same as type " `T.append` nameX))
-                           parseTypeVarT)
+                           parseTypeStrVarT)
   <*> many (lexeme parseExpr)
 
 parseDestructorDef :: Text -> Parser (Text, Ctx, [Expr], Expr)
@@ -100,15 +112,18 @@ parseDestructorDef nameX = uncurry (,,,)
   <$> parseStructorDefHeader
   <* lexeme (withPredicate (== nameX)
                            (`T.append` ("should be the same as type " `T.append` nameX))
-                           parseTypeVarT)
+                           parseTypeStrVarT)
   <*> many (lexeme parseExpr)
   <* symbol "->"
+  <* (tyCtx %= Map.insert nameX UnitType) -- Dummy
   <*> lexeme parseExpr
+  <* (tyCtx %= Map.delete nameX) -- nameX is only allowed here to make it strictly positve
 
 parseDataHeader :: Parser (Text, [Text], Ctx)
 parseDataHeader = do
-  nameX <- lexeme parseTypeVarT
-  typeParameters <- many $ lexeme parseTypeVarT
+  nameX <- lexeme parseTypeStrVarT
+  typeParameters <- lexeme . option []
+                           $ between "<" ">" (parseTypeStrVarT `sepBy1` ",")
   void $ symbol ":"
   gamma <- lexeme parseCtx
   void $ if null gamma
@@ -118,7 +133,7 @@ parseDataHeader = do
 
 parseStructorDefHeader :: Parser (Text, Ctx)
 parseStructorDefHeader = do
-  nameC <- lexeme parseStructorVarT
+  nameC <- lexeme parseTypeStrVarT
   void $ symbol ":"
   gamma1 <- lexeme parseCtx
   void $ if null gamma1
@@ -135,7 +150,7 @@ parseTerm = choice $ map lexeme
   , parseUnitExpr
   , try parseRec
   , try parseCorec
-  , parseTypeVar
+  , parseTypeStrVar
   , parseExprVar
   , parens parseExpr
   ]
@@ -154,18 +169,29 @@ parseExprVar :: Parser Expr
 parseExprVar = ExprVar
   <$> lexeme parseExprVarT
 
-parseTypeVarT :: Parser Text
-parseTypeVarT = withPredicate (`notElem` keywords)
-                              (`T.append` " is a keyword")
-                              (T.cons
-                               <$> upperChar
-                               <*> takeWhileP Nothing isAlphaNum)
+parseTypeStrVarT :: Parser Text
+parseTypeStrVarT = withPredicate (`notElem` keywords)
+                                 (`T.append` " is a keyword")
+                                 (T.cons
+                                  <$> upperChar
+                                  <*> takeWhileP Nothing isAlphaNum)
 
-parseStructorVarT :: Parser Text
-parseStructorVarT = parseTypeVarT
-
-parseTypeVar :: Parser Expr
-parseTypeVar = TypeVar <$> parseTypeVarT
+parseTypeStrVar :: Parser Expr
+parseTypeStrVar = do
+  ParserState{..} <- get
+  tyStrVar <- parseTypeStrVarT
+  indexes <- parseIndexes
+  let lookupStr = do
+        nameX <- Map.lookup tyStrVar _strCtx
+        (nameX,) <$> Map.lookup nameX _tyCtx
+  if tyStrVar `Map.member` _tyCtx
+  then pure $ TypeVar tyStrVar indexes
+  else (case lookupStr of
+          Just (nameX, Inductive{..})
+                  -> pure $ Constructor tyStrVar indexes nameX
+          Just (nameX, Coinductive{..})
+                  -> pure $ Destructor tyStrVar indexes nameX
+          Nothing -> singleFailure "Name not defined")
 
 parseUnitType :: Parser Expr
 parseUnitType = UnitType <$ string "Unit"
@@ -197,12 +223,15 @@ parseCorec = parseBlock (symbol "corec"
 
 parseMatch :: Parser Match
 parseMatch = Match
-  <$> lexeme parseStructorVarT
-  <*> lexeme (option [] . between (string "<") (string ">")
-                        $ parseExpr `sepBy` symbol ",")
+  <$> lexeme parseTypeStrVarT
+  <*> lexeme parseIndexes
   <*> manyLexeme parseExprVarT
   <* symbol "="
   <*> lineFold parseExpr
+
+parseIndexes :: Parser [Expr]
+parseIndexes = option [] . between "<" ">"
+                         $ parseExpr `sepBy` symbol ","
 
 parseCtxNE :: Parser Ctx
 parseCtxNE = ((.).(.)) Map.fromList (:)
@@ -299,7 +328,10 @@ withPredicate f msg p = do
     then return r
     else parseError (FancyError o (Set.singleton (ErrorFail . T.unpack $ msg r)))
 
+singleFailure :: Text -> Parser a
+singleFailure = fancyFailure . Set.singleton . ErrorFail . T.unpack
 
 unzip4 :: [(a,b,c,d)] -> ([a], [b], [c], [d])
 unzip4 = foldl (\(as, bs, cs, ds) (a, b ,c ,d) -> (a:as,b:bs,c:cs,d:ds))
                ([],[],[],[])
+

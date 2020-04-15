@@ -50,6 +50,7 @@ test-suite tests
                     , containers
                     , mtl
                     , text
+                    , microlens-platform
                     , masterarbeit
   build-tools:        hspec-discover   >= 2.0 && < 3.0
   default-language:   Haskell2010
