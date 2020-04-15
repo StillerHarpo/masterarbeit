@@ -95,6 +95,13 @@ main = hspec $ do
                Map.empty
                Map.empty
                (ExprVar "y")
+    it "parses a statement with line folding" $
+      parse parseDefinitionS "" (T.unlines [ "x ="
+                                           , "  ()"
+                                           , "   @"
+                                           , "    ()"])
+      `shouldParse`
+       Map.singleton "x" (UnitExpr :@: UnitExpr)
     it "parses indented data definition" $
       parse parseStatementS "" (T.unlines [ "data A : (y:B) -> Set where"
                                           , "  C1 : A -> A"
