@@ -13,14 +13,16 @@ data Expr = UnitType -- verum value
           | TypeVar Text
           | Constructor [Expr] Text
           | Destructror [Expr] Text
-          | Inductive Ctx -- Gamma
-                      [[Expr]] -- sigmas
-                      [Expr] -- As
-                      [Ctx] -- gamma1s
-          | Coinductive Ctx -- Gamma
-                        [[Expr]] -- sigmas
-                        [Expr] -- As
-                        [Ctx] -- gamma1s
+          | Inductive { gamma :: Ctx
+                      , sigmas :: [[Expr]]
+                      , as :: [Expr]
+                      , gamma1s :: [Ctx]
+                      }
+          | Coinductive { gamma :: Ctx
+                        , sigmas :: [[Expr]]
+                        , as :: [Expr]
+                        , gamma1s :: [Ctx]
+                        }
           | Rec Expr [Match]
           | Corec Expr [Match]
   deriving (Eq, Show)
