@@ -1,0 +1,21 @@
+#+TITLE: masterarbeit
+A intepreter for a dependently typed language with inductive and coinductive data types
+
+* How to build the project
+  1. Install nix with
+     #+begin_src bash
+       curl -L https://nixos.org/nix/install | sh
+     #+end_src
+  2. From the root directory run
+  #+begin_src bash
+    nix-shell
+  #+end_src
+  3. Build with cabal
+     #+begin_src bash
+       cabal build
+     #+end_src
+  You can also run the tests with
+  #+begin_src bash
+    cabal test
+  #+end_src
+
