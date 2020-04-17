@@ -6,11 +6,11 @@
 * Statements
   \begin{lstlisting}
   statement =
-    data Name $C_1\dots C_n$ : $(x_1 : B_1,\dots,x_n : B_n)$ -> Set where
+    data Name<$C_1,\dots,C_n$> : $(x_1 : B_1,\dots,x_n : B_n)$ -> Set where
       $Constr_1$ : $(x_{1_1}:B_{1_1},\dots,x_{n_1}: B_{n_1})$ -> $A_1[Name/X]$ -> Name $\sigma_{1_1}\dots \sigma_{1_n}$
              $\vdots$                $\vdots$             $\vdots$            $\vdots$
       $Constr_m$ : $(x_{1_m}:B_{1_m},\dots,x_{n_m}: B_{n_m})$ -> $A_i[Name/X]$ -> Name $\sigma_{m_1}\dots \sigma_{m_n}$
-   | codata Name $C_1\dots C_n$ : $(x_1 : B_1,\dots,x_n : B_n)$ -> Set where
+   | codata Name<$C_1,\dots,C_n$>: $(x_1 : B_1,\dots,x_n : B_n)$ -> Set where
       $Destr_1$ : $(x_{1_1}:B_{i_1},\dots,x_{n_1}: B_{n_1})$ -> Name $\sigma_{1_1}\dots \sigma_{1_n}$ -> $A_1[Name/X]$
              $\vdots$                $\vdots$             $\vdots$            $\vdots$
       $Destr_m$ : $(x_{1_m}:B_{1_m},\dots,x_{n_m}: B_{n_m})$ -> Name $\sigma_{m_1}\dots \sigma_{m_n}$ -> $A_i[Name/X]$
@@ -29,32 +29,34 @@
   + $C_1\dots C_n$ have to be of *, they are for polymorphism.  If we call a constructor we have to give this types,
     to relate the right type to it.
 
-  We take $B_1\rightarrow\dots\rightarrow B_n)$ as syntactic sugar for $(\_:B_1,\dots,\_:B_n)$ where _ stands for a unused termvariable
+  We take $B_1\rightarrow\dots\rightarrow B_n$ as syntactic sugar for $(\_:B_1,\dots,\_:B_n)$ where _ stands for a unused termvariable
 
   We will also need a extra context which relates constructors to their types
-* (Co)rec
+* Expressions
   \begin{lstlisting}
   expr =
     rec C where
-      $Constr_1$  $x_{1_1}$ $\dots$ $x_{n_1}$ $y_1$ = $g_1$
-         $\vdots$      $\vdots$      $\vdots$        $\vdots$
-      $Constr_m$  $x_{1_m}$ $\dots$ $x_{n_m}$ $y_m$ = $g_m$
+      $Constr_1$<$h_1,\dots,h_n$> $x_{1_1}$ $\dots$ $x_{n_1}$ $y_1$    = $g_1$
+              $\vdots$          $\vdots$      $\vdots$        $\vdots$
+      $Constr_m$<$h_1,\dots,h_n$> $x_{1_m}$ $\dots$ $x_{n_m}$ $y_m$ = $g_m$
   | corec C where
-      $Destr_1$  $x_{1_1}$ $\dots$ $x_{n_1}$ $y_1$ = $g_1$
-         $\vdots$      $\vdots$      $\vdots$        $\vdots$
-      $Destr_m$  $x_{1_m}$ $\dots$ $x_{n_m}$ $y_m$ = $g_m$
-  | expr @ expr \| () | Unit \| Constr expr\* \| Destr expr\*
+      $Destr_1$<$h_1,\dots,h_n$> $x_{1_1}$ $\dots$ $x_{n_1}$ $y_1$   = $g_1$
+              $\vdots$         $\vdots$      $\vdots$        $\vdots$
+      $Destr_m$<$h_1,\dots,h_n$>  $x_{1_m}$ $\dots$ $x_{n_m}$ $y_m$ = $g_m$
+  | expr @ expr | () | Unit
+  | Constr<$h_1,\dots,h_n$> expr* | Destr<$h_1,\dots,h_n$> expr*
   \end{lstlisting}
-
-  $t_1,\dots,t_m,g_1,\dots,g_k$ are /expr/
+  $g_1,\dots,g_k$ are /expr/
 
   $x_{1_1},\dots, x_{n_m}$ are termvariables
+
+  $h_1,\dots,h_m$ ares expressions of type *
 
 * Terminal Object
   #+begin_example
   codata Terminal : Set where
      Terminal : Terminal -> Terminal
-  terminal' = (corec (y:Unit) where
+  terminal' = (corec Unit where
                  Terminal x = x) @ ()
 
   #+end_example
@@ -62,8 +64,8 @@
   #+begin_example
   data Initial : Set where
      Initial : Intial -> Intial
-  edfalsum = rec (y:Initial) where
-                 Initial x = x
+  edfalsum = rec Initial where
+               Initial x = x
   #+end_example
 
 * Natural Numbers
@@ -71,32 +73,29 @@
   data Nat : Set where
      Zero' : Terminal -> Nat
      Succ : Nat -> Nat
-  zero = Zero'
+  zero = Zero' @ ()
   #+end_example
 * Binary Product
   #+begin_example
   codata Product A B : Set where
      Fst : Product -> A
      Snd : Product -> B
-  pair A B (x:A, y:B) = (corec Unit where
-                          Fst _ -> x
-                          Snd _ -> y) @ ()
+  pair x y = (corec Unit where
+                Fst _ -> x
+                Snd _ -> y) @ ()
   #+end_example
 * Binary Coproduct
   #+begin_example
-  data Coproduct A B : Set where
+  data Coproduct<A,B> : Set where
      Left : A -> Coproduct
      Right : B -> Coproduct
-  coproduct (x:C, y:C) = rec C where
-                           Left _ -> x
-                           Right _ -> y
   #+end_example
 * Pi Type
   #+begin_example
-  codata Pi A B : Set where
+  codata Pi<A,B>: Set where
      Apply' : (x: A) -> Pi -> B
-  lambda (x:A,g:B) = (corec Unit where
-                        Apply' A B x _ = g) @ ()
+  lambda A B x g = (corec Unit where
+                      Apply'<A,B> x _ = g) @ ()
   apply t x = Apply' x t
   #+end_example
 * Sigma Type
@@ -109,18 +108,18 @@
   data Vector A : (n:Nat) -> Set where
     Nil' : Unit -> Vector 0
     Cons : (k:Nat) -> Product A (Vector k) -> Vector (Succ k)
-  nil = Nil' ()
+  nil A = Nil'<A> @ ()
   #+end_example
 * Extended Naturals
   #+begin_example
   codata ExNat : Set where
-     Prec : ExNat -> Coproduct Unit ExNat
+     Prec : ExNat -> Coproduct<Unit,ExNat>
   succE = corec ExNat where
             Prec x -> Right x
   #+end_example
 * Streams
   #+begin_example
-  codata PStr A : (n: ExNat) -> Set where
+  codata PStr<A>: (n: ExNat) -> Set where
      hd : (k : ExNat) -> PStr A (succE k) -> A
      tl : (k : ExNat) -> PStr A (succE k) -> PStr A k
   #+end_example
@@ -129,18 +128,19 @@
   + $\Gamma_1=\emptyset$
   + $\Gamma_2=A$
 
-    #+begin_example
-  data List A : Set where
+  #+begin_example
+  data List<A> : Set where
      Nil : Terminal -> List
      Cons : A -> List -> List
+  nil A = Nil<A> @ ()
   #+end_example
-$(A_1)(A_2)\ny(X:\Gamma\rightarrow*;(id_\Gamma,id_\Gamma);(A_1,A_2))@id_\Gamma : *$
 
 * Rose Tree
   Rose Tree A = $\nu(X:*;\epsilon_2;(\textbf{1},List X)$
 
   #+begin_example
-  data RoseTree A : Set where
+  data RoseTree<A> : Set where
      Leaf : Terminal -> RoseTree
-     Branch : List RoseTree -> RoseTree
+     Branch : List<RoseTree> -> RoseTree
+  leaf A = Leaf<A> @ ()
   #+end_example
