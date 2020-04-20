@@ -1,146 +1,220 @@
 #+LATEX_HEADER: \usepackage{listings}
+#+LATEX_HEADER: \usepackage{bussproofs}
 #+LATEX_HEADER: \lstset{
 #+LATEX_HEADER:  basicstyle=\ttfamily,
 #+LATEX_HEADER:   mathescape
 #+LATEX_HEADER: }
-* Statements
-  \begin{lstlisting}
-  statement =
-    data Name<$C_1,\dots,C_n$> : $(x_1 : B_1,\dots,x_n : B_n)$ -> Set where
-      $Constr_1$ : $(x_{1_1}:B_{1_1},\dots,x_{n_1}: B_{n_1})$ -> $A_1[Name/X]$ -> Name $\sigma_{1_1}\dots \sigma_{1_n}$
-             $\vdots$                $\vdots$             $\vdots$            $\vdots$
-      $Constr_m$ : $(x_{1_m}:B_{1_m},\dots,x_{n_m}: B_{n_m})$ -> $A_i[Name/X]$ -> Name $\sigma_{m_1}\dots \sigma_{m_n}$
-   | codata Name<$C_1,\dots,C_n$>: $(x_1 : B_1,\dots,x_n : B_n)$ -> Set where
-      $Destr_1$ : $(x_{1_1}:B_{i_1},\dots,x_{n_1}: B_{n_1})$ -> Name $\sigma_{1_1}\dots \sigma_{1_n}$ -> $A_1[Name/X]$
-             $\vdots$                $\vdots$             $\vdots$            $\vdots$
-      $Destr_m$ : $(x_{1_m}:B_{1_m},\dots,x_{n_m}: B_{n_m})$ -> Name $\sigma_{m_1}\dots \sigma_{m_n}$ -> $A_i[Name/X]$
-   | name $x_1 \dots x_n$ = expr
-  \end{lstlisting}
+#+TITLE: Masterarbeit
+* Abstract Syntax
+** Statements
+   \begin{lstlisting}
+   statement =
+     data Name<$C_1,\dots,C_n$> : $(x_1 : B_1,\dots,x_n : B_n)$ -> Set where
+       $Constr_1$ : $(x_{1_1}:B_{1_1},\dots,x_{n_1}: B_{n_1})$ -> $A_1[Name/X]$ -> Name $\sigma_{1_1}\dots \sigma_{1_n}$
+              $\vdots$                $\vdots$             $\vdots$            $\vdots$
+       $Constr_m$ : $(x_{1_m}:B_{1_m},\dots,x_{n_m}: B_{n_m})$ -> $A_i[Name/X]$ -> Name $\sigma_{m_1}\dots \sigma_{m_n}$
+    | codata Name<$C_1,\dots,C_n$>: $(x_1 : B_1,\dots,x_n : B_n)$ -> Set where
+       $Destr_1$ : $(x_{1_1}:B_{i_1},\dots,x_{n_1}: B_{n_1})$ -> Name $\sigma_{1_1}\dots \sigma_{1_n}$ -> $A_1[Name/X]$
+              $\vdots$                $\vdots$             $\vdots$            $\vdots$
+       $Destr_m$ : $(x_{1_m}:B_{1_m},\dots,x_{n_m}: B_{n_m})$ -> Name $\sigma_{m_1}\dots \sigma_{m_n}$ -> $A_i[Name/X]$
+    | name<C_1,\dots,C_n> $x_1:A_1 \dots x_n:A_n$ = expr
+   \end{lstlisting}
 
-  "/Name/" , "$Constr_1\dots Contr_m$" and "$Destr_1\dots Destr_m$" are arbitrary distinct names
+   "/Name/" , "$Constr_1\dots Contr_m$" and "$Destr_1\dots Destr_m$" are arbitrary distinct names
 
-  The statements correspond to $\rho(X:\Gamma\rightarrow*;\vec\sigma;\vec{A}):\Gamma\rightarrow*$ as follows.
-  + $x_1: B_1,\dots,x_n: B_n$ is $\Gamma$
-  + /Name/ is X
-  + $Constr_1,\dots, Contr_m$ stands for $\alpha_1^{\mu(X:\Gamma\rightarrow *;\vec\sigma;\vec A)},\dots,\alpha_m^{\mu(X:\Gamma\rightarrow *;\vec\sigma;\vecA)}$
-  + $Destr_1,\dots, Destr_m$ stands for $\xi_1^{\mu(X:\Gamma\rightarrow *;\vec\sigma;\vec A)},\dots,\xi_m^{\mu(X:\Gamma\rightarrow *;\vec\sigma;\vec A)}$
-  + $Name_i$ is $A_i[\Gamma/X]$
-  + $(x_{1_1}:B_{1_1},\dots,x_{n_1}: B_{n_1}),\dots,(x_{1_m}:B_{1_m},\dots,x_{n_m}:B_{n_m})$ stands for $\Gamma_1,\dots,\Gamma_m$
-  + $C_1\dots C_n$ have to be of *, they are for polymorphism.  If we call a constructor we have to give this types,
-    to relate the right type to it.
+   The statements correspond to $\rho(X:\Gamma\rightarrow*;\vec\sigma;\vec{A}):\Gamma\rightarrow*$ as follows.
+   + $x_1: B_1,\dots,x_n: B_n$ is $\Gamma$
+   + /Name/ is X
+   + $Constr_1,\dots, Contr_m$ stands for $\alpha_1^{\mu(X:\Gamma\rightarrow *;\vec\sigma;\vec A)},\dots,\alpha_m^{\mu(X:\Gamma\rightarrow *;\vec\sigma;\vecA)}$
+   + $Destr_1,\dots, Destr_m$ stands for $\xi_1^{\mu(X:\Gamma\rightarrow *;\vec\sigma;\vec A)},\dots,\xi_m^{\mu(X:\Gamma\rightarrow *;\vec\sigma;\vec A)}$
+   + $Name_i$ is $A_i[\Gamma/X]$
+   + $(x_{1_1}:B_{1_1},\dots,x_{n_1}: B_{n_1}),\dots,(x_{1_m}:B_{1_m},\dots,x_{n_m}:B_{n_m})$ stands for $\Gamma_1,\dots,\Gamma_m$
+   + $C_1\dots C_n$ have to be of *, they are for polymorphism.  If we call a constructor we have to give this types,
+     to relate the right type to it.
 
-  We take $B_1\rightarrow\dots\rightarrow B_n$ as syntactic sugar for $(\_:B_1,\dots,\_:B_n)$ where _ stands for a unused termvariable
+   We take $B_1\rightarrow\dots\rightarrow B_n$ as syntactic sugar for $(\_:B_1,\dots,\_:B_n)$ where _ stands for a unused termvariable
 
-  We will also need a extra context which relates constructors to their types
-* Expressions
-  \begin{lstlisting}
-  expr =
-    rec C where
-      $Constr_1$<$h_1,\dots,h_n$> $x_{1_1}$ $\dots$ $x_{n_1}$ $y_1$    = $g_1$
-              $\vdots$          $\vdots$      $\vdots$        $\vdots$
-      $Constr_m$<$h_1,\dots,h_n$> $x_{1_m}$ $\dots$ $x_{n_m}$ $y_m$ = $g_m$
-  | corec C where
-      $Destr_1$<$h_1,\dots,h_n$> $x_{1_1}$ $\dots$ $x_{n_1}$ $y_1$   = $g_1$
-              $\vdots$         $\vdots$      $\vdots$        $\vdots$
-      $Destr_m$<$h_1,\dots,h_n$>  $x_{1_m}$ $\dots$ $x_{n_m}$ $y_m$ = $g_m$
-  | expr @ expr | () | Unit
-  | Constr<$h_1,\dots,h_n$> expr* | Destr<$h_1,\dots,h_n$> expr*
-  \end{lstlisting}
-  $g_1,\dots,g_k$ are /expr/
+   <$C_1,\dots,C_n$> of definition can only be used as parameters in constructors, destructors, inductive types
+   or coinductive types.  They always are of type $*$.  We type check definition
+   in *Ctx* $(x_1:A_1,\dots,x_n:A_n)$ with $C_1:*,\dots,C_n:*$ as Axioms
 
-  $x_{1_1},\dots, x_{n_m}$ are termvariables
+**** TODO How can we refer to parameters from the ctx
 
-  $h_1,\dots,h_m$ ares expressions of type *
+   We will also need a extra context which relates constructors to their types
+** Expressions
+   \begin{lstlisting}
+   expr =
+     rec C where
+       $Constr_1$<$h_1,\dots,h_n$> $x_{1_1}$ $\dots$ $x_{n_1}$ $y_1$    = $g_1$
+               $\vdots$          $\vdots$      $\vdots$        $\vdots$
+       $Constr_m$<$h_1,\dots,h_n$> $x_{1_m}$ $\dots$ $x_{n_m}$ $y_m$ = $g_m$
+   | corec C where
+       $Destr_1$<$h_1,\dots,h_n$> $x_{1_1}$ $\dots$ $x_{n_1}$ $y_1$   = $g_1$
+               $\vdots$         $\vdots$      $\vdots$        $\vdots$
+       $Destr_m$<$h_1,\dots,h_n$>  $x_{1_m}$ $\dots$ $x_{n_m}$ $y_m$ = $g_m$
+   | expr @ expr | () | Unit
+   | Constr<$h_1,\dots,h_n$> expr* | Destr<$h_1,\dots,h_n$> expr*
+   \end{lstlisting}
+   $g_1,\dots,g_k$ are /expr/
 
-* Terminal Object
-  #+begin_example
-  codata Terminal : Set where
-     Terminal : Terminal -> Terminal
-  terminal' = (corec Unit where
-                 Terminal x = x) @ ()
+   $x_{1_1},\dots, x_{n_m}$ are termvariables
 
-  #+end_example
-* Intial Object
-  #+begin_example
-  data Initial : Set where
-     Initial : Intial -> Intial
-  edfalsum = rec Initial where
-               Initial x = x
-  #+end_example
+   $h_1,\dots,h_m$ ares expressions of type *
 
-* Natural Numbers
-  #+begin_example
-  data Nat : Set where
-     Zero' : Terminal -> Nat
-     Succ : Nat -> Nat
-  zero = Zero' @ ()
-  #+end_example
-* Binary Product
-  #+begin_example
-  codata Product A B : Set where
-     Fst : Product -> A
-     Snd : Product -> B
-  pair x y = (corec Unit where
-                Fst _ -> x
-                Snd _ -> y) @ ()
-  #+end_example
-* Binary Coproduct
-  #+begin_example
-  data Coproduct<A,B> : Set where
-     Left : A -> Coproduct
-     Right : B -> Coproduct
-  #+end_example
-* Pi Type
-  #+begin_example
-  codata Pi<A,B>: Set where
-     Apply' : (x: A) -> Pi -> B
-  lambda A B x g = (corec Unit where
-                      Apply'<A,B> x _ = g) @ ()
-  apply t x = Apply' x t
-  #+end_example
-* Sigma Type
-  #+begin_example
-  data Sigma A B : Set where
-     Exists : (x:A) -> B -> Sigma
-  #+end_example
-* Vectors
-  #+begin_example
-  data Vector A : (n:Nat) -> Set where
-    Nil' : Unit -> Vector 0
-    Cons : (k:Nat) -> Product A (Vector k) -> Vector (Succ k)
-  nil A = Nil'<A> @ ()
-  #+end_example
-* Extended Naturals
-  #+begin_example
-  codata ExNat : Set where
-     Prec : ExNat -> Coproduct<Unit,ExNat>
-  succE = corec ExNat where
-            Prec x -> Right x
-  #+end_example
-* Streams
-  #+begin_example
-  codata PStr<A>: (n: ExNat) -> Set where
-     hd : (k : ExNat) -> PStr A (succE k) -> A
-     tl : (k : ExNat) -> PStr A (succE k) -> PStr A k
-  #+end_example
-* List
-  List A =  $\nu(X:*;\epsilon_2;(\textbf{1},X))$
-  + $\Gamma_1=\emptyset$
-  + $\Gamma_2=A$
+** Terminal Object
+   #+begin_example
+   codata Terminal : Set where
+      Terminal : Terminal -> Terminal
+   terminal' = (corec Unit where
+                  Terminal x = x) @ ()
 
-  #+begin_example
-  data List<A> : Set where
-     Nil : Terminal -> List
-     Cons : A -> List -> List
-  nil A = Nil<A> @ ()
-  #+end_example
+   #+end_example
+** Intial Object
+   #+begin_example
+   data Initial : Set where
+      Initial : Intial -> Intial
+   edfalsum = rec Initial where
+                Initial x = x
+   #+end_example
 
-* Rose Tree
-  Rose Tree A = $\nu(X:*;\epsilon_2;(\textbf{1},List X)$
+** Natural Numbers
+   #+begin_example
+   data Nat : Set where
+      Zero' : Terminal -> Nat
+      Succ : Nat -> Nat
+   zero = Zero' @ ()
+   #+end_example
+** Binary Product
+   #+begin_example
+   codata Product A B : Set where
+      Fst : Product -> A
+      Snd : Product -> B
+   pair x y = (corec Unit where
+                 Fst _ -> x
+                 Snd _ -> y) @ ()
+   #+end_example
+** Binary Coproduct
+   #+begin_example
+   data Coproduct<A,B> : Set where
+      Left : A -> Coproduct
+      Right : B -> Coproduct
+   #+end_example
+** Pi Type
+   #+begin_example
+   codata Pi<A,B>: Set where
+      Apply' : (x: A) -> Pi -> B
+   lambda<A,B> (x:A, g:B) = (corec Unit where
+                              Apply'<A,B> x _ = g) @ ()
+   apply<A,B> (t:A, x:B) = Apply' x t
+   #+end_example
+** Sigma Type
+   #+begin_example
+   data Sigma A B : Set where
+      Exists : (x:A) -> B -> Sigma
+   #+end_example
+** Vectors
+   #+begin_example
+   data Vector A : (n:Nat) -> Set where
+     Nil' : Unit -> Vector 0
+     Cons : (k:Nat) -> Product A (Vector k) -> Vector (Succ k)
+   nil A = Nil'<A> @ ()
+   #+end_example
+** Extended Naturals
+   #+begin_example
+   codata ExNat : Set where
+      Prec : ExNat -> Coproduct<Unit,ExNat>
+   succE = corec ExNat where
+             Prec x -> Right x
+   #+end_example
+** Streams
+   #+begin_example
+   codata PStr<A>: (n: ExNat) -> Set where
+      hd : (k : ExNat) -> PStr A (succE k) -> A
+      tl : (k : ExNat) -> PStr A (succE k) -> PStr A k
+   #+end_example
+** List
+   List A =  $\nu(X:*;\epsilon_2;(\textbf{1},X))$
+   + $\Gamma_1=\emptyset$
+   + $\Gamma_2=A$
 
-  #+begin_example
-  data RoseTree<A> : Set where
-     Leaf : Terminal -> RoseTree
-     Branch : List<RoseTree> -> RoseTree
-  leaf A = Leaf<A> @ ()
-  #+end_example
+   #+begin_example
+   data List<A> : Set where
+      Nil : Terminal -> List
+      Cons : A -> List -> List
+   nil A = Nil<A> @ ()
+   #+end_example
+
+** Rose Tree
+   Rose Tree A = $\nu(X:*;\epsilon_2;(\textbf{1},List X)$
+
+   #+begin_example
+   data RoseTree<A> : Set where
+      Leaf : Terminal -> RoseTree
+      Branch : List<RoseTree> -> RoseTree
+   leaf A = Leaf<A> @ ()
+   #+end_example
+
+* Typing rules
+  We have to rewrite the typing rules of the paper, to get rules which are
+  syntax directed. Here are the rules which have to be rewritten.
+  + *(Ty-Inst)*
+  + *(Param-Abstr)*
+  This rules contain variables in the premises where their type isn't in the
+  conclusion. So if we want to type-check something which is the conclusion of
+  such a rule we have no way of knowing what this variables are.
+
+  We don't need the weaking rules because we can lookup a variable in a context.
+  So the following rules get removed.
+  + *(TyVar-Weak)*
+  + *(Ty-Weak)*
+  The order in *TyCtx* isn't relevant so we use a Map for it.  The order of *Ctx*
+  is relevant because types of later variables can refer to former variables and application
+  instantiate the first varibale in *Ctx*
+
+  We also rewrite the rules which are already syntax-directed to rules which work on our syntax
+
+  We add a new Ctx for data types
+
+** Context rules
+   \begin{prooftree}
+   \AxiomC{\Delta|X_1:*,\dots,X_n:*|\Gamma\vdash A:*
+   \UnaryInfC{\vdash\Gamma,x<X_1,\dots,X_n)
+   \end{prooftree}
+
+** Initial Object introduction
+   The rule
+   \begin{prooftree}
+     \AxiomC{}
+     \RightLabel{\textbf{($\top$-I)}}
+     \UnaryInfC{$\vdash\top:*$}
+   \end{prooftree}
+   gets rewritten to
+    \begin{prooftree}
+     \AxiomC{}
+     \RightLabel{\textbf{(Unit-I)}}
+     \UnaryInfC{$\Theta|\Gamma\vdash$Unit:$*$}
+   \end{prooftree}
+
+** Type Variable introduction
+    \begin{prooftree}
+     \AxiomC{$X:\Gamma\rightarrow*\in\Theta$}
+     \AxiomC{}
+     \RightLabel{\textbf{(TyVar-I)}}
+     \BinaryInfC{$\Theta|\Gamma_1\vdash X : \Gamma \rightarrow *$}
+   \end{prooftree}
+
+** data definition
+   \begin{prooftree}
+   \AxiomC{$\sigma_k:\Gamma_k\triangleright\Gamma$}
+   \AxiomC{$\Theta\cup\overrightarrow{B:*}\cup\{X:\Gamma\rightarrow*\}|\Gamma_1\cup\Gamma_k\vdash A_k:*$}
+   \RightLabel{(\textbf{FP-Ty})}
+   \BinaryInfC{$\Theta | \Gamma_1 \vdash$ data X<$\vec{B}$> $\Gamma$ -> Set where; $\overrightarrow{Constr : \Gamma_k -> A_k -> X \sigma_k}$}
+   \end{prooftree}
+
+** codata definition
+   \begin{prooftree}
+   \AxiomC{$\sigma_k:\Gamma_k\triangleright\Gamma$}
+   \AxiomC{$\Theta\cup\overrightarrow{B:*}\cup\{X:\Gamma\rightarrow*\}|\Gamma_1\cup\Gamma_k\vdash A_k:*$}
+   \RightLabel{(\textbf{FP-Ty})}
+   \BinaryInfC{$\Theta | \Gamma_1 \vdash$ codata X<$\vec{B}$> $\Gamma$ -> Set where; $\overrightarrow{Destr_k : \Gamma_k -> X \sigma_k -> A_k}$}
+   \end{prooftree}
