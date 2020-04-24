@@ -5,40 +5,49 @@ module AbstractSyntaxTree where
 import Data.Text (Text)
 import Data.Map (Map)
 
+data Statement = ExprDef { name :: Text
+                         , expr :: Expr
+                         }
+               | InductiveDef { name :: Text
+                              , gamma :: Ctx
+                              , sigmas :: [[Expr]]
+                              , as :: [Expr]
+                              , constructors :: [Text]
+                              , gamma1s :: [Ctx]
+                              }
+               | CoinductiveDef { name :: Text
+                                , gamma :: Ctx
+                                , sigmas :: [[Expr]]
+                                , as :: [Expr]
+                                , destructors :: [Text]
+                                , gamma1s :: [Ctx]
+                                }
+               | Expression Expr
+  deriving (Eq, Show)
+
 data Expr = UnitType -- verum value
           | UnitExpr -- verum type
-          | ExprVar Text -- Ctx-- term variables
+          | LocalExprVar Text -- Ctx-- term variables
+          | GlobalExprVar Text
           | Expr :@: Expr
           | Abstr Text Expr Expr
-          | TypeVar Text [Expr]
-          | Constructor Text [Expr] Text
-          | Destructor Text [Expr] Text
-          | Inductive { gamma :: Ctx
-                      , sigmas :: [[Expr]]
-                      , as :: [Expr]
-                      , gamma1s :: [Ctx]
-                      }
-          | Coinductive { gamma :: Ctx
-                        , sigmas :: [[Expr]]
-                        , as :: [Expr]
-                        , gamma1s :: [Ctx]
-                        }
+          | TypeVar Text
+          | Constructor Text
+          | Destructor Text
+          | Inductive Text
+          | Coinductive Text
           | Rec Expr [Match]
           | Corec Expr [Match]
   deriving (Eq, Show)
 
 data Match = Match {
     structorName  :: Text
-  , typeArguments :: [Expr]
   , exprVars      :: [Text]
-  , expr          :: Expr
+  , matchExpr     :: Expr
   }
   deriving (Eq, Show)
 
-type Ctx = Map Text Expr
+type Ctx = [(Text, Expr)]
 
 -- | TyCtx contains only inductive coninductive types for now
-type TyCtx = Map Text Expr
-
-data Judgment = Judgment Ctx TyCtx Expr
-  deriving (Eq, Show)
+type TyCtx = [(Text, Ctx)]
