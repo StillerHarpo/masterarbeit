@@ -214,10 +214,41 @@
   We add a new Ctx for data types
 
 ** Context rules
-   \begin{prooftree}
-   \AxiomC{\Delta|X_1:*,\dots,X_n:*|\Gamma\vdash A:*
-   \UnaryInfC{\vdash\Gamma,x<X_1,\dots,X_n)
-   \end{prooftree}
+   The rules for valid contexts are already syntax directed so we take
+   just them
+   \begin{center}
+   \AxiomC{}
+   \UnaryInfC{$\vdash\emptyset$ \textbf{TyCtx}}
+   \DisplayProof
+   \hskip 1.5em
+   \AxiomC{$\vdash\Theta$ \textbf{TyCtx}}
+   \AxiomC{$\vdash\Gamma$ \textbf{Ctx}}
+   \BinaryInfC{$\vdash\Theta,X:\Gamma\rightarrow*$ \textbf{TyCtx}}
+   \DisplayProof
+   \vskip 0.5em
+   \AxiomC{}
+   \UnaryInfC{$\vdash\emptyset$ \textbf{Ctx}}
+   \DisplayProof
+   \hskip 1.5em
+   \AxiomC{$\emptyset|\Gamma\vdash A:*$}
+   \UnaryInfC{$\vdash\Gamma,x:A$ \textbf{Ctx}}
+   \DisplayProof
+   \end{center}
+
+   We add 2 rules for looking up something in a context
+   \begin{center}
+     \AxiomC{$\vdash \Theta$ \textbf{TyCtx}}
+     \AxiomC{$\vdash \Gamma$ \textbf{Ctx}}
+     \BinaryInfC{$\Theta,X:\Gamma\rightarrow*(X)\rightsquigarrow\Gamma\rightarrow*$}
+     \DisplayProof
+     \hskip 1.5em
+     \AxiomC{$\vdash \Gamma_1$ \textbf{Ctx}}
+     \AxiomC{$\Theta(X) \rightsquigarrow\Gamma_2\rightarrow*$}
+     \BinaryInfC{$\Theta,Y:\Gamma_1\rightarrow*(X)\rightsquigarrow\Gamma_2\rightarrow*$}
+     \DisplayProof
+   \end{center}
+
+   Here "Y" and "X" are different variables
 
 ** Initial Object introduction
    The rule
