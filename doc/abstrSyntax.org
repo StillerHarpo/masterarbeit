@@ -197,15 +197,19 @@
   conclusion. So if we want to type-check something which is the conclusion of
   such a rule we have no way of knowing what this variables are.
 
-  We don't need the weaking rules because we can lookup a variable in a context.
+  We don't need the weaking rules because we can lookup a variable in a
+  context.
+
   So the following rules get removed.
   + *(TyVar-Weak)*
   + *(Ty-Weak)*
-  The order in *TyCtx* isn't relevant so we use a Map for it.  The order of *Ctx*
-  is relevant because types of later variables can refer to former variables and application
-  instantiate the first varibale in *Ctx*
+  The order in *TyCtx* isn't relevant so we use a Map for it.  The order
+  of *Ctx* is relevant because types of later variables can refer to
+  former variables and application instantiate the first varibale in
+  *Ctx*
 
-  We also rewrite the rules which are already syntax-directed to rules which work on our syntax
+  We also rewrite the rules which are already syntax-directed to rules
+  which work on our syntax
 
   We add a new Ctx for data types
 
