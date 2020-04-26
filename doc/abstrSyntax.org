@@ -235,7 +235,10 @@
    \DisplayProof
    \end{center}
 
-   We add 2 rules for looking up something in a context
+   We use the notation $\Theta(X)\rightsquigarrow\Gamma\rigthtarrow*$ for
+   looking up the type-variable $X$ in type-context $\Theta$ yields type
+   $\Gamma\rightarrow*$. We add 2 rules for looking up something in a
+   type-context.  They are:
    \begin{center}
      \AxiomC{$\vdash \Theta$ \textbf{TyCtx}}
      \AxiomC{$\vdash \Gamma$ \textbf{Ctx}}
@@ -247,8 +250,22 @@
      \BinaryInfC{$\Theta,Y:\Gamma_1\rightarrow*(X)\rightsquigarrow\Gamma_2\rightarrow*$}
      \DisplayProof
    \end{center}
+   Here $Y$ and $X$ are different variables
 
-   Here "Y" and "X" are different variables
+   Respectively the notation $\Gamma(x)\rightsquigarrow A$ means looking
+   up the termvariable $x$ in term-context $\Gamma$ yields type $A$. The
+   rules for term-contexts are:
+   \begin{center}
+     \AxiomC{$\vdash \Gamma$ \textbf{Ctx}}
+     \AxiomC{$\Gamma\vdash A:*$}
+     \BinaryInfC{$\Gamma,x:A(x)\rightsquigarrow A$}
+     \DisplayProof
+     \hskip 1.5em
+     \AxiomC{$\Gamma(x) \rightsquigarrow A$}
+     \AxiomC{$\Gamma\vdash B:*$}
+     \BinaryInfC{$\Gamma,y:B(x)\rightsquigarrow A$}
+     \DisplayProof
+   \end{center}
 
 ** Initial Object introduction
    The rule
