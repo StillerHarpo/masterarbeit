@@ -346,10 +346,18 @@
 
 
 ** Parameter abstraction
+   The rule
    \begin{center}
      \AxiomC{$\Theta|\Gamma_1,x:A\vdash B:\Gamma_2\rightarrow*$}
      \RightLabel{\textbf{(Param-Abstr)}}
      \UnaryInfC{$\Theta|\Gamma_1\vdash(x).B:(x:A,\Gamma_2)\rightarrow*$}
+     \DisplayProof
+   \end{center}
+   gets rewritten to
+   \begin{center}
+     \AxiomC{$\Theta|\Gamma_1,x:A\vdash B:\Gamma_2\rightarrow*$}
+     \RightLabel{\textbf{(Param-Abstr)}}
+     \UnaryInfC{$\Theta|\Gamma_1\vdash(x$\colorbox{gray}{$:A$}$).B:(x:A,\Gamma_2)\rightarrow*$}
      \DisplayProof
    \end{center}
 
