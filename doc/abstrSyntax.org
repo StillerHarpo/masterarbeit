@@ -362,19 +362,19 @@
    \end{center}
 
 ** Unit expression introduction
-\begin{center}
-  \AxiomC{}
-  \RightLabel{\textbf{(}$\top$\textbf{-I)}}
-  \UnaryInfC{$\lozenge:\top$}
-  \DisplayProof
-\end{center}
+   \begin{center}
+     \AxiomC{}
+     \RightLabel{\textbf{(}$\top$\textbf{-I)}}
+     \UnaryInfC{$\lozenge:\top$}
+     \DisplayProof
+   \end{center}
 
-\begin{center}
-  \AxiomC{}
-  \RightLabel{\textbf{(}$\top$\textbf{-I)}}
-  \UnaryInfC{():Unit}
-  \DisplayProof
-\end{center}
+   \begin{center}
+     \AxiomC{}
+     \RightLabel{\textbf{(}$\top$\textbf{-I)}}
+     \UnaryInfC{():Unit}
+     \DisplayProof
+   \end{center}
 
 ** Expression Instantiation
 \begin{center}
