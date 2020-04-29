@@ -396,12 +396,21 @@
    \end{center}
 
 ** Expression variable introduction
-\begin{center}
-  \AxiomC{$\Gamma\vdash A:*$}
-  \RightLabel{\textbf{(Proj)}}
-  \UnaryInfC{$\Gamma,x:A\vdash x:A$}
-  \DisplayProof
-\end{center}
+   The rule
+   \begin{center}
+     \AxiomC{$\Gamma\vdash A:*$}
+     \RightLabel{\textbf{(Proj)}}
+     \UnaryInfC{$\Gamma,x:A\vdash x:A$}
+     \DisplayProof
+   \end{center}
+   gets rewritten to
+   \begin{center}
+     \AxiomC{\colorbox{gray}{$\Gamma(x)\rightsquigarrow A$}}
+     \RightLabel{\textbf{(Proj)}}
+     \UnaryInfC{$\Gamma\vdash x:A$}
+     \DisplayProof
+   \end{center}
+
 
 ** Constructor
 \begin{center}
