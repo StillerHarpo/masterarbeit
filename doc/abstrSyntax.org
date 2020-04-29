@@ -1,5 +1,6 @@
 #+LATEX_HEADER: \usepackage{listings}
 #+LATEX_HEADER: \usepackage{bussproofs}
+#+LATEX_HEADER: \usepackage{xcolor}
 #+LATEX_HEADER: \lstset{
 #+LATEX_HEADER:  basicstyle=\ttfamily,
 #+LATEX_HEADER:   mathescape
@@ -267,7 +268,7 @@
      \DisplayProof
    \end{center}
 
-** Initial Object introduction
+** Unit type introduction
    The rule
    \begin{prooftree}
      \AxiomC{}
@@ -278,29 +279,133 @@
     \begin{prooftree}
      \AxiomC{}
      \RightLabel{\textbf{(Unit-I)}}
-     \UnaryInfC{$\Theta|\Gamma\vdash$Unit:$*$}
+     \UnaryInfC{\colorbox{gray}{$\Theta|\Gamma$}$\vdash$Unit:$*$}
    \end{prooftree}
+   We change the syntax "$\top$" to "Unit" and add *Ctx* and *TyCtx*.
+   We will do this for every rule which has empty contexts to subsume
+   the rules with *TyVar-Weak*, *Ty-Weak* and *Term-Weak*.
 
 ** Type Variable introduction
+
+    The rule
     \begin{prooftree}
-     \AxiomC{$X:\Gamma\rightarrow*\in\Theta$}
-     \AxiomC{}
+     \AxiomC{$\vdash \Theta$ \textbf{TyCtx}}
+     \AxiomC{$\vdash \Gamma$ \textbf{Ctx}}
      \RightLabel{\textbf{(TyVar-I)}}
-     \BinaryInfC{$\Theta|\Gamma_1\vdash X : \Gamma \rightarrow *$}
+     \BinaryInfC{$\Theta,X:\Gamma\rightarrow*|\emptyset\vdash X : \Gamma \rightarrow *$}
    \end{prooftree}
+   gets rewritten to
+
+    \begin{prooftree}
+     \AxiomC{\colorbox{gray}{$\Theta(X)\rightsquigarrow\Gamma'\rightarrow*$}}
+     \AxiomC{\colorbox{gray}{$\vdash \Gamma_1$ \textbf{Ctx}}}
+     \AxiomC{\colorbox{gray}{$\Gamma'\equiv_\beta\Gamma$}}
+     \RightLabel{\textbf{(TyVar-I)}}
+     \TrinaryInfC{$\Theta|$\colorbox{gray}{$\Gamma_1$}$\vdash X : \Gamma \rightarrow *$}
+   \end{prooftree}
+
+** Type instantiation
+   The rule
+   \begin{prooftree}
+     \AxiomC{$\Theta|\Gamma_1\vdash A:(x:B,\Gamma_2)\rightarrow*$}
+     \AxiomC{$\Gamma_1\vdash t:B$}
+     \BinaryInfC{$\Theta|\Gamma_1\vdash A@t:\Gamma_2[t/x]\rightarrow*$}
+   \end{prooftree}
+   gets rewritten to
+
+** Parameter abstraction
+   \begin{center}
+     \AxiomC{$\Theta|\Gamma_1,x:A\vdash B:\Gamma_2\rightarrow*$}
+     \RightLabel{\textbf{(Param-Abstr)}}
+     \UnaryInfC{$\Theta|\Gamma_1\vdash(x).B:(x:A,\Gamma_2)\rightarrow*$}
+     \DisplayProof
+   \end{center}
+
+** Unit expression introduction
+\begin{center}
+  \AxiomC{}
+  \RightLabel{\textbf{(}$\top$\textbf{-I)}}
+  \UnaryInfC{$\lozenge:\top$}
+  \DisplayProof
+\end{center}
+
+\begin{center}
+  \AxiomC{}
+  \RightLabel{\textbf{(}$\top$\textbf{-I)}}
+  \UnaryInfC{():Unit}
+  \DisplayProof
+\end{center}
+
+** Expression Instantiation
+\begin{center}
+  \AxiomC{$\Gamma_1\vdash t:(x:A,\Gamma_2)\rightarrow B$}
+  \AxiomC{$\Gamma_1\vdash s:A$}
+  \RightLabel{\textbf{(Inst)}}
+  \BinaryInfC{$\Gamma_1\vdash t@s:\Gamma_2[s/x]\rightarrow B[s/x]$}
+  \DisplayProof
+\end{center}
+
+** Expression variable introduction
+\begin{center}
+  \AxiomC{$\Gamma\vdash A:*$}
+  \RightLabel{\textbf{(Proj)}}
+  \UnaryInfC{$\Gamma,x:A\vdash x:A$}
+  \DisplayProof
+\end{center}
+
+** Constructor
+\begin{center}
+  \AxiomC{$\mu(X:\Gamma\rightarrow*;\vec{\sigma};\vec{A}):\Gamma\rightarrow*$}
+  \AxiomC{$1\leq k\leq|\vec{A}|$}
+  \RightLabel{\textbf{(Ind-I)}}
+  \BinaryInfC{$\alpha_k^{\mu(X:\Gamma\rightarrow*;\vec{\sigma};\vec{A})}:(\Gamma_k,y:A_k[\mu/X])\rightarrow\mu@\sigma_k$}
+  \DisplayProof
+\end{center}
+
+** Destructor
+\begin{center}
+  \AxiomC{$\nu(X:\Gamma\rightarrow*;\vec{\sigma};\vec{A}):\Gamma\rightarrow*$}
+  \AxiomC{$1\leq k\leq|\vec{A}|$}
+  \RightLabel{\textbf{(Coind-E)}}
+  \BinaryInfC{$\xi_k^{\nu(X:\Gamma\rightarrow*;\vec{\sigma};\vec{A})}:(\Gamma_k,y:\nu@\sigma_k)\rightarrow
+    A_k[\nu/X]$}
+  \DisplayProof
+\end{center}
+
+** Recursion
+\begin{center}
+  \AxiomC{$\vdash C:\Gamma\rightarrow*$}
+  \AxiomC{$\Delta,\Gamma_k,y_k:A_k[C/X]\vdash g_k:(C@\sigma_k)$}
+  \AxiomC{$\forall k=1,\dots,n$}
+  \RightLabel{\textbf{(Ind-E)}}
+  \TrinaryInfC{$\Delta\vdash$ rec
+    $\overrightarrow{(\Gamma_k,y_k).g_k}:(\Gamma,y:\mu@id_\Gamma)\rightarrow C@id_\Gamma$}
+  \DisplayProof
+\end{center}
+
+** Corecursion
+\begin{center}
+  \AxiomC{$\vdash C:\Gamma\rightarrow*$}
+  \AxiomC{$\Delta,\Gamma_k,y_k:(C@\sigma_k)\vdash g_k:A_k[C/X]$}
+  \AxiomC{$\forall k=1,\dots,n$}
+  \RightLabel{\textbf{(Coind-I)}}
+  \TrinaryInfC{$\Delta\vdash$ corec
+    $\overrightarrow{(\Gamma_k,y_k).g_k}:(\Gamma,y:C@id_\Gamma)\rightarrow \nu@id_\Gamma$}
+  \DisplayProof
+\end{center}
 
 ** data definition
    \begin{prooftree}
    \AxiomC{$\sigma_k:\Gamma_k\triangleright\Gamma$}
-   \AxiomC{$\Theta\cup\overrightarrow{B:*}\cup\{X:\Gamma\rightarrow*\}|\Gamma_1\cup\Gamma_k\vdash A_k:*$}
+   \AxiomC{$\Theta,X:\Gamma\rightarrow*|\Gamma_1,\Gamma_k\vdash A_k:*$}
    \RightLabel{(\textbf{FP-Ty})}
-   \BinaryInfC{$\Theta | \Gamma_1 \vdash$ data X<$\vec{B}$> $\Gamma$ -> Set where; $\overrightarrow{Constr : \Gamma_k -> A_k -> X \sigma_k}$}
+   \BinaryInfC{$\Theta | \Gamma_1 \vdash$ data X $\Gamma$ -> Set where; $\overrightarrow{Constr : \Gamma_k -> A_k -> X \sigma_k}$}
    \end{prooftree}
 
 ** codata definition
    \begin{prooftree}
    \AxiomC{$\sigma_k:\Gamma_k\triangleright\Gamma$}
-   \AxiomC{$\Theta\cup\overrightarrow{B:*}\cup\{X:\Gamma\rightarrow*\}|\Gamma_1\cup\Gamma_k\vdash A_k:*$}
+   \AxiomC{$\Theta,X:\Gamma\rightarrow*|\Gamma_1,\Gamma_k\vdash A_k:*$}
    \RightLabel{(\textbf{FP-Ty})}
-   \BinaryInfC{$\Theta | \Gamma_1 \vdash$ codata X<$\vec{B}$> $\Gamma$ -> Set where; $\overrightarrow{Destr_k : \Gamma_k -> X \sigma_k -> A_k}$}
+   \BinaryInfC{$\Theta | \Gamma_1 \vdash$ codata X $\Gamma$ -> Set where; $\overrightarrow{Destr_k : \Gamma_k -> X \sigma_k -> A_k}$}
    \end{prooftree}
