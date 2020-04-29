@@ -377,13 +377,23 @@
    \end{center}
 
 ** Expression Instantiation
-\begin{center}
-  \AxiomC{$\Gamma_1\vdash t:(x:A,\Gamma_2)\rightarrow B$}
-  \AxiomC{$\Gamma_1\vdash s:A$}
-  \RightLabel{\textbf{(Inst)}}
-  \BinaryInfC{$\Gamma_1\vdash t@s:\Gamma_2[s/x]\rightarrow B[s/x]$}
-  \DisplayProof
-\end{center}
+   The rule
+   \begin{center}
+     \AxiomC{$\Gamma_1\vdash t:(x:A,\Gamma_2)\rightarrow B$}
+     \AxiomC{$\Gamma_1\vdash s:A$}
+     \RightLabel{\textbf{(Inst)}}
+     \BinaryInfC{$\Gamma_1\vdash t@s:\Gamma_2[s/x]\rightarrow B[s/x]$}
+     \DisplayProof
+   \end{center}
+   gets rewritten to
+   \begin{center}
+     \AxiomC{$\Gamma_1\vdash t:(x:A,\Gamma_2)\rightarrow B$}
+     \AxiomC{$\Gamma_1\vdash s:$\colorbox{gray}{$A'$}}
+     \AxiomC{\colorbox{gray}{$A\equiv_\beta A'$}}
+     \RightLabel{\textbf{(Inst)}}
+     \TrinaryInfC{$\Gamma_1\vdash t@s:\Gamma_2[s/x]\rightarrow B[s/x]$}
+     \DisplayProof
+   \end{center}
 
 ** Expression variable introduction
 \begin{center}
