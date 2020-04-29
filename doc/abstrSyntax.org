@@ -337,6 +337,13 @@
      \BinaryInfC{$\Theta|\Gamma_1\vdash A@t:\Gamma_2[t/x]\rightarrow*$}
    \end{prooftree}
    gets rewritten to
+    \begin{prooftree}
+     \AxiomC{$\Theta|\Gamma_1\vdash A:(x:B,\Gamma_2)\rightarrow*$}
+     \AxiomC{$\Gamma_1\vdash t:$\colorbox{gray}{$B'$}}
+     \AxiomC{\colorbox{gray}{$B\equiv_\beta B'$}}
+     \TrinaryInfC{$\Theta|\Gamma_1\vdash A@t:\Gamma_2[t/x]\rightarrow*$}
+   \end{prooftree}
+
 
 ** Parameter abstraction
    \begin{center}
