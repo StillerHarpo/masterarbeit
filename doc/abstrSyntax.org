@@ -413,23 +413,43 @@
 
 
 ** Constructor
-\begin{center}
-  \AxiomC{$\mu(X:\Gamma\rightarrow*;\vec{\sigma};\vec{A}):\Gamma\rightarrow*$}
-  \AxiomC{$1\leq k\leq|\vec{A}|$}
-  \RightLabel{\textbf{(Ind-I)}}
-  \BinaryInfC{$\alpha_k^{\mu(X:\Gamma\rightarrow*;\vec{\sigma};\vec{A})}:(\Gamma_k,y:A_k[\mu/X])\rightarrow\mu@\sigma_k$}
-  \DisplayProof
-\end{center}
+   The rule
+   \begin{center}
+     \AxiomC{$\mu(X:\Gamma\rightarrow*;\vec{\sigma};\vec{A}):\Gamma\rightarrow*$}
+     \AxiomC{$1\leq k\leq|\vec{A}|$}
+     \RightLabel{\textbf{(Ind-I)}}
+     \BinaryInfC{$\vdash\alpha_k^{\mu(X:\Gamma\rightarrow*;\vec{\sigma};\vec{A})}:(\Gamma_k,y:A_k[\mu/X])\rightarrow\mu@\sigma_k$}
+     \DisplayProof
+   \end{center}
+   gets rewritten to
+   \begin{center}
+     \AxiomC{\colorbox{gray}{$\Sigma$(Constr)$\rightsquigarrow(\Gamma_k,y:A_k[\mu/X])\rightarrow\mu@\sigma_k$}}
+     \RightLabel{\textbf{(Ind-I)}}
+     \UnaryInfC{\colorbox{gray}{$\Sigma|\Theta|\Gamma$}$\vdash$Constr$:(\Gamma_k,y:A_k[\mu/X])\rightarrow\mu@\sigma_k$}
+     \DisplayProof
+   \end{center}
+
 
 ** Destructor
-\begin{center}
-  \AxiomC{$\nu(X:\Gamma\rightarrow*;\vec{\sigma};\vec{A}):\Gamma\rightarrow*$}
-  \AxiomC{$1\leq k\leq|\vec{A}|$}
-  \RightLabel{\textbf{(Coind-E)}}
-  \BinaryInfC{$\xi_k^{\nu(X:\Gamma\rightarrow*;\vec{\sigma};\vec{A})}:(\Gamma_k,y:\nu@\sigma_k)\rightarrow
-    A_k[\nu/X]$}
-  \DisplayProof
-\end{center}
+   The rule
+   \begin{center}
+     \AxiomC{$\nu(X:\Gamma\rightarrow*;\vec{\sigma};\vec{A}):\Gamma\rightarrow*$}
+     \AxiomC{$1\leq k\leq|\vec{A}|$}
+     \RightLabel{\textbf{(Coind-E)}}
+     \BinaryInfC{$\vdash\xi_k^{\nu(X;\Gamma\rightarrow*;\vec{\sigma};\vec{A})}:(\Gamma_k,y:\nu@\sigma_k)\rightarrow
+       A_k[\nu/X]$}
+     \DisplayProof
+   \end{center}
+   gets rewritten to
+   \begin{center}
+     \AxiomC{\colorbox{gray}{$\Sigma$(Destr)$\rightsquigarrow(\Gamma_k,y:\nu@\sigma_k)\rightarrow
+       A_k[\nu/X]$}}
+     \RightLabel{\textbf{(Ind-I)}}
+     \UnaryInfC{\colorbox{gray}{$\Sigma|\Theta|\Gamma$}$\vdash$Destr$:(\Gamma_k,y:\nu@\sigma_k)\rightarrow
+       A_k[\nu/X]$}
+     \DisplayProof
+   \end{center}
+
 
 ** Recursion
 \begin{center}
