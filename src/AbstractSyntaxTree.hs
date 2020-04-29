@@ -27,10 +27,10 @@ data Statement = ExprDef { name :: Text
 
 data Expr = UnitType -- verum value
           | UnitExpr -- verum type
-          | LocalExprVar Text -- Ctx-- term variables
+          | LocalExprVar Int -- Ctx-- term variables
           | GlobalExprVar Text
           | Expr :@: Expr
-          | Abstr Text Expr Expr
+          | Abstr Expr Expr
           | TypeVar Text
           | Constructor Text
           | Destructor Text
@@ -47,7 +47,7 @@ data Match = Match {
   }
   deriving (Eq, Show)
 
-type Ctx = [(Text, Expr)]
+type Ctx = [Expr]
 
 -- | TyCtx contains only inductive coninductive types for now
 type TyCtx = [(Text, Ctx)]

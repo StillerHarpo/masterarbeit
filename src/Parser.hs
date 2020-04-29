@@ -10,6 +10,7 @@ import AbstractSyntaxTree
 
 import qualified Data.Set as Set
 import Data.Set (Set)
+import Data.List (elemIndex)
 import Data.String
 
 import Control.Monad (void)
@@ -31,6 +32,9 @@ import qualified Text.Megaparsec.Char.Lexer as L
 -- | Con/Destructor Context
 -- maps Con/Destructor Names to their type names
 
+-- | Context to parse
+type CtxP = [(Text, Expr)]
+
 data ParserState = ParserState {
     _scLineFold :: Parsec Void Text ()
   , _exprDefs:: Set Text
@@ -38,6 +42,7 @@ data ParserState = ParserState {
   , _coinductiveDefs :: Set Text
   , _constructorDefs :: Set Text
   , _destructorDefs :: Set Text
+  , _localVars :: [Text]
   }
 $(makeLenses ''ParserState)
 
@@ -47,11 +52,11 @@ type Parser = StateT ParserState (Parsec Void Text)
 instance (Monad m, IsString (m a)) => IsString (StateT s m a) where
   fromString = lift . fromString
 
-parseTestS p t = parseTest (evalStateT p (ParserState sc Set.empty Set.empty Set.empty Set.empty Set.empty)) t
+parseTestS p t = parseTest (evalStateT p (ParserState sc Set.empty Set.empty Set.empty Set.empty Set.empty [])) t
 
 parseProgram :: Parsec Void Text [Statement]
 parseProgram = evalStateT (many parseStatement <* eof)
-                          (ParserState sc Set.empty Set.empty Set.empty Set.empty Set.empty)
+                          (ParserState sc Set.empty Set.empty Set.empty Set.empty Set.empty [])
 
 parseStatement :: Parser Statement
 parseStatement = nonIndented $ choice
@@ -76,8 +81,10 @@ parseData = nonIndented $ parseBlock
   (\(name, _) -> do
      checkName name
      parseConstructorDef name)
-  (\(name, gamma) constructorDefsP -> do
+  (\(name, gammaP) constructorDefsP -> do
      let (constructors, gamma1s, as, sigmas) = unzip4 constructorDefsP
+         (_,gamma) = unzip gammaP
+     localVars %= drop (length gamma)
      mapM_ checkName constructors
      inductiveDefs %= Set.insert name
      constructorDefs %= Set.union (Set.fromList constructors)
@@ -89,17 +96,18 @@ parseCodata = nonIndented $ parseBlock
   (\(name, _) -> do
       checkName name
       parseDestructorDef name)
-  (\(name, gamma) destructorDefsP -> do
+  (\(name, gammaP) destructorDefsP -> do
      let (destructors, gamma1s, sigmas, as) = unzip4 destructorDefsP
+         (_,gamma) = unzip gammaP
+     localVars %= drop (length gamma)
      mapM_ checkName destructors
      coinductiveDefs %= Set.insert name
      destructorDefs %= Set.union (Set.fromList destructors)
      pure CoinductiveDef{..})
 
 parseConstructorDef :: Text -> Parser (Text, Ctx, Expr, [Expr])
-parseConstructorDef name = uncurry (,,,)
-  <$> parseStructorDefHeader
-  <* (inductiveDefs %= Set.insert name) -- Dummy
+parseConstructorDef name = parseStructorDef $ (,)
+  <$ (inductiveDefs %= Set.insert name) -- Dummy
   <*> lexeme parseExpr
   <* (inductiveDefs %= Set.delete name) -- name is only allowed here to make it strictly positve
   <* symbol "->"
@@ -109,9 +117,8 @@ parseConstructorDef name = uncurry (,,,)
   <*> many (lexeme parseExpr)
 
 parseDestructorDef :: Text -> Parser (Text, Ctx, [Expr], Expr)
-parseDestructorDef name = uncurry (,,,)
-  <$> parseStructorDefHeader
-  <* lexeme (withPredicate (== name)
+parseDestructorDef name = parseStructorDef $ (,)
+  <$ lexeme (withPredicate (== name)
                            (`T.append` ("should be the same as type " `T.append` name))
                            parseTypeStrVarT)
   <*> many (lexeme parseExpr)
@@ -120,25 +127,29 @@ parseDestructorDef name = uncurry (,,,)
   <*> lexeme parseExpr
   <* (coinductiveDefs %= Set.delete name) -- name is only allowed here to make it strictly positve
 
-parseDataHeader :: Parser (Text, Ctx)
+parseDataHeader :: Parser (Text, CtxP)
 parseDataHeader = do
   name <- lexeme parseTypeStrVarT
   void $ symbol ":"
-  gamma <- lexeme parseCtx
-  void $ if null gamma
+  gammaP <- lexeme parseCtx
+  let vars = map fst gammaP
+  localVars %= (vars++)
+  void $ if null gammaP
          then symbols ["Set", "where"]
          else symbols ["->", "Set", "where"]
-  pure (name, gamma)
+  pure (name, gammaP)
 
-parseStructorDefHeader :: Parser (Text, Ctx)
-parseStructorDefHeader = do
+parseStructorDef :: Parser (a,b) -> Parser (Text, Ctx,a,b)
+parseStructorDef p = do
   nameC <- lexeme parseTypeStrVarT
   void $ symbol ":"
-  gamma1 <- lexeme parseCtx
+  gamma1P <- lexeme parseCtx
+  let (vars,gamma1) = unzip gamma1P
   void $ if null gamma1
          then pure ""
          else symbol "->"
-  pure (nameC, gamma1)
+  (x,y) <- withLocalVars vars p
+  pure (nameC, gamma1, x, y)
 
 parseExpr :: Parser Expr
 parseExpr = makeExprParser parseTerm operatorTable
@@ -147,6 +158,7 @@ parseTerm :: Parser Expr
 parseTerm = choice $ map lexeme
   [ parseUnitType
   , parseUnitExpr
+  , try parseAbstr
   , try parseRec
   , try parseCorec
   , parseTypeStrVar
@@ -170,7 +182,10 @@ parseExprVar = do
   ParserState{..} <- get
   if var `Set.member` _exprDefs
   then pure $ GlobalExprVar var
-  else pure $ LocalExprVar var
+  else case elemIndex var _localVars of
+         Just idx -> pure $ LocalExprVar $ length _localVars - idx - 1
+         Nothing  ->
+           fancyFailure $ Set.singleton $ ErrorFail "Name not defined"
 
 parseTypeStrVarT :: Parser Text
 parseTypeStrVarT = withPredicate (`notElem` keywords)
@@ -195,13 +210,12 @@ parseUnitType = UnitType <$ string "Unit"
 parseUnitExpr :: Parser Expr
 parseUnitExpr = UnitExpr <$ string "()"
 
-parseAbstr :: Parser (Expr -> Expr)
-parseAbstr = (\((par1,ty1):pars) ->
-                foldl (\abstrf (par,ty) -> abstrf . Abstr par ty)
-                      (Abstr par1 ty1)
-                      pars)
-  <$> parseCtxNE
-  <* char '.'
+parseAbstr :: Parser Expr
+parseAbstr = do
+  (vars,ty1:tys) <- unzip <$> parseCtxNE
+  void $ lexeme $ char '.'
+  expr <- withLocalVars vars parseExpr
+  pure $ foldr Abstr (Abstr ty1 expr) tys
 
 parseRec :: Parser Expr
 parseRec = parseBlock (symbol "rec"
@@ -224,30 +238,28 @@ parseMatch = Match
   <* symbol "="
   <*> lineFold parseExpr
 
-parseCtxNE :: Parser Ctx
-parseCtxNE = (:)
-  <$ symbol "("
-  <*> (do var <- lexeme parseExprVarT
+-- | parses a non empty context
+parseCtxNE :: Parser CtxP
+parseCtxNE = symbol "(" *> parseCtxRest
+  where parseCtxRest = do
+          var <- lexeme parseExprVarT
           checkName var
           void $ symbol ":"
-          (var,) <$> parseExpr )
-  <*> many (do void $ symbol ","
-               var <- lexeme parseExprVarT
-               checkName var
-               void $ symbol ":"
-               (var,) <$> parseExpr )
-  <* char ')'
+          expr <- parseExpr
+          c <- char ',' <|> char ')'
+          if c == ','
+          then ((var,expr):) <$> withLocalVars [var] parseCtxRest
+          else pure [(var,expr)]
 
-parseCtx :: Parser Ctx
+parseCtx :: Parser CtxP
 parseCtx = try parseCtxNE <|> pure []
 
 operatorTable :: [[Operator Parser Expr]]
-operatorTable =
-  [ [ Prefix (try parseAbstr)
-    ]
-  , [ InfixL ((:@:) <$ symbol "@")
-    ]
-  ]
+operatorTable = [[ InfixL ((:@:) <$ symbol "@")]]
+
+withLocalVars :: [Text] -> Parser a -> Parser a
+withLocalVars vars p =
+  (localVars %= (vars ++)) *> p <* (localVars %= drop (length vars))
 
 -- | checks if name is already used.  We forbid name shadowing for now
 checkName :: Text -- ^ name

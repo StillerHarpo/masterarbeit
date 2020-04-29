@@ -21,7 +21,7 @@ checkTyCtx ((_,ctx):tyCtx) = checkCtx ctx >> checkTyCtx tyCtx
 
 checkCtx :: Ctx -> TI ()
 checkCtx [] = pure ()
-checkCtx ((x,typ):ctx) = checkType [] ctx typ []
+checkCtx (typ:ctx) = checkType [] ctx typ []
 
 checkType :: TyCtx -> Ctx -> Expr -> Type -> TI ()
 checkType = undefined
@@ -42,7 +42,7 @@ inferTerm _   Inductive{} = throwError "This is not a type"
 inferTerm _   Coinductive{} = throwError "This is not a type"
 
 
-lookupTI :: Eq a => a -> [(a,b)] -> TI b
-lookupTI x m = case lookup x m of
-                 Just v -> pure v
-                 Nothing -> throwError "Variable not defined"
+lookupTI :: Int -> [a] -> TI a
+lookupTI _ []     = throwError "Variable not defined"
+lookupTI 0 (x:_)  = pure x
+lookupTI n (x:xs) = lookupTI (n-1) xs

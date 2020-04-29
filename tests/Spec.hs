@@ -21,37 +21,39 @@ main = hspec $ do
     it "parses the unit type" $
       parse parseProgram "" "Unit" `shouldParse` [Expression UnitType]
     it "parses a expression variable" $
-      parse parseProgram "" "x" `shouldParse`  [Expression $ LocalExprVar "x"]
+      parse parseProgram "" "(x:Unit).x" `shouldParse`  [Expression $ Abstr UnitType $ LocalExprVar 0]
     it "parses a type variable" $
       parse parseProgram "" "A" `shouldParse`  [Expression $ TypeVar "A"]
     it "parses a application" $
-      parse parseProgram "" "x @ y"
+      parse parseProgram "" "(x:Unit,y:Unit).x @ y"
       `shouldParse`
-      [Expression $ LocalExprVar "x" :@: LocalExprVar "y"]
+      [Expression $ Abstr UnitType $ Abstr UnitType $ LocalExprVar 1 :@: LocalExprVar 0]
     it "parses a application 2" $
-      parse parseProgram "" "A @ x"
+      parse parseProgram "" "(x:Unit).A @ x"
       `shouldParse`
-      [Expression $ TypeVar "A" :@: LocalExprVar "x"]
+      [Expression $ Abstr UnitType $ TypeVar "A" :@: LocalExprVar 0]
     it "parses a application with brackets" $
-      parse parseProgram "" "(A @ x)"
+      parse parseProgram "" "(x:Unit).(A @ x)"
       `shouldParse`
-      [Expression $ TypeVar "A" :@: LocalExprVar "x"]
+      [Expression $ Abstr UnitType $ TypeVar "A" :@: LocalExprVar 0]
     it "parses a abstraction" $
       parse parseProgram "" "(x:Unit).()"
       `shouldParse`
-      [Expression $ Abstr "x" UnitType UnitExpr]
+      [Expression $ Abstr UnitType UnitExpr]
     it "parses a abstraction with multiple arguments" $
       parse parseProgram "" "(x:Unit,y:Unit).()"
       `shouldParse`
-      [Expression $ Abstr "x" UnitType (Abstr "y" UnitType UnitExpr)]
+      [Expression $ Abstr  UnitType (Abstr UnitType UnitExpr)]
     it "parse a application left associative" $
-      parse parseProgram "" "x @ z @ y"
+      parse parseProgram "" "(x:Unit,y:Unit,z:Unit). x @ y @ z"
       `shouldParse`
-      [Expression $ LocalExprVar "x" :@: LocalExprVar "z" :@: LocalExprVar "y"]
+      [Expression $ Abstr UnitType $ Abstr UnitType $ Abstr UnitType $
+       LocalExprVar 2 :@: LocalExprVar 1 :@: LocalExprVar 0]
     it "parse a expression with brackets" $
-      parse parseProgram "" "x @ (z @ y)"
+      parse parseProgram "" "(x:Unit,y:Unit,z:Unit).x @ (y @ z)"
       `shouldParse`
-      [Expression $ LocalExprVar "x" :@: (LocalExprVar "z" :@: LocalExprVar "y")]
+      [Expression $ Abstr UnitType $ Abstr UnitType $ Abstr UnitType $
+       LocalExprVar 2 :@: (LocalExprVar 1 :@: LocalExprVar 0)]
     it "parses definitions" $
       parse parseProgram "" "x = ()"
       `shouldParse`
@@ -91,10 +93,10 @@ main = hspec $ do
                                        , "  C2 : (C @ y) -> C ()"])
       `shouldParse`
       [InductiveDef { name = "C"
-                    , gamma = [("y", UnitType)]
+                    , gamma = [UnitType]
                     , sigmas = [ [UnitExpr]
                                , [UnitExpr]]
-                    , as = [ Inductive "C" :@: LocalExprVar "y"
+                    , as = [ Inductive "C" :@: LocalExprVar 0
                            , Inductive "C" :@: UnitExpr ]
                     , constructors = [ "C2"
                                      , "C1"]
@@ -109,14 +111,14 @@ main = hspec $ do
                                        , "x @ z"])
       `shouldParse`
       [ ExprDef { name = "x"
-                , expr = Abstr "y" UnitType (LocalExprVar "y")}
+                , expr = Abstr UnitType (LocalExprVar 0)}
       , ExprDef { name = "z"
                 , expr = UnitExpr}
       , InductiveDef { name = "A"
-                     , gamma = [("y", UnitType)]
+                     , gamma = [ UnitType]
                      , sigmas = [ [UnitExpr]
                                 , [UnitExpr]]
-                     , as = [ Inductive "A" :@: LocalExprVar "y"
+                     , as = [ Inductive "A" :@: LocalExprVar 0
                             , Inductive "A" :@: UnitExpr]
                      , constructors = [ "C2"
                                       , "C1"]
