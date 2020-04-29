@@ -268,6 +268,31 @@
      \DisplayProof
    \end{center}
 
+** Beta-equivalence
+   We introduce a new rule for beta-equivalence.
+   \begin{center}
+   \AxiomC{$A\longrightarrow_T A'$}
+   \AxiomC{$B\longrightarrow_T B'$}
+   \AxiomC{$A'\equiv_\alpha B'$}
+   \TrinaryInfC{$A\equiv_\beta B$}
+   \DisplayProof
+   \end{center}
+   In the implementation $\equiv_\alpha$ is trivial, because we use /de
+   Bruijn indices/.  $\longrightarrow_2$ is the evaluation from the paper.
+
+   We also add some rule to check if two contexts are the same.
+   \begin{center}
+   \AxiomC{}
+   \UnaryInfC{$\emptyset\equiv_\beta\emptyset$}
+   \DisplayProof
+   \hskip 1.5em
+   \AxiomC{$\Gamma_1\equiv_\beta \Gamma_2$}
+   \AxiomC{$A[\Gamma_1]\equiv_\beta B[\Gamma_2]$}
+   \BinaryInfC{$\Gamma_1,x:A\equiv_\beta\Gamma_2,y:B$}
+   \DisplayProof
+   \end{center}
+   \end{center}
+
 ** Unit type introduction
    The rule
    \begin{prooftree}
