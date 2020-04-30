@@ -290,6 +290,11 @@
    \AxiomC{$A[\Gamma_1]\equiv_\beta B[\Gamma_2]$}
    \BinaryInfC{$\Gamma_1,x:A\equiv_\beta\Gamma_2,y:B$}
    \DisplayProof
+%   \vskip 0.5em
+%   \AxiomC{$\Theta_1\equiv_\beta \Theta_2$}
+%   \AxiomC{$\Gamma_1\equiv_\beta \Gamma_2$}
+%   \BinaryInfC{$\Theta_1,X:\Gamma_1\rightarrow*\equiv_\beta\Theta_2,X:\Gamma_2\rightarrow*$}
+%   \DisplayProof
    \end{center}
    \end{center}
 
@@ -361,6 +366,29 @@
      \DisplayProof
    \end{center}
 
+** (co)data definition
+   The rule
+   \begin{prooftree}
+   \AxiomC{$\sigma_k:\Gamma_k\triangleright\Gamma$}
+   \AxiomC{$\Theta,X:\Gamma\rightarrow*|\Gamma_k\vdash A_k:*$}
+   \RightLabel{(\textbf{FP-Ty})}
+   \BinaryInfC{$\Theta | \emptyset \vdash \rho(X : \Gamma \rightarrow *;\vec{\sigma};\vec{A}):\Gamma\rightarrow *$}
+   \end{prooftree}
+   gets rewritten to
+   \begin{prooftree}
+   \AxiomC{$\sigma_k:\Gamma_k\triangleright\Gamma$}
+   \AxiomC{$\Theta,X:\Gamma\rightarrow*|\Gamma_k\vdash A_k:*$}
+   \RightLabel{(\textbf{FP-Ty})}
+   \BinaryInfC{$\Theta | $\colorbox{gray}{$\Gamma_1$} $\vdash$ data X $\Gamma$ -> Set where; $\overrightarrow{Constr_k : \Gamma_k\text{ -> }A_k\text{ -> }X \sigma_k}$}
+   \end{prooftree}
+   and
+   \begin{prooftree}
+   \AxiomC{$\sigma_k:\Gamma_k\triangleright\Gamma$}
+   \AxiomC{$\Theta,X:\Gamma\rightarrow*|\Gamma_k\vdash A_k:*$}
+   \RightLabel{(\textbf{FP-Ty})}
+   \BinaryInfC{$\Theta |$\colorbox{gray}{$\Gamma_1$} $ \vdash$ codata X $\Gamma$ -> Set where; $\overrightarrow{Destr_k : \Gamma_k \text{ -> } X \sigma_k \text{ -> } A_k}$}
+   \end{prooftree}
+
 ** Unit expression introduction
    The rule
    \begin{center}
@@ -408,7 +436,7 @@
    \begin{center}
      \AxiomC{\colorbox{gray}{$\Gamma(x)\rightsquigarrow A$}}
      \RightLabel{\textbf{(Proj)}}
-     \UnaryInfC{$\Gamma\vdash x:A$}
+     \UnaryInfC{$\Sigma|\Theta|\Gamma\vdash x:A$}
      \DisplayProof
    \end{center}
 
@@ -453,39 +481,47 @@
 
 
 ** Recursion
-\begin{center}
-  \AxiomC{$\vdash C:\Gamma\rightarrow*$}
-  \AxiomC{$\Delta,\Gamma_k,y_k:A_k[C/X]\vdash g_k:(C@\sigma_k)$}
-  \AxiomC{$\forall k=1,\dots,n$}
-  \RightLabel{\textbf{(Ind-E)}}
-  \TrinaryInfC{$\Delta\vdash$ rec
-    $\overrightarrow{(\Gamma_k,y_k).g_k}:(\Gamma,y:\mu@id_\Gamma)\rightarrow C@id_\Gamma$}
-  \DisplayProof
-\end{center}
+   \begin{center}
+     \AxiomC{$\vdash C:\Gamma\rightarrow*$}
+     \AxiomC{$\Delta,\Gamma_k,y_k:A_k[C/X]\vdash g_k:(C@\sigma_k)$}
+     \AxiomC{$\forall k=1,\dots,n$}
+     \RightLabel{\textbf{(Ind-E)}}
+     \TrinaryInfC{$\Delta\vdash$ rec
+       $\overrightarrow{(\Gamma_k,y_k).g_k}:(\Gamma,y:\mu@id_\Gamma)\rightarrow C@id_\Gamma$}
+     \DisplayProof
+   \end{center}
+
+   \begin{prooftree}
+     \AxiomC{$\vdash C:\Gamma\rightarrow*$}
+     \AxiomC{\colorbox{gray}{$\overrightarrow{\vdash B_k\equiv_\beta(C@\sigma_k)}$}}
+     \AxiomC{\colorbox{gray}{$\overrightarrow{\Sigma \vdash\text{Constr}_k:(\Gamma_k,y:A_k[\mu/X])\rightarrow\mu@\sigma_k}$}}
+     \noLine
+     \UnaryInfC{$\overrightarrow{\Delta,\Gamma_k,y_k:A_k[C/X]\vdash g_k:\text{\colorbox{gray}{$B_k$}}}$}
+     \RightLabel{\textbf{(Ind-E)}}
+     \TrinaryInfC{\colorbox{gray}{$\Sigma|\Theta|$}$\Delta\vdash$ rec \colorbox{gray}{$\mu$ to C};
+       $\overrightarrow{\text{Constr}_k\overrightarrow{x_k}\text{ } y_k = g_k}:(\Gamma,y:\mu@id_\Gamma)\rightarrow C@id_\Gamma$}
+    \end{prooftree}
+
 
 ** Corecursion
-\begin{center}
-  \AxiomC{$\vdash C:\Gamma\rightarrow*$}
-  \AxiomC{$\Delta,\Gamma_k,y_k:(C@\sigma_k)\vdash g_k:A_k[C/X]$}
-  \AxiomC{$\forall k=1,\dots,n$}
-  \RightLabel{\textbf{(Coind-I)}}
-  \TrinaryInfC{$\Delta\vdash$ corec
-    $\overrightarrow{(\Gamma_k,y_k).g_k}:(\Gamma,y:C@id_\Gamma)\rightarrow \nu@id_\Gamma$}
-  \DisplayProof
-\end{center}
+   \begin{center}
+     \AxiomC{$\vdash C:\Gamma\rightarrow*$}
+     \AxiomC{$\Delta,\Gamma_k,y_k:(C@\sigma_k)\vdash g_k:A_k[C/X]$}
+     \AxiomC{$\forall k=1,\dots,n$}
+     \RightLabel{\textbf{(Coind-I)}}
+     \TrinaryInfC{$\Delta\vdash$ corec
+       $\overrightarrow{(\Gamma_k,y_k).g_k}:(\Gamma,y:C@id_\Gamma)\rightarrow \nu@id_\Gamma$}
+     \DisplayProof
+   \end{center}
 
-** data definition
    \begin{prooftree}
-   \AxiomC{$\sigma_k:\Gamma_k\triangleright\Gamma$}
-   \AxiomC{$\Theta,X:\Gamma\rightarrow*|\Gamma_1,\Gamma_k\vdash A_k:*$}
-   \RightLabel{(\textbf{FP-Ty})}
-   \BinaryInfC{$\Theta | \Gamma_1 \vdash$ data X $\Gamma$ -> Set where; $\overrightarrow{Constr : \Gamma_k -> A_k -> X \sigma_k}$}
-   \end{prooftree}
-
-** codata definition
-   \begin{prooftree}
-   \AxiomC{$\sigma_k:\Gamma_k\triangleright\Gamma$}
-   \AxiomC{$\Theta,X:\Gamma\rightarrow*|\Gamma_1,\Gamma_k\vdash A_k:*$}
-   \RightLabel{(\textbf{FP-Ty})}
-   \BinaryInfC{$\Theta | \Gamma_1 \vdash$ codata X $\Gamma$ -> Set where; $\overrightarrow{Destr_k : \Gamma_k -> X \sigma_k -> A_k}$}
-   \end{prooftree}
+     \AxiomC{$\vdash C:\Gamma\rightarrow*$}
+     \AxiomC{\colorbox{gray}{$\overrightarrow{\vdash B_k\equiv_\beta A_k[C/X]}$}}
+     \AxiomC{\colorbox{gray}{$\overrightarrow{\Sigma \vdash\text{Destr}_k:(\Gamma_k,y:\nu@\sigma_k)\rightarrow
+       A_k[\nu/X]}$}}
+     \noLine
+     \UnaryInfC{$\overrightarrow{\Delta,\Gamma_k,y_k:(\Gamma_k,y:(C@\sigma_k))\vdash g_k:\text{\colorbox{gray}{$B_k$}}}$}
+     \RightLabel{\textbf{(Coind-I)}}
+     \TrinaryInfC{\colorbox{gray}{$\Sigma|\Theta|$}$\Delta\vdash$ rec \colorbox{gray}{C to $\nu$};
+       $\overrightarrow{\text{Destr}_k\overrightarrow{x_k}\text{ } y_k = g_k}:(\Gamma,y:C@id_\Gamma)\rightarrow \nu@id_\Gamma$}
+    \end{prooftree}
