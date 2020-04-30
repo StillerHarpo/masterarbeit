@@ -236,7 +236,7 @@
    \DisplayProof
    \end{center}
 
-   We use the notation $\Theta(X)\rightsquigarrow\Gamma\rigthtarrow*$ for
+   We use the notation $\Theta(X)\rightsquigarrow\Gamma\rightarrow*$ for
    looking up the type-variable $X$ in type-context $\Theta$ yields type
    $\Gamma\rightarrow*$. We add 2 rules for looking up something in a
    type-context.  They are:
