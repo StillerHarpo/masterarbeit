@@ -149,28 +149,29 @@
    \end{align*}
 *** Type checking
 
-\begin{scprooftree}{0.6}
-\AxiomC{$\vdash\textbf{N}:*$}
-\AxiomC{$\vdash\alpha_1^\textbf{N}: (x:\textbf{1})\rightarrow\textbf{N}$}
-\RightLabel{\textbf{(Term-Weak)}}
-\UnaryInfC{$y_k:\textbf{1}\vdash\alpha_1^\textbf{N}: (x:\textbf{1})\rightarrow\textbf{N}$}
-\AxiomC{$\vdash\langle\rangle':\textbf{1}$}
-\RightLabel{\textbf{(Term-Weak)}}
-\UnaryInfC{$y_k:\textbf{1}\vdash\langle\rangle':\textbf{1}$}
-\RightLabel{\textbf{(Inst)}}
-\BinaryInfC{$y_k:\textbf{1}\vdash \alpha_1^\textbf{N}@\langle\rangle':\textbf{N}$}
-\AxiomC{$\vdash\alpha_2^\textbf{N}: (x:\textbf{N})\rightarrow\textbf{N}$}
-\RightLabel{\textbf{(Term-Weak)}}
-\UnaryInfC{$y_k:\textbf{N}\vdash\alpha_2^\textbf{N}: (x:\textbf{N})\rightarrow\textbf{N}$}
-\AxiomC{$\textbf{N}:*$}
-\RightLabel{\textbf{(Proj)}}
-\UnaryInfC{$y_k:\textbf{N}\vdash y_k:\textbf{N}$}
-\RightLabel{\textbf{(Inst)}}
-\BinaryInfC{$y_k:\textbf{N}\vdash \alpha_2^\textbf{N}@y_k:\textbf{N}$}
-\RightLabel{\textbf{(Ind-E)}}
-\TrinaryInfC{$\vdash \text{rec}((y_k).\alpha_1^\textbf{N}@\langle\rangle'
-                ,(y_k).\alpha_2^\textbf{N} @ y_k):(y:\text{List }\textbf{1})\rightarrow\textbf{N}$}
-\end{scprooftree}
+    \begin{scprooftree}{0.6}
+    \AxiomC{$\vdash\textbf{N}:*$}
+    \AxiomC{$\vdash\alpha_1^\textbf{N}: (x:\textbf{1})\rightarrow\textbf{N}$}
+    \RightLabel{\textbf{(Term-Weak)}}
+    \UnaryInfC{$y_k:\textbf{1}\vdash\alpha_1^\textbf{N}: (x:\textbf{1})\rightarrow\textbf{N}$}
+    \AxiomC{$\vdash\langle\rangle':\textbf{1}$}
+    \RightLabel{\textbf{(Term-Weak)}}
+    \UnaryInfC{$y_k:\textbf{1}\vdash\langle\rangle':\textbf{1}$}
+    \RightLabel{\textbf{(Inst)}}
+    \BinaryInfC{$y_k:\textbf{1}\vdash \alpha_1^\textbf{N}@\langle\rangle':\textbf{N}$}
+    \AxiomC{$\vdash\alpha_2^\textbf{N}: (x:\textbf{N})\rightarrow\textbf{N}$}
+    \RightLabel{\textbf{(Term-Weak)}}
+    \UnaryInfC{$y_k:\textbf{N}\vdash\alpha_2^\textbf{N}: (x:\textbf{N})\rightarrow\textbf{N}$}
+    \AxiomC{$\textbf{N}:*$}
+    \RightLabel{\textbf{(Proj)}}
+    \UnaryInfC{$y_k:\textbf{N}\vdash y_k:\textbf{N}$}
+    \RightLabel{\textbf{(Inst)}}
+    \BinaryInfC{$y_k:\textbf{N}\vdash \alpha_2^\textbf{N}@y_k:\textbf{N}$}
+    \RightLabel{\textbf{(Ind-E)}}
+    \TrinaryInfC{$\vdash \text{rec}((y_k).\alpha_1^\textbf{N}@\langle\rangle'
+                    ,(y_k).\alpha_2^\textbf{N} @ y_k):(y:\text{List }\textbf{1})\rightarrow\textbf{N}$}
+    \end{scprooftree}
+
 
 ** Rose Tree
    Rose Tree A = $\nu(X:*;\epsilon_2;(\textbf{1},List X)$
