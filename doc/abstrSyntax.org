@@ -207,6 +207,7 @@
 
   We add a new Ctx for data types
 
+  We will mark semantic differences in the rewritten rules gray.
 ** Context rules
    The rules for valid contexts are already syntax directed so we take
    just them
