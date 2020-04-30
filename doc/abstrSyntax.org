@@ -14,11 +14,11 @@
 ** Statements
    \begin{lstlisting}
    statement =
-     data Name<$C_1,\dots,C_n$> : $(x_1 : B_1,\dots,x_n : B_n)$ -> Set where
+     data Name : $(x_1 : B_1,\dots,x_n : B_n)$ -> Set where
        $Constr_1$ : $(x_{1_1}:B_{1_1},\dots,x_{n_1}: B_{n_1})$ -> $A_1[Name/X]$ -> Name $\sigma_{1_1}\dots \sigma_{1_n}$
               $\vdots$                $\vdots$             $\vdots$            $\vdots$
        $Constr_m$ : $(x_{1_m}:B_{1_m},\dots,x_{n_m}: B_{n_m})$ -> $A_i[Name/X]$ -> Name $\sigma_{m_1}\dots \sigma_{m_n}$
-    | codata Name<$C_1,\dots,C_n$>: $(x_1 : B_1,\dots,x_n : B_n)$ -> Set where
+    | codata Name : $(x_1 : B_1,\dots,x_n : B_n)$ -> Set where
        $Destr_1$ : $(x_{1_1}:B_{i_1},\dots,x_{n_1}: B_{n_1})$ -> Name $\sigma_{1_1}\dots \sigma_{1_n}$ -> $A_1[Name/X]$
               $\vdots$                $\vdots$             $\vdots$            $\vdots$
        $Destr_m$ : $(x_{1_m}:B_{1_m},\dots,x_{n_m}: B_{n_m})$ -> Name $\sigma_{m_1}\dots \sigma_{m_n}$ -> $A_i[Name/X]$
@@ -30,7 +30,7 @@
    The statements correspond to $\rho(X:\Gamma\rightarrow*;\vec\sigma;\vec{A}):\Gamma\rightarrow*$ as follows.
    + $x_1: B_1,\dots,x_n: B_n$ is $\Gamma$
    + /Name/ is X
-   + $Constr_1,\dots, Contr_m$ stands for $\alpha_1^{\mu(X:\Gamma\rightarrow *;\vec\sigma;\vec A)},\dots,\alpha_m^{\mu(X:\Gamma\rightarrow *;\vec\sigma;\vecA)}$
+   + $Constr_1,\dots, Contr_m$ stands for $\alpha_1^{\mu(X:\Gamma\rightarrow *;\vec\sigma;\vec A)},\dots,\alpha_m^{\mu(X:\Gamma\rightarrow *;\vec\sigma;\vec A)}$
    + $Destr_1,\dots, Destr_m$ stands for $\xi_1^{\mu(X:\Gamma\rightarrow *;\vec\sigma;\vec A)},\dots,\xi_m^{\mu(X:\Gamma\rightarrow *;\vec\sigma;\vec A)}$
    + $Name_i$ is $A_i[\Gamma/X]$
    + $(x_{1_1}:B_{1_1},\dots,x_{n_1}: B_{n_1}),\dots,(x_{1_m}:B_{1_m},\dots,x_{n_m}:B_{n_m})$ stands for $\Gamma_1,\dots,\Gamma_m$
@@ -39,32 +39,25 @@
 
    We take $B_1\rightarrow\dots\rightarrow B_n$ as syntactic sugar for $(\_:B_1,\dots,\_:B_n)$ where _ stands for a unused termvariable
 
-   <$C_1,\dots,C_n$> of definition can only be used as parameters in constructors, destructors, inductive types
-   or coinductive types.  They always are of type $*$.  We type check definition
-   in *Ctx* $(x_1:A_1,\dots,x_n:A_n)$ with $C_1:*,\dots,C_n:*$ as Axioms
-
-**** TODO How can we refer to parameters from the ctx
-
    We will also need a extra context which relates constructors to their types
+
 ** Expressions
    \begin{lstlisting}
    expr =
-     rec C where
-       $Constr_1$<$h_1,\dots,h_n$> $x_{1_1}$ $\dots$ $x_{n_1}$ $y_1$    = $g_1$
-               $\vdots$          $\vdots$      $\vdots$        $\vdots$
-       $Constr_m$<$h_1,\dots,h_n$> $x_{1_m}$ $\dots$ $x_{n_m}$ $y_m$ = $g_m$
-   | corec C where
-       $Destr_1$<$h_1,\dots,h_n$> $x_{1_1}$ $\dots$ $x_{n_1}$ $y_1$   = $g_1$
-               $\vdots$         $\vdots$      $\vdots$        $\vdots$
-       $Destr_m$<$h_1,\dots,h_n$>  $x_{1_m}$ $\dots$ $x_{n_m}$ $y_m$ = $g_m$
-   | expr @ expr | () | Unit
-   | Constr<$h_1,\dots,h_n$> expr* | Destr<$h_1,\dots,h_n$> expr*
+     rec $\mu$ to C where
+       $Constr_1$ $x_{1_1}$ $\dots$ $x_{n_1}$ $y_1$    = $g_1$
+               $\vdots$          $\vdots$
+       $Constr_m$ $x_{1_m}$ $\dots$ $x_{n_m}$ $y_m$ = $g_m$
+   | corec C to $\nu$ where
+       $Destr_1$ $x_{1_1}$ $\dots$ $x_{n_1}$ $y_1$   = $g_1$
+               $\vdots$         $\vdots$
+       $Destr_m$  $x_{1_m}$ $\dots$ $x_{n_m}$ $y_m$ = $g_m$
+   | expr @ expr | () | Unit | Constr expr* | Destr expr*
    \end{lstlisting}
+
    $g_1,\dots,g_k$ are /expr/
 
    $x_{1_1},\dots, x_{n_m}$ are termvariables
-
-   $h_1,\dots,h_m$ ares expressions of type *
 
 ** Terminal Object
    #+begin_example
