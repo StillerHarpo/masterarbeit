@@ -362,13 +362,14 @@
    \end{center}
 
 ** Unit expression introduction
+   The rule
    \begin{center}
      \AxiomC{}
      \RightLabel{\textbf{(}$\top$\textbf{-I)}}
      \UnaryInfC{$\lozenge:\top$}
      \DisplayProof
    \end{center}
-
+   get rewritten to
    \begin{center}
      \AxiomC{}
      \RightLabel{\textbf{(}$\top$\textbf{-I)}}
