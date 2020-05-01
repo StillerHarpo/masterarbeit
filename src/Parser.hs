@@ -218,25 +218,32 @@ parseAbstr = do
   pure $ foldr Abstr (Abstr ty1 expr) tys
 
 parseRec :: Parser Expr
-parseRec = parseBlock (symbol "rec"
-                       *> lexeme parseExpr
+parseRec = parseBlock ((,)
+                       <$ symbol "rec"
+                       <*> lexeme parseTypeStrVarT
+                       <* symbol "to"
+                       <*> lexeme parseExpr
                        <* symbol "where")
                       (const parseMatch)
-                      (((.).(.)) pure  Rec)
+                      (((.).(.)) pure $ uncurry Rec)
 
 parseCorec :: Parser Expr
-parseCorec = parseBlock (symbol "corec"
-                         *> lexeme parseExpr
+parseCorec = parseBlock ((,)
+                         <$ symbol "corec"
+                         <*> lexeme parseExpr
+                         <* symbol "to"
+                         <*> lexeme parseTypeStrVarT
                          <* symbol "where")
                          (const parseMatch)
-                         (((.).(.)) pure Corec)
+                         (((.).(.)) pure $ uncurry Corec)
 
 parseMatch :: Parser Match
-parseMatch = Match
-  <$> lexeme parseTypeStrVarT
-  <*> manyLexeme parseExprVarT
-  <* symbol "="
-  <*> lineFold parseExpr
+parseMatch = do
+  structorName <- lexeme parseTypeStrVarT
+  vars <- manyLexeme parseExprVarT
+  void $ symbol "="
+  matchExpr <- withLocalVars vars $ lineFold parseExpr
+  pure Match{..}
 
 -- | parses a non empty context
 parseCtxNE :: Parser CtxP

@@ -36,13 +36,18 @@ data Expr = UnitType -- verum value
           | Destructor Text
           | Inductive Text
           | Coinductive Text
-          | Rec Expr [Match]
-          | Corec Expr [Match]
+          | Rec { recFrom :: Text
+                , recTo :: Expr
+                , matches :: [Match]
+                }
+          | Corec { corecFrom :: Expr
+                  , corecTo :: Text
+                  , matches :: [Match]
+                  }
   deriving (Eq, Show)
 
 data Match = Match {
     structorName  :: Text
-  , exprVars      :: [Text]
   , matchExpr     :: Expr
   }
   deriving (Eq, Show)

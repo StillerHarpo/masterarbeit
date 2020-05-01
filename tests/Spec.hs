@@ -68,13 +68,13 @@ main = hspec $ do
       [CoinductiveDef "C" [] [[]] [Coinductive "C"] ["C1"] [[]]]
     -- TODO Tests for constructors and destructors
     it "parses rec" $
-      parse parseProgram "" "rec Unit where { A x = () }"
+      parse parseProgram "" "rec C to Unit where { A x = () }"
       `shouldParse`
-      [Expression $ Rec UnitType [Match "A" ["x"] UnitExpr]]
+      [Expression $ Rec "C" UnitType [Match "A" UnitExpr]]
     it "parses corec" $
-      parse parseProgram "" "corec Unit where { A x = ()}"
+      parse parseProgram "" "corec Unit to C where { A x = ()}"
       `shouldParse`
-      [Expression $ Corec UnitType [Match "A" ["x"] UnitExpr]]
+      [Expression $ Corec UnitType "C" [Match "A"  UnitExpr]]
     it "parses multiline program" $
       parse parseProgram "" "y = (); y"
       `shouldParse`
