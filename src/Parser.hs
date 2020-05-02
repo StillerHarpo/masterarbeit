@@ -3,6 +3,7 @@
 {-# language TupleSections #-}
 {-# language TemplateHaskell #-}
 {-# language MultiWayIf #-}
+{-# language LambdaCase #-}
 
 module Parser where
 
@@ -36,7 +37,7 @@ import qualified Text.Megaparsec.Char.Lexer as L
 type CtxP = [(Text, Expr)]
 
 data ParserState = ParserState {
-    _scLineFold :: Parsec Void Text ()
+    _scLineFold :: Maybe (Parsec Void Text ())
   , _exprDefs:: Set Text
   , _inductiveDefs :: Set Text
   , _coinductiveDefs :: Set Text
@@ -52,11 +53,11 @@ type Parser = StateT ParserState (Parsec Void Text)
 instance (Monad m, IsString (m a)) => IsString (StateT s m a) where
   fromString = lift . fromString
 
-parseTestS p t = parseTest (evalStateT p (ParserState sc Set.empty Set.empty Set.empty Set.empty Set.empty [])) t
+parseTestS p t = parseTest (evalStateT p (ParserState Nothing Set.empty Set.empty Set.empty Set.empty Set.empty [])) t
 
 parseProgram :: Parsec Void Text [Statement]
 parseProgram = evalStateT (many parseStatement <* eof)
-                          (ParserState sc Set.empty Set.empty Set.empty Set.empty Set.empty [])
+                          (ParserState Nothing Set.empty Set.empty Set.empty Set.empty Set.empty [])
 
 parseStatement :: Parser Statement
 parseStatement = nonIndented $ choice
@@ -67,10 +68,10 @@ parseStatement = nonIndented $ choice
   ]
 
 parseDefinition :: Parser Statement
-parseDefinition = do
+parseDefinition = lineFold $ do
   name <- lexeme parseExprVarT
   void $ symbol "="
-  expr <- lineFold parseExpr
+  expr <- parseExpr
   checkName name
   exprDefs %= Set.insert name
   pure ExprDef{..}
@@ -238,11 +239,11 @@ parseCorec = parseBlock ((,)
                          (((.).(.)) pure $ uncurry Corec)
 
 parseMatch :: Parser Match
-parseMatch = do
+parseMatch = lineFold $ do
   structorName <- lexeme parseTypeStrVarT
   vars <- manyLexeme parseExprVarT
   void $ symbol "="
-  matchExpr <- withLocalVars vars $ lineFold parseExpr
+  matchExpr <- withLocalVars vars parseExpr
   pure Match{..}
 
 -- | parses a non empty context
@@ -300,7 +301,9 @@ nonIndented :: Parser a -> Parser a
 nonIndented p = symbol ";" *> p <|> L.nonIndented (lift scn) p
 
 parseBlock :: Parser a -> (a -> Parser b) -> (a -> [b] -> Parser c) -> Parser c
-parseBlock pHeader pItems f = try pBrackets <|> L.indentBlock (lift scn) pIndented
+parseBlock pHeader pItems f =
+  try pBrackets
+  <|> noLineFold (L.indentBlock (lift scn) pIndented)
     where
       pBrackets = do
         header <- pHeader
@@ -314,24 +317,33 @@ parseBlock pHeader pItems f = try pBrackets <|> L.indentBlock (lift scn) pIndent
 
 lineFold :: Parser a -> Parser a
 lineFold p = do
-  parserState@ParserState {..} <- get
+  parserState <- get
   (a, innerState) <- lift $ L.lineFold scn $
-      \sc' -> runStateT p (set scLineFold sc' parserState)
-  put $ set scLineFold _scLineFold innerState
+      \sc' -> runStateT (p <* lift scn) (set scLineFold (Just sc') parserState)
+  put $ set scLineFold Nothing innerState
+  pure a
+
+noLineFold :: Parser a -> Parser a
+noLineFold p = do
+  lf <- view scLineFold <$> get
+  scLineFold .= Nothing
+  a <- p
+  scLineFold .= lf
   pure a
 
 lexeme :: Parser a -> Parser a
-lexeme = L.lexeme lineFolding
+lexeme p = view scLineFold <$> get >>= \case
+                  Just sc' -> try (L.lexeme (lift sc') p) <|> p
+                  Nothing -> L.lexeme (lift sc) p
 
 manyLexeme :: Parser a -> Parser [a]
 manyLexeme = lexeme . many . lexeme
 
-lineFolding :: Parser ()
-lineFolding = (view scLineFold <$> get >>= try . lift)
-              <|> lift scn
-
 symbol :: Text -> Parser Text
-symbol = L.symbol lineFolding
+symbol t = view scLineFold <$> get >>= \case
+                  Just sc' -> try (L.symbol (lift sc') t) <|> string t
+                  Nothing -> L.symbol (lift sc) t
+
 
 symbols :: [Text] -> Parser [Text]
 symbols = traverse symbol
