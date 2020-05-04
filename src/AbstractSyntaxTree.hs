@@ -5,8 +5,14 @@ module AbstractSyntaxTree where
 import Data.Text (Text)
 import Data.Map (Map)
 
+type Type = (Ctx,Expr)
+type Kind = Ctx
+
+type StrCtx = [(Text,Type)]
+
 data Statement = ExprDef { name :: Text
                          , expr :: Expr
+                         , ty :: Maybe Type
                          }
                | InductiveDef { name :: Text
                               , gamma :: Ctx
@@ -36,12 +42,12 @@ data Expr = UnitType -- verum value
           | Destructor Text
           | Inductive Text
           | Coinductive Text
-          | Rec { recFrom :: Text
-                , recTo :: Expr
+          | Rec { from :: Expr
+                , to :: Expr
                 , matches :: [Match]
                 }
-          | Corec { corecFrom :: Expr
-                  , corecTo :: Text
+          | Corec { from :: Expr
+                  , to :: Expr
                   , matches :: [Match]
                   }
   deriving (Eq, Show)

@@ -1,16 +1,18 @@
 {-# language OverloadedStrings#-}
 import Test.Hspec
+import Test.Hspec.Expectations
 import Test.Hspec.Megaparsec
+
 import Text.Megaparsec
 
 import qualified Data.Map as Map
 
 import Control.Monad.State.Strict
-import Lens.Micro.Platform
 
 import qualified Data.Text as T
 
 import Parser
+import TypeChecker
 import AbstractSyntaxTree
 
 main :: IO ()
@@ -57,7 +59,7 @@ main = hspec $ do
     it "parses definitions" $
       parse parseProgram "" "x = ()"
       `shouldParse`
-      [ExprDef "x" UnitExpr]
+      [ExprDef "x" UnitExpr Nothing]
     it "parses data" $
       parse parseProgram "" "data C : Set where { C1 : C -> C }"
       `shouldParse`
@@ -70,15 +72,15 @@ main = hspec $ do
     it "parses rec" $
       parse parseProgram "" "rec C to Unit where { A x = () }"
       `shouldParse`
-      [Expression $ Rec "C" UnitType [Match "A" UnitExpr]]
+      [Expression $ Rec (TypeVar "C") UnitType [Match "A" UnitExpr]]
     it "parses corec" $
       parse parseProgram "" "corec Unit to C where { A x = ()}"
       `shouldParse`
-      [Expression $ Corec UnitType "C" [Match "A"  UnitExpr]]
+      [Expression $ Corec UnitType (TypeVar "C") [Match "A"  UnitExpr]]
     it "parses multiline program" $
       parse parseProgram "" "y = (); y"
       `shouldParse`
-      [ ExprDef "y" UnitExpr
+      [ ExprDef "y" UnitExpr Nothing
       , Expression $ GlobalExprVar "y"]
     it "parses a statement with line folding" $
       parse parseProgram "" (T.unlines [ "x ="
@@ -86,7 +88,7 @@ main = hspec $ do
                                        , "   @"
                                        , "    ()"])
       `shouldParse`
-       [ ExprDef "x" (UnitExpr :@: UnitExpr)]
+       [ ExprDef "x" (UnitExpr :@: UnitExpr) Nothing]
     it "parses indented data definition" $
       parse parseProgram "" (T.unlines [ "data C : (y:Unit) -> Set where"
                                        , "  C1 : (C @ ()) -> C ()"
@@ -111,9 +113,11 @@ main = hspec $ do
                                        , "x @ z"])
       `shouldParse`
       [ ExprDef { name = "x"
-                , expr = Abstr UnitType (LocalExprVar 0)}
+                , expr = Abstr UnitType (LocalExprVar 0)
+                , ty = Nothing}
       , ExprDef { name = "z"
-                , expr = UnitExpr}
+                , expr = UnitExpr
+                , ty = Nothing}
       , InductiveDef { name = "A"
                      , gamma = [ UnitType]
                      , sigmas = [ [UnitExpr]
@@ -125,3 +129,20 @@ main = hspec $ do
                      , gamma1s = [ []
                                  , []]}
       , Expression $ GlobalExprVar "x" :@: GlobalExprVar "z" ]
+
+  describe "Type Checker works" $ do
+    let shouldCheck :: (HasCallStack, Show a, Eq a) => TI a -> a -> Expectation
+        shouldCheck ti val = runTI ti (ContextTI { _ctx = []
+                                                 , _tyCtx = []
+                                                 , _defCtx = []
+                                                 , _strCtx = []})
+                             `shouldBe`
+                             Right val
+    it "type check unit type" $
+      inferType UnitType
+      `shouldCheck`
+      []
+    it "type check unit expr" $
+      inferTerm UnitExpr
+      `shouldCheck`
+      ([],UnitType)

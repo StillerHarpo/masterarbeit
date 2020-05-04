@@ -74,6 +74,7 @@ parseDefinition = lineFold $ do
   expr <- parseExpr
   checkName name
   exprDefs %= Set.insert name
+  let ty = Nothing
   pure ExprDef{..}
 
 parseData :: Parser Statement
@@ -221,7 +222,7 @@ parseAbstr = do
 parseRec :: Parser Expr
 parseRec = parseBlock ((,)
                        <$ symbol "rec"
-                       <*> lexeme parseTypeStrVarT
+                       <*> lexeme parseTypeStrVar
                        <* symbol "to"
                        <*> lexeme parseExpr
                        <* symbol "where")
@@ -233,7 +234,7 @@ parseCorec = parseBlock ((,)
                          <$ symbol "corec"
                          <*> lexeme parseExpr
                          <* symbol "to"
-                         <*> lexeme parseTypeStrVarT
+                         <*> lexeme parseTypeStrVar
                          <* symbol "where")
                          (const parseMatch)
                          (((.).(.)) pure $ uncurry Corec)
