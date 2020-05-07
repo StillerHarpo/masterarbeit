@@ -3,11 +3,14 @@
 {-# language TemplateHaskell #-}
 {-# language RecordWildCards #-}
 {-# language LambdaCase #-}
+{-# language ViewPatterns #-}
 
 module TypeChecker where
 
 import Control.Monad.Except
 import Control.Monad.Reader
+import Control.Arrow (second)
+
 import Lens.Micro.Platform
 
 import Data.Text (Text)
@@ -63,7 +66,7 @@ checkTerm = undefined
 inferTerm :: Expr -> TI Type
 inferTerm UnitExpr = pure ([],UnitType)
 inferTerm (LocalExprVar idx) = ([],) <$> (view ctx >>= lookupLocalVarTI idx)
-inferTerm (GlobalExprVar x) = view defCtx >>= lookupDefTypeTI x
+inferTerm (GlobalExprVar x) = lookupDefTypeTI x
 inferTerm (t :@: s) = inferTerm t >>= \case
   ([],_) -> throwError "Can't apply someting to a type with a empty context"
   (a:ctx2,b) -> do
@@ -78,8 +81,8 @@ inferTerm _  = throwError "This is not a term"
 
 betaeq :: Expr -> Expr -> TI ()
 betaeq e1 e2 = do
-  ee1 <- eval e1
-  ee2 <- eval e2
+  ee1 <- evalExpr e1
+  ee2 <- evalExpr e2
   if ee1 == ee2
   then pure ()
   else throwError $ "couldn't match type "
@@ -87,9 +90,41 @@ betaeq e1 e2 = do
                   <> " with type "
                   <> T.pack (show e2)
 
-eval :: Expr -> TI Expr
-eval (GlobalExprVar x) = undefined
-eval x = pure x
+evalExpr :: Expr -> TI Expr
+evalExpr (Abstr ty expr) = Abstr <$> evalExpr ty <*> evalExpr expr
+evalExpr r@Rec{..} = Rec fromRec
+                         <$> evalExpr toRec
+                         <*> mapM (\Match{..} -> Match structorName
+                                              <$> evalExpr matchExpr)
+                                  matches
+evalExpr r@Corec{..} = Corec <$> evalExpr fromCorec
+                             <*> pure toCorec
+                             <*> mapM (\Match{..} -> Match structorName
+                                                  <$> evalExpr matchExpr)
+                                      matches
+evalExpr (f :@: arg) = do
+  valF <- evalExpr f
+  valF' <- case valF of
+            GlobalExprVar x -> lookupDefExprTI x
+            _               -> pure valF
+  valArg <- evalExpr arg
+  case (valF', valArg) of
+    (Abstr _ expr,_) -> evalExpr $ substExpr 0 expr valArg
+    -- TODO gamma can be empty
+    (r@Rec{..}, getArgs -> (Constructor constrN,constrArgs)) -> do
+      typeTo <- inferType toRec
+      recTy <- inferTerm r
+      evalExpr $ applyToStr fromRec (getRecRHS constrN matches)
+               $ substExprs 0 constrArgs r
+    (d@(Destructor n), _) -> undefined
+    _ -> pure $ valF :@: valArg
+evalExpr atom = pure atom
+
+getRecRHS :: Text -> [Match] -> Expr
+getRecRHS str [] = error . T.unpack $ "internel type checking error: rec expression doesn't contain structor" <> str
+getRecRHS str (Match{..}:ms)
+  | str == structorName = matchExpr
+  | otherwise           = getRecRHS str ms
 
 substExpr :: Int -> Expr -> Expr -> Expr
 substExpr i r v@(LocalExprVar j)
@@ -114,12 +149,46 @@ substData n x (Coinductive m)
   | n == m = x
 substData n x (e1 :@: e2) = substData n x e1 :@: substData n x e2
 substData n x (Abstr t e) = Abstr (substData n x t) (substData n x e)
-substData n x Rec{..} = Rec { from = substData n x from
-                            , to = substData n x to
+substData n x Rec{..} = Rec { fromRec = fromRec
+                            , toRec = substData n x toRec
                             , matches = map (\m -> m {matchExpr = substData n x (matchExpr m)}) matches
                             }
+substData n x Corec{..} = Corec { fromCorec = substData n x fromCorec
+                                , toCorec = toCorec
+                                , matches = map (\m -> m {matchExpr = substData n x (matchExpr m)}) matches
+                                }
 substData n x atom    = atom
 
+applyToStr :: Text -> Expr -> Expr -> Expr
+applyToStr n e (getArgs -> (c@(Constructor m),args))
+  | n == m = e :@: applyArgs (c,map (applyToStr n e) args)
+  | otherwise = applyArgs (c,map (applyToStr n e) args)
+applyToStr n e (getArgs -> (d@(Destructor m),args))
+  | n == m = e :@: applyArgs (d,map (applyToStr n e) args)
+  | otherwise = applyArgs (d,map (applyToStr n e) args)
+applyToStr n e (f :@: arg) = applyToStr n e f :@: applyToStr n e arg
+applyToStr n e (Abstr ty arg) = Abstr (applyToStr n e ty)
+                                      (applyToStr n e arg)
+applyToStr n e Rec{..} = Rec { fromRec = fromRec
+                             , toRec = applyToStr n e toRec
+                             , matches = map (\m -> m {matchExpr = applyToStr n e (matchExpr m)}) matches
+                             }
+applyToStr n e Corec{..} = Corec { fromCorec = applyToStr n e fromCorec
+                                 , toCorec = toCorec
+                                 , matches = map (\m -> m {matchExpr = applyToStr n e (matchExpr m)}) matches
+                                 }
+applyToStr _ _ atom = atom
+
+-- | splits up a chain of left associative applications into a list of
+-- arguments
+getArgs :: Expr -> (Expr,[Expr])
+getArgs (expr :@: arg) = second (++ [arg]) (getArgs expr)
+getArgs arg = (arg,[])
+
+applyArgs :: (Expr,[Expr]) -> Expr
+applyArgs (f,args) = foldl (:@:) f args
+
+-- | lookup lifted to the TI monad
 lookupTI :: Eq a => a -> [(a,b)] -> TI b
 lookupTI var ctx = case lookup var ctx of
                      Just t   -> pure t
@@ -130,22 +199,35 @@ lookupLocalVarTI _ []     = throwError "Variable not defined"
 lookupLocalVarTI 0 (x:_)  = pure x
 lookupLocalVarTI n (x:xs) = lookupLocalVarTI (n-1) xs
 
-lookupDefTypeTI :: Text -> [Statement] -> TI Type
-lookupDefTypeTI _ [] = throwError "Variable not defined"
-lookupDefTypeTI n (ExprDef{..}:stmts)
-  | n == name = pure $ fromJust ty
-  | otherwise = lookupDefTypeTI n stmts
-lookupDefTypeTI n (_:stmts) = lookupDefTypeTI n stmts
+lookupDefTypeTI :: Text -> TI Type
+lookupDefTypeTI t = view defCtx >>= lookupDefTypeTI' t
+  where
+    lookupDefTypeTI' _ [] = throwError "Variable not defined"
+    lookupDefTypeTI' n (ExprDef{..}:stmts)
+      | n == name = pure $ fromJust ty
+      | otherwise = lookupDefTypeTI' n stmts
+    lookupDefTypeTI' n (_:stmts) = lookupDefTypeTI' n stmts
 
-lookupDefKindTI :: Text -> [Statement] -> TI Kind
-lookupDefKindTI _ [] = throwError "Variable not defined"
-lookupDefKindTI n (InductiveDef{..}:stmts)
-  | n == name = pure gamma
-  | otherwise = lookupDefKindTI n stmts
-lookupDefKindTI n (CoinductiveDef{..}:stmts)
-  | n == name = pure gamma
-  | otherwise = lookupDefKindTI n stmts
-lookupDefKindTI n (_:stmts) = lookupDefKindTI n stmts
+lookupDefExprTI :: Text -> TI Expr
+lookupDefExprTI t = view defCtx >>= lookupDefExprTI' t
+  where
+    lookupDefExprTI' _ [] = throwError "Variable not defined"
+    lookupDefExprTI' n (ExprDef{..}:stmts)
+      | n == name = pure expr
+      | otherwise = lookupDefExprTI' n stmts
+    lookupDefExprTI' n (_:stmts) = lookupDefExprTI' n stmts
+
+lookupDefKindTI :: Text -> TI Kind
+lookupDefKindTI t = view defCtx >>= lookupDefKindTI' t
+  where
+    lookupDefKindTI' _ [] = throwError "Variable not defined"
+    lookupDefKindTI' n (InductiveDef{..}:stmts)
+      | n == name = pure gamma
+      | otherwise = lookupDefKindTI' n stmts
+    lookupDefKindTI' n (CoinductiveDef{..}:stmts)
+      | n == name = pure gamma
+      | otherwise = lookupDefKindTI' n stmts
+    lookupDefKindTI' n (_:stmts) = lookupDefKindTI' n stmts
 
 assert :: Bool -> Text -> TI ()
 assert True  _   = pure ()

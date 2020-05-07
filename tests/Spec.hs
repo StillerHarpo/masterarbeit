@@ -72,11 +72,11 @@ main = hspec $ do
     it "parses rec" $
       parse parseProgram "" "rec C to Unit where { A x = () }"
       `shouldParse`
-      [Expression $ Rec (TypeVar "C") UnitType [Match "A" UnitExpr]]
+      [Expression $ Rec "C" UnitType [Match "A" UnitExpr]]
     it "parses corec" $
       parse parseProgram "" "corec Unit to C where { A x = ()}"
       `shouldParse`
-      [Expression $ Corec UnitType (TypeVar "C") [Match "A"  UnitExpr]]
+      [Expression $ Corec UnitType "C" [Match "A"  UnitExpr]]
     it "parses multiline program" $
       parse parseProgram "" "y = (); y"
       `shouldParse`

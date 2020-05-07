@@ -222,7 +222,7 @@ parseAbstr = do
 parseRec :: Parser Expr
 parseRec = parseBlock ((,)
                        <$ symbol "rec"
-                       <*> lexeme parseTypeStrVar
+                       <*> lexeme parseTypeStrVarT
                        <* symbol "to"
                        <*> lexeme parseExpr
                        <* symbol "where")
@@ -234,7 +234,7 @@ parseCorec = parseBlock ((,)
                          <$ symbol "corec"
                          <*> lexeme parseExpr
                          <* symbol "to"
-                         <*> lexeme parseTypeStrVar
+                         <*> lexeme parseTypeStrVarT
                          <* symbol "where")
                          (const parseMatch)
                          (((.).(.)) pure $ uncurry Corec)

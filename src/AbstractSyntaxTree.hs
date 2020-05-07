@@ -42,12 +42,12 @@ data Expr = UnitType -- verum value
           | Destructor Text
           | Inductive Text
           | Coinductive Text
-          | Rec { from :: Expr
-                , to :: Expr
+          | Rec { fromRec :: Text
+                , toRec :: Expr
                 , matches :: [Match]
                 }
-          | Corec { from :: Expr
-                  , to :: Expr
+          | Corec { fromCorec :: Expr
+                  , toCorec :: Text
                   , matches :: [Match]
                   }
   deriving (Eq, Show)
