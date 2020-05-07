@@ -60,8 +60,11 @@ inferType (a :@: t) = inferType a >>= \case
 inferType (Abstr tyX b) = (tyX:) <$> local (ctx %~ (tyX:)) (inferType b)
 inferType _        = throwError "This is not a type"
 
-checkTerm :: Ctx -> Expr -> (Ctx,Expr) -> TI ()
-checkTerm = undefined
+checkTerm :: Expr -> (Ctx,Expr) -> TI ()
+checkTerm e (ctx1,a1) = do
+  (ctx2, a2) <- inferTerm e
+  zipWithM_ betaeq ctx1 ctx2
+  betaeq a1 a2
 
 inferTerm :: Expr -> TI Type
 inferTerm UnitExpr = pure ([],UnitType)
