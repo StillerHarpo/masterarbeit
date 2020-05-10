@@ -112,11 +112,48 @@
    #+end_example
 ** Vectors
    #+begin_example
-   data Vector A : (n:Nat) -> Set where
-     Nil' : Unit -> Vector 0
-     Cons : (k:Nat) -> Product A (Vector k) -> Vector (Succ k)
-   nil A = Nil'<A> @ ()
+   data VectorA : (n:Nat) -> Set where
+     NilA' : Unit -> Vector 0
+     ConsA : (k:Nat) -> ProductA A (VectorA k) -> VectorA (Suc k)
+   nilA = NilA' @ ()
    #+end_example
+   Here $A$ has to be a concrete type, because  our language doesn't have type
+   parameters.
+*** Tail Function
+    We use a function, which extends a vector of units to the front of a
+    vector, to show how evaluation on a vector works.
+    This tail function returns the empty vector for the empty vector,
+    because every function has to be total in our language.  To keep
+    things simple we use Unit for $A$. We also simplify "Product Unit
+    (VectorUnit k)" to just "VectorUnit k"
+    #+begin_example
+    extend = rec VecUnit to ((x).Vec @ (Suc x) where
+               NilUnit' _ = ConsUnit @ 0 @ (NilUnit' @ ())
+               ConsA k v = ConsUnit @ (Suc @ k) @ v
+    #+end_example
+    The type checking of this function goes as follows
+    \begin{scprooftree}{0.8}
+    \AxiomC{$\vdash$ (x).(VecUnit @ (Suc @ x)) : (k: Nat)}
+    \noLine
+    \UnaryInfC{(\_ : Unit) $\vdash$ ConsUnit @ 0 @ (NilUnit' @ ()) : (x).(VecUnit @ (Suc @ x)) @ 0}
+    \noLine
+    \UnaryInfC{(k : Nat, v : (x).(Vec @ (Suc @ x)) @ k) $\vdash$ ConsUnit @ (Suc @ k) @ v : (x).(Vec @ (Suc @ x)) @ (Suc @ k)}
+    \UnaryInfC{$\vdash$ app : (k:Nat,y : (x).Vec (Suc x)) $\rightarrow$ (x).(Vec @ (Suc x)) @ k}
+    \end{scprooftree}
+    As an example we evaluate a vector of length 1 with this function.  We choose length one
+    to see all rec cases.
+    \begin{align*}
+      &\text{extend}@ 1 @ (\text{ConsUnit} @ 0 @ (\text{NilUnit'} @ ()))\\
+      &= \text{extend}@(\text{Suc} @ k \bullet 0) @ (\text{ConsUnit} @ 0 @ (\text{NilUnit'} @ ()))\\
+      &\succ \text{ConsUnit} @ (\text{Suc} @ k) @ v \left[ \hat{X}(\text{extend} @ n @ x)/v \right][0,\text{NilUnit'} @ ()]\\
+      &= \text{ConsUnit} @ (\text{Suc} @ k) @ v \left[ \text{extend} @ n @ x/v \right][0, \text{NilUnit'} @ ()]\\
+      &= \text{ConsUnit} @ (\text{Suc} @ 0) @ (\text{extend} @ n @ x) [0,\text{NilUnit'} @ ()]\\
+      &= \text{ConsUnit} @ (\text{Suc} @ 0) @ (\text{extend} @ 0 @ (\text{NilUnit'} @ ()))\\
+      &= \text{ConsUnit} @ 1 @ (\text{extend} @ (0 \bullet 0) @ (\text{NilUnit'} @ ()))\\
+      &\succ \text{ConsUnit} @ 1 @ (\text{ConsUnit} @ 0 @ (\text{NilUnit'} @ ()))\left[ \hat{()}(\text{extend} @ k @ x) / \_  \right][()]\\
+      &= \text{ConsUnit} @ 1 @ (\text{ConsUnit} @ 0 @ (\text{NilUnit'} @ ()))[()]\\
+      &= \text{ConsUnit} @ 1 @ (\text{ConsUnit} @ 0 @ (\text{NilUnit'} @ ()))
+    \end{align*}
 ** Extended Naturals
    #+begin_example
    codata ExNat : Set where
