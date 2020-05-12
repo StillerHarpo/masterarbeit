@@ -83,14 +83,21 @@
    zero = Zero' @ ()
    #+end_example
 ** Binary Product
+   The product is defined as a coinductive type.  It has two destructrors.
+   The first gives back the first element.  And the second the second.
+   The types A and B have to be concrete types.  We don't have type
+   polymorphism in our language.
    #+begin_example
-   codata Product A B : Set where
+   codata Product : Set where
       Fst : Product -> A
       Snd : Product -> B
    pair x y = (corec Unit where
                  Fst _ -> x
                  Snd _ -> y) @ ()
    #+end_example
+   For differnt types we have to define different Products.  We will write
+   ProductNat for a prodcut of two nats. ProductNatUnit is the prodcuct,
+   where the first element is a Nat and the second a Unit.
 ** Binary Coproduct
    #+begin_example
    data Coproduct<A,B> : Set where
