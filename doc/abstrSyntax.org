@@ -411,6 +411,18 @@
 ** Full evaluation
    We write $A \longrightarrow_T^* B$ for evaluating $A$ as long as it
    is possible yields $B$.
+
+   The rules are
+   \begin{center}
+   \AxiomC{$\neg\exists B : A \longrightarrow_T B$}
+   \UnaryInfC{$A \longrightarrow_T^* A$}
+   \DisplayProof
+   \hskip 1.5em
+   \AxiomC{$A \longrightarrow_T B$}
+   \AxiomC{$B \longrightarrow_T^* C$}
+   \BinaryInfC{$A \longrightarrow_T^* C$}
+   \DisplayProof
+   \end{center}
 ** Beta-equivalence
    We introduce a new rule for beta-equivalence.
    \begin{center}
