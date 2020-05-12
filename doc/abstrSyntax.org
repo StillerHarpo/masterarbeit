@@ -98,6 +98,34 @@
    For differnt types we have to define different Products.  We will write
    ProductNat for a prodcut of two nats. ProductNatUnit is the prodcuct,
    where the first element is a Nat and the second a Unit.
+
+*** Swap funtion
+    We use the swap function on a product of 2 numbers, to illustrate
+    how evaluation on a coninductive type works.  The swap function is
+    defined as follows.
+    #+begin_example
+    swap = corec ProductNat to ProductNat where
+             Fst x -> Snd x
+             Snd x -> Fst x
+    #+end_example
+    This is a well typed function as shown by the following proof
+    \begin{prooftree}
+    \AxiomC{$\vdash$ ProductNat : $*$}
+    \AxiomC{(x:Nat) $\vdash$ Snd @ x : ProductNat \textcircled{a}}
+    \noLine
+    \UnaryInfC{(y : Nat) $\vdash$ Fst @ y : ProductNat \textcircled{b}}
+    \BinaryInfC{swap : (y : ProductNat) $\rightarrow$ ProductNat}
+    \end{prooftree}
+    We show \textcircled{a} in the following proof.  \textcircled{b} works analog
+    \begin{prooftree}
+    \AxiomC{ProductNat : $*$}
+    \UnaryInfC{$\vdash$ Snd (y : Nat) $\rightarrow$ ProductNat}
+    \AxiomC{Nat : $*$}
+    \BinaryInfC{(x : Nat) $\vdash$ Snd (y :Nat) $\rightarrow$ ProductNat}
+    \AxiomC{Nat : $*$}
+    \UnaryInfC{(x : Nat) $\vdash$ x : Nat}
+    \BinaryInfC{(x : Nat) $\vdash$ Snd @ x : ProductNat}
+    \end{prooftree}
 ** Binary Coproduct
    #+begin_example
    data Coproduct<A,B> : Set where
