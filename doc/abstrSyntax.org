@@ -63,8 +63,8 @@
    #+begin_example
    codata Terminal : Set where
       Terminal : Terminal -> Terminal
-   terminal' = (corec Unit where
-                  Terminal x = x) @ ()
+   terminal = (corec Unit where
+                 Terminal x = x) @ ()
 
    #+end_example
 ** Intial Object
@@ -78,8 +78,8 @@
 ** Natural Numbers
    #+begin_example
    data Nat : Set where
-      Zero' : Terminal -> Nat
-      Succ : Nat -> Nat
+      Zero : Terminal -> Nat
+      Suc : Nat -> Nat
    zero = Zero' @ ()
    #+end_example
 ** Binary Product
@@ -134,12 +134,48 @@
    #+end_example
 ** Pi Type
    #+begin_example
-   codata Pi<A,B>: Set where
-      Apply' : (x: A) -> Pi -> B
-   lambda<A,B> (x:A, g:B) = (corec Unit where
-                              Apply'<A,B> x _ = g) @ ()
-   apply<A,B> (t:A, x:B) = Apply' x t
+   codata Pi : Set where
+      Apply : (x: A) -> Pi -> B
+   lambda x g = (corec Pi_A_B to Unit where
+                           Apply x _ = g) @ ()
+   apply t x = Apply @ x @ t
    #+end_example
+*** identity function
+     The identity function on nats is defined like this
+     #+begin_example
+     id = lambda x x
+     #+end_example
+
+     Evaluation on 1 goes as follows
+
+    \begin{lstlisting}
+    apply (lambda n n)) 1
+    = Apply @ 1 @ (lampda n n)
+    = Apply @ 1 @ ((corec Pi to Unit where
+                       Apply n _ = n ) @ ())
+    $\succ \widehat{\text{Nat}}$ ($\underbrace{\text{(corec Pi to Unit where Apply' n \_ = n)@x}}_t$)[n/x][1,()]
+    = (rec Nat to Nat where
+         Zero x = Zero @ ($\widehat{()}$(t,y))
+         Succ x = Suc @ ($\widehat{Y}$(t,y)))@x[n/x][1,()]
+    = (rec Nat to Nat where
+         Zero x = Zero @ ($\widehat{()}$(t))
+         Succ x = Suc @ y)@x[n/x][1,()]
+    = (rec Nat to Nat where
+         Zero x = Zero @ ($\widehat{()}$())
+         Succ x = Suc @ y)@x[n/x][1,()]
+    = (rec Nat to Nat where
+         Zero x = Zero @ x
+         Succ x = Suc @ y)@x[n/x][1,()]
+    = (rec Nat to Nat where
+         Zero x = Zero @ x
+         Succ x = Suc @ y)@x[n/x][1,()]
+    = (rec Nat to Nat where
+         Zero x = Zero @ x
+         Succ x = Suc @ y)@n[1,()]
+    = (rec Nat to Nat where
+         Zero x = Zero @ x
+         Succ x = Suc @ x)@1
+    \end{lstlisting}
 ** Sigma Type
    #+begin_example
    data Sigma A B : Set where
