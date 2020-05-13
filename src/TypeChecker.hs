@@ -41,16 +41,16 @@ checkCtx :: Ctx -> TI ()
 checkCtx [] = pure ()
 checkCtx (typ:ctx) = checkType typ []
 
-checkType :: Expr -> Kind -> TI ()
+checkType :: TypeExpr -> Kind -> TI ()
 checkType e k = inferType e >>= zipWithM_ betaeq k
 
-inferType :: Expr -> TI Kind
+inferType :: TypeExpr -> TI Kind
 inferType UnitType = pure []
 inferType (TypeVar var) = do
   ty <- view tyCtx >>= lookupTI var
   view ctx >>= checkCtx
   pure ty
-inferType (a :@: t) = inferType a >>= \case
+inferType (a :@ t) = inferType a >>= \case
     [] -> throwError "Can't apply someting to a type with a empty context"
     (b:gamma2) -> do
       (ctx,b') <- inferTerm t
@@ -58,9 +58,10 @@ inferType (a :@: t) = inferType a >>= \case
       betaeq b b'
       pure $ substCtx 0 t gamma2
 inferType (Abstr tyX b) = (tyX:) <$> local (ctx %~ (tyX:)) (inferType b)
-inferType _        = throwError "This is not a type"
+inferType (Inductive t) = undefined
+inferType (Coinductive t) = undefined
 
-checkTerm :: Expr -> (Ctx,Expr) -> TI ()
+checkTerm :: Expr -> Type -> TI ()
 checkTerm e (ctx1,a1) = do
   (ctx2, a2) <- inferTerm e
   zipWithM_ betaeq ctx1 ctx2
@@ -76,16 +77,16 @@ inferTerm (t :@: s) = inferTerm t >>= \case
     (ctx,a') <- inferTerm s
     assert (null ctx) "Type Ctx should be empty"
     betaeq a a'
-    pure (substCtx 0 s ctx2, substExpr 0 s b)
+    pure (substCtx 0 s ctx2, substTypeExpr 0 s b)
 inferTerm (Constructor x) = view strCtx >>= lookupTI x
 inferTerm (Destructor x) = view strCtx >>= lookupTI x
 inferTerm Rec{..} = undefined
-inferTerm _  = throwError "This is not a term"
+inferTerm Corec{..} = undefined
 
-betaeq :: Expr -> Expr -> TI ()
+betaeq :: TypeExpr -> TypeExpr -> TI ()
 betaeq e1 e2 = do
-  ee1 <- evalExpr e1
-  ee2 <- evalExpr e2
+  ee1 <- evalTypeExpr e1
+  ee2 <- evalTypeExpr e2
   if ee1 == ee2
   then pure ()
   else throwError $ "couldn't match type "
@@ -93,14 +94,24 @@ betaeq e1 e2 = do
                   <> " with type "
                   <> T.pack (show e2)
 
+evalTypeExpr :: TypeExpr -> TI TypeExpr
+evalTypeExpr (Abstr ty expr) = Abstr <$> evalTypeExpr ty
+                                     <*> evalTypeExpr expr
+evalTypeExpr (f :@ arg) = do
+  valF <- evalTypeExpr f
+  valArg <- evalExpr arg
+  case (valF, valArg) of
+    (Abstr _ expr,_) -> evalTypeExpr $ substTypeExpr 0 valArg expr
+    _ -> pure $ valF :@ valArg
+evalTypeExpr atom = pure atom
+
 evalExpr :: Expr -> TI Expr
-evalExpr (Abstr ty expr) = Abstr <$> evalExpr ty <*> evalExpr expr
 evalExpr r@Rec{..} = Rec fromRec
-                         <$> evalExpr toRec
+                         <$> evalTypeExpr toRec
                          <*> mapM (\Match{..} -> Match structorName
                                               <$> evalExpr matchExpr)
                                   matches
-evalExpr r@Corec{..} = Corec <$> evalExpr fromCorec
+evalExpr r@Corec{..} = Corec <$> evalTypeExpr fromCorec
                              <*> pure toCorec
                              <*> mapM (\Match{..} -> Match structorName
                                                   <$> evalExpr matchExpr)
@@ -112,7 +123,6 @@ evalExpr (f :@: arg) = do
             _               -> pure valF
   valArg <- evalExpr arg
   case (valF', valArg) of
-    (Abstr _ expr,_) -> evalExpr $ substExpr 0 expr valArg
     -- TODO gamma can be empty
     (r@Rec{..}, getArgs -> (Constructor constrN,constrArgs)) -> do
       typeTo <- inferType toRec
@@ -134,32 +144,28 @@ substExpr i r v@(LocalExprVar j)
   | i == j = r
   | otherwise = v
 substExpr i r (e1 :@: e2) = substExpr i r e1 :@: substExpr i r e2
-substExpr i r1 (Abstr t r2) = Abstr (substExpr i r1 t) (substExpr (i+1) r1 r2)
 substExpr _ _ e = e
+
+substTypeExpr :: Int -> Expr -> TypeExpr -> TypeExpr
+substTypeExpr i r1 (Abstr t r2) = Abstr (substTypeExpr i r1 t) (substTypeExpr (i+1) r1 r2)
+substTypeExpr i r (e1 :@ e2) = substTypeExpr i r e1 :@ substExpr i r e2
+substTypeExpr _ _ e = e
 
 substCtx :: Int -> Expr -> Ctx -> Ctx
 substCtx _ _ [] = []
-substCtx i r (e:ctx) = substExpr i r e : substCtx (i+1) r ctx
+substCtx i r (e:ctx) = substTypeExpr i r e : substCtx (i+1) r ctx
 
 substExprs :: Int -> [Expr] -> Expr -> Expr
 substExprs _ [] e = e
 substExprs n (v:vs) e = substExprs (n+1) vs (substExpr n v e)
 
-substData :: Text -> Expr -> Expr -> Expr
+substData :: Text -> TypeExpr -> TypeExpr -> TypeExpr
 substData n x (Inductive m)
   | n == m = x
 substData n x (Coinductive m)
   | n == m = x
-substData n x (e1 :@: e2) = substData n x e1 :@: substData n x e2
+substData n x (e1 :@ e2) = substData n x e1 :@ e2
 substData n x (Abstr t e) = Abstr (substData n x t) (substData n x e)
-substData n x Rec{..} = Rec { fromRec = fromRec
-                            , toRec = substData n x toRec
-                            , matches = map (\m -> m {matchExpr = substData n x (matchExpr m)}) matches
-                            }
-substData n x Corec{..} = Corec { fromCorec = substData n x fromCorec
-                                , toCorec = toCorec
-                                , matches = map (\m -> m {matchExpr = substData n x (matchExpr m)}) matches
-                                }
 substData n x atom    = atom
 
 applyToStr :: Text -> Expr -> Expr -> Expr
@@ -170,16 +176,10 @@ applyToStr n e (getArgs -> (d@(Destructor m),args))
   | n == m = e :@: applyArgs (d,map (applyToStr n e) args)
   | otherwise = applyArgs (d,map (applyToStr n e) args)
 applyToStr n e (f :@: arg) = applyToStr n e f :@: applyToStr n e arg
-applyToStr n e (Abstr ty arg) = Abstr (applyToStr n e ty)
-                                      (applyToStr n e arg)
-applyToStr n e Rec{..} = Rec { fromRec = fromRec
-                             , toRec = applyToStr n e toRec
-                             , matches = map (\m -> m {matchExpr = applyToStr n e (matchExpr m)}) matches
-                             }
-applyToStr n e Corec{..} = Corec { fromCorec = applyToStr n e fromCorec
-                                 , toCorec = toCorec
-                                 , matches = map (\m -> m {matchExpr = applyToStr n e (matchExpr m)}) matches
-                                 }
+applyToStr n e r@Rec{..} =
+  r { matches = map (\m -> m {matchExpr = applyToStr n e (matchExpr m)}) matches }
+applyToStr n e c@Corec{..} =
+  c { matches = map (\m -> m {matchExpr = applyToStr n e (matchExpr m)}) matches }
 applyToStr _ _ atom = atom
 
 -- | splits up a chain of left associative applications into a list of

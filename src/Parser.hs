@@ -34,7 +34,7 @@ import qualified Text.Megaparsec.Char.Lexer as L
 -- maps Con/Destructor Names to their type names
 
 -- | Context to parse
-type CtxP = [(Text, Expr)]
+type CtxP = [(Text, TypeExpr)]
 
 data ParserState = ParserState {
     _scLineFold :: Maybe (Parsec Void Text ())
@@ -107,10 +107,10 @@ parseCodata = nonIndented $ parseBlock
      destructorDefs %= Set.union (Set.fromList destructors)
      pure CoinductiveDef{..})
 
-parseConstructorDef :: Text -> Parser (Text, Ctx, Expr, [Expr])
+parseConstructorDef :: Text -> Parser (Text, Ctx, TypeExpr, [Expr])
 parseConstructorDef name = parseStructorDef $ (,)
   <$ (inductiveDefs %= Set.insert name) -- Dummy
-  <*> lexeme parseExpr
+  <*> lexeme parseTypeExpr
   <* (inductiveDefs %= Set.delete name) -- name is only allowed here to make it strictly positve
   <* symbol "->"
   <* lexeme (withPredicate (== name)
@@ -118,7 +118,7 @@ parseConstructorDef name = parseStructorDef $ (,)
                            parseTypeStrVarT)
   <*> many (lexeme parseExpr)
 
-parseDestructorDef :: Text -> Parser (Text, Ctx, [Expr], Expr)
+parseDestructorDef :: Text -> Parser (Text, Ctx, [Expr], TypeExpr)
 parseDestructorDef name = parseStructorDef $ (,)
   <$ lexeme (withPredicate (== name)
                            (`T.append` ("should be the same as type " `T.append` name))
@@ -126,7 +126,7 @@ parseDestructorDef name = parseStructorDef $ (,)
   <*> many (lexeme parseExpr)
   <* symbol "->"
   <* (coinductiveDefs %= Set.insert name) -- Dummy
-  <*> lexeme parseExpr
+  <*> lexeme parseTypeExpr
   <* (coinductiveDefs %= Set.delete name) -- name is only allowed here to make it strictly positve
 
 parseDataHeader :: Parser (Text, CtxP)
@@ -153,20 +153,34 @@ parseStructorDef p = do
   (x,y) <- withLocalVars vars p
   pure (nameC, gamma1, x, y)
 
+parseTypeExpr :: Parser TypeExpr
+parseTypeExpr = try (parseApp (:@) parseTypeTerm parseTerm) <|> parseTypeTerm
+
+parseTypeTerm :: Parser TypeExpr
+parseTypeTerm = choice $ map lexeme
+  [ parseUnitType
+  , try parseAbstr
+  , parseTypeVar
+  , parens parseTypeExpr
+  ]
+
 parseExpr :: Parser Expr
-parseExpr = makeExprParser parseTerm operatorTable
+parseExpr = try (parseApp (:@:) parseTerm parseTerm) <|> parseTerm
 
 parseTerm :: Parser Expr
 parseTerm = choice $ map lexeme
-  [ parseUnitType
-  , parseUnitExpr
-  , try parseAbstr
+  [ parseUnitExpr
   , try parseRec
   , try parseCorec
-  , parseTypeStrVar
+  , parseStrVar
   , parseExprVar
   , parens parseExpr
   ]
+
+parseApp :: (a -> b -> a) -> Parser a -> Parser b -> Parser a
+parseApp ap p1 p2 = do
+  r <- ap <$> lexeme p1 <* symbol "@" <*> p2
+  parseApp ap (pure r) p2 <|> pure r
 
 keywords :: [Text]
 keywords = ["data", "codata", "where", "rec", "corec"]
@@ -196,27 +210,33 @@ parseTypeStrVarT = withPredicate (`notElem` keywords)
                                   <$> upperChar
                                   <*> takeWhileP Nothing isAlphaNum)
 
-parseTypeStrVar :: Parser Expr
-parseTypeStrVar = do
+parseTypeVar :: Parser TypeExpr
+parseTypeVar = do
   ParserState{..} <- get
   var <- parseTypeStrVarT
   if | var `Set.member` _inductiveDefs   -> pure $ Inductive var
      | var `Set.member` _coinductiveDefs -> pure $ Coinductive var
-     | var `Set.member` _constructorDefs -> pure $ Constructor var
-     | var `Set.member` _destructorDefs  -> pure $ Destructor var
      | otherwise                         -> pure $ TypeVar var
 
-parseUnitType :: Parser Expr
+parseStrVar :: Parser Expr
+parseStrVar = do
+  ParserState{..} <- get
+  var <- parseTypeStrVarT
+  if | var `Set.member` _constructorDefs -> pure $ Constructor var
+     | var `Set.member` _destructorDefs  -> pure $ Destructor var
+     | otherwise                         -> singleFailure "Con/Destructor not defined"
+
+parseUnitType :: Parser TypeExpr
 parseUnitType = UnitType <$ string "Unit"
 
 parseUnitExpr :: Parser Expr
 parseUnitExpr = UnitExpr <$ string "()"
 
-parseAbstr :: Parser Expr
+parseAbstr :: Parser TypeExpr
 parseAbstr = do
   (vars,ty1:tys) <- unzip <$> parseCtxNE
   void $ lexeme $ char '.'
-  expr <- withLocalVars vars parseExpr
+  expr <- withLocalVars vars parseTypeExpr
   pure $ foldr Abstr (Abstr ty1 expr) tys
 
 parseRec :: Parser Expr
@@ -224,7 +244,7 @@ parseRec = parseBlock ((,)
                        <$ symbol "rec"
                        <*> lexeme parseTypeStrVarT
                        <* symbol "to"
-                       <*> lexeme parseExpr
+                       <*> lexeme parseTypeExpr
                        <* symbol "where")
                       (const parseMatch)
                       (((.).(.)) pure $ uncurry Rec)
@@ -232,7 +252,7 @@ parseRec = parseBlock ((,)
 parseCorec :: Parser Expr
 parseCorec = parseBlock ((,)
                          <$ symbol "corec"
-                         <*> lexeme parseExpr
+                         <*> lexeme parseTypeExpr
                          <* symbol "to"
                          <*> lexeme parseTypeStrVarT
                          <* symbol "where")
@@ -254,7 +274,7 @@ parseCtxNE = symbol "(" *> parseCtxRest
           var <- lexeme parseExprVarT
           checkName var
           void $ symbol ":"
-          expr <- parseExpr
+          expr <- parseTypeExpr
           c <- char ',' <|> char ')'
           if c == ','
           then ((var,expr):) <$> withLocalVars [var] parseCtxRest
@@ -262,9 +282,6 @@ parseCtxNE = symbol "(" *> parseCtxRest
 
 parseCtx :: Parser CtxP
 parseCtx = try parseCtxNE <|> pure []
-
-operatorTable :: [[Operator Parser Expr]]
-operatorTable = [[ InfixL ((:@:) <$ symbol "@")]]
 
 withLocalVars :: [Text] -> Parser a -> Parser a
 withLocalVars vars p =
