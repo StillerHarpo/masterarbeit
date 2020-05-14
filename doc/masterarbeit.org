@@ -155,26 +155,24 @@
                        Apply n _ = n ) @ ())
     $\succ \widehat{\text{Nat}}$ ($\underbrace{\text{(corec Pi to Unit where Apply' n \_ = n)@x}}_t$)[n/x][1,()]
     = (rec Nat to Nat where
-         Zero x = Zero @ ($\widehat{()}$(t,y))
-         Succ x = Suc @ ($\widehat{Y}$(t,y)))@x[n/x][1,()]
+         Zero x = Zero @ ($\widehat{()}$(t,x))
+         Succ x = Suc @ ($\widehat{Y}$(t,x)))@x[n/x][1,()]
     = (rec Nat to Nat where
          Zero x = Zero @ ($\widehat{()}$(t))
-         Succ x = Suc @ y)@x[n/x][1,()]
+         Succ x = Suc @ x)@x[n/x][1,()]
     = (rec Nat to Nat where
          Zero x = Zero @ ($\widehat{()}$())
-         Succ x = Suc @ y)@x[n/x][1,()]
+         Succ x = Suc @ x)@x[n/x][1,()]
     = (rec Nat to Nat where
          Zero x = Zero @ x
-         Succ x = Suc @ y)@x[n/x][1,()]
+         Succ x = Suc @ x)@x[n/x][1,()]
     = (rec Nat to Nat where
          Zero x = Zero @ x
-         Succ x = Suc @ y)@x[n/x][1,()]
-    = (rec Nat to Nat where
-         Zero x = Zero @ x
-         Succ x = Suc @ y)@n[1,()]
+         Succ x = Suc @ x)@n[1,()]
     = (rec Nat to Nat where
          Zero x = Zero @ x
          Succ x = Suc @ x)@1
+    = 1
     \end{lstlisting}
 
 *** replicate function
