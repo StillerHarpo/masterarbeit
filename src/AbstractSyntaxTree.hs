@@ -14,54 +14,46 @@ data Statement = ExprDef { name :: Text
                          , expr :: Expr
                          , ty :: Maybe Type
                          }
-               | InductiveDef { name :: Text
-                              , gamma :: Ctx
-                              , sigmas :: [[Expr]]
-                              , as :: [TypeExpr]
-                              , constructors :: [Text]
-                              , gamma1s :: [Ctx]
-                              }
-               | CoinductiveDef { name :: Text
-                                , gamma :: Ctx
-                                , sigmas :: [[Expr]]
-                                , as :: [TypeExpr]
-                                , destructors :: [Text]
-                                , gamma1s :: [Ctx]
-                                }
+               | TypeDef { name :: Text
+                         , typeExpr :: TypeExpr
+                         , kind :: Maybe Kind
+                         }
                | Expression Expr
   deriving (Eq, Show)
 
 data TypeExpr = UnitType -- verum type
               | TypeExpr :@ Expr
-              | TypeVar Text
+              | LocalTypeVar Int
+              | GlobalTypeVar Text
               | Abstr TypeExpr TypeExpr
-              | Inductive Text
-              | Coinductive Text
+              | In Ductive
+              | Coin Ductive
+  deriving (Eq, Show)
+
+data Ductive = Ductive { gamma :: Ctx
+                       , sigmas :: [[Expr]]
+                       , as :: [TypeExpr]
+                       , gamma1s :: [Ctx]
+                       }
   deriving (Eq, Show)
 
 data Expr = UnitExpr -- verum value
           | LocalExprVar Int -- Ctx-- term variables
           | GlobalExprVar Text
           | Expr :@: Expr
-          | Constructor Text
-          | Destructor Text
-          | Rec { fromRec :: Text
+          | Constructor Ductive Int
+          | Destructor Ductive Int
+          | Rec { fromRec :: Ductive
                 , toRec :: TypeExpr
-                , matches :: [Match]
+                , matches :: [Expr]
                 }
           | Corec { fromCorec :: TypeExpr
-                  , toCorec :: Text
-                  , matches :: [Match]
+                  , toCorec :: Ductive
+                  , matches :: [Expr]
                   }
-  deriving (Eq, Show)
-
-data Match = Match {
-    structorName  :: Text
-  , matchExpr     :: Expr
-  }
   deriving (Eq, Show)
 
 type Ctx = [TypeExpr]
 
 -- | TyCtx contains only inductive coninductive types for now
-type TyCtx = [(Text, Ctx)]
+type TyCtx = [Ctx]

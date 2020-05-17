@@ -34,22 +34,25 @@ runTI :: TI a -> ContextTI -> Either Text a
 runTI ti = runReader (runExceptT ti)
 
 checkTyCtx :: TyCtx -> TI ()
-checkTyCtx [] = pure ()
-checkTyCtx ((_,ctx):tyCtx) = checkCtx ctx >> checkTyCtx tyCtx
+checkTyCtx = mapM_ checkCtx
 
 checkCtx :: Ctx -> TI ()
 checkCtx [] = pure ()
-checkCtx (typ:ctx) = checkType typ []
+checkCtx (typ:ctx') =
+  local (over tyCtx (const []) . over ctx (const ctx'))
+        (checkType typ [])
+  >> checkCtx ctx'
 
 checkType :: TypeExpr -> Kind -> TI ()
 checkType e k = inferType e >>= zipWithM_ betaeq k
 
 inferType :: TypeExpr -> TI Kind
 inferType UnitType = pure []
-inferType (TypeVar var) = do
-  ty <- view tyCtx >>= lookupTI var
+inferType (LocalTypeVar idx) = do
+  ty <- view tyCtx >>= lookupLocalVarTI idx
   view ctx >>= checkCtx
   pure ty
+inferType (GlobalTypeVar var) = lookupDefKindTI var
 inferType (a :@ t) = inferType a >>= \case
     [] -> throwError "Can't apply someting to a type with a empty context"
     (b:gamma2) -> do
@@ -58,8 +61,16 @@ inferType (a :@ t) = inferType a >>= \case
       betaeq b b'
       pure $ substCtx 0 t gamma2
 inferType (Abstr tyX b) = (tyX:) <$> local (ctx %~ (tyX:)) (inferType b)
-inferType (Inductive t) = undefined
-inferType (Coinductive t) = undefined
+inferType (In d) = inferTypeDuctive d
+inferType (Coin d) = inferTypeDuctive d
+
+inferTypeDuctive :: Ductive -> TI Kind
+inferTypeDuctive Ductive{..} = do
+  -- TODO check context morphism
+  zipWithM_ (\gamma1 a ->
+              local (over tyCtx (gamma:) . over ctx (gamma1++)) (checkType a []))
+            gamma1s as
+  pure gamma
 
 checkTerm :: Expr -> Type -> TI ()
 checkTerm e (ctx1,a1) = do
@@ -78,8 +89,14 @@ inferTerm (t :@: s) = inferTerm t >>= \case
     assert (null ctx) "Type Ctx should be empty"
     betaeq a a'
     pure (substCtx 0 s ctx2, substTypeExpr 0 s b)
-inferTerm (Constructor x) = view strCtx >>= lookupTI x
-inferTerm (Destructor x) = view strCtx >>= lookupTI x
+inferTerm (Constructor d@Ductive{..} i) =
+  inferTypeDuctive d
+  >> pure ( substType 0 (as !! i) (In d) : gamma1s !! i
+          , applyTypeExprArgs (In d, sigmas !! i))
+inferTerm (Destructor d@Ductive{..} i) =
+  inferTypeDuctive d
+  >> pure ( substType 0 (as !! i) (Coin d) : gamma1s !! i
+          , applyTypeExprArgs (Coin d, sigmas !! i))
 inferTerm Rec{..} = undefined
 inferTerm Corec{..} = undefined
 
@@ -103,19 +120,28 @@ evalTypeExpr (f :@ arg) = do
   case (valF, valArg) of
     (Abstr _ expr,_) -> evalTypeExpr $ substTypeExpr 0 valArg expr
     _ -> pure $ valF :@ valArg
+evalTypeExpr (In d) = In <$> evalDuctive d
+evalTypeExpr (Coin d) = Coin <$> evalDuctive d
 evalTypeExpr atom = pure atom
+
+evalCtx :: Ctx -> TI Ctx
+evalCtx = mapM evalTypeExpr
+
+evalDuctive :: Ductive -> TI Ductive
+evalDuctive Ductive{..} = do
+  gamma <- evalCtx gamma
+  sigmas <- mapM (mapM evalExpr) sigmas
+  as <- local (over tyCtx (gamma:)) $ mapM evalTypeExpr as
+  gamma1s <- mapM evalCtx gamma1s
+  pure Ductive{..}
 
 evalExpr :: Expr -> TI Expr
 evalExpr r@Rec{..} = Rec fromRec
                          <$> evalTypeExpr toRec
-                         <*> mapM (\Match{..} -> Match structorName
-                                              <$> evalExpr matchExpr)
-                                  matches
+                         <*> mapM evalExpr matches
 evalExpr r@Corec{..} = Corec <$> evalTypeExpr fromCorec
                              <*> pure toCorec
-                             <*> mapM (\Match{..} -> Match structorName
-                                                  <$> evalExpr matchExpr)
-                                      matches
+                             <*> mapM evalExpr matches
 evalExpr (f :@: arg) = do
   valF <- evalExpr f
   valF' <- case valF of
@@ -124,32 +150,35 @@ evalExpr (f :@: arg) = do
   valArg <- evalExpr arg
   case (valF', valArg) of
     -- TODO gamma can be empty
-    (r@Rec{..}, getArgs -> (Constructor constrN,constrArgs)) -> do
+    (r@Rec{..}, getExprArgs -> (Constructor ductive i,constrArgs)) -> do
       typeTo <- inferType toRec
       recTy <- inferTerm r
-      evalExpr $ applyToStr fromRec (getRecRHS constrN matches)
-               $ substExprs 0 constrArgs r
-    (d@(Destructor n), _) -> undefined
+      undefined
+    (d@(Destructor ductive i), _) -> undefined
     _ -> pure $ valF :@: valArg
 evalExpr atom = pure atom
-
-getRecRHS :: Text -> [Match] -> Expr
-getRecRHS str [] = error . T.unpack $ "internel type checking error: rec expression doesn't contain structor" <> str
-getRecRHS str (Match{..}:ms)
-  | str == structorName = matchExpr
-  | otherwise           = getRecRHS str ms
 
 substExpr :: Int -> Expr -> Expr -> Expr
 substExpr i r v@(LocalExprVar j)
   | i == j = r
   | otherwise = v
+substExpr i r (GlobalExprVar var) = undefined
 substExpr i r (e1 :@: e2) = substExpr i r e1 :@: substExpr i r e2
 substExpr _ _ e = e
 
 substTypeExpr :: Int -> Expr -> TypeExpr -> TypeExpr
 substTypeExpr i r1 (Abstr t r2) = Abstr (substTypeExpr i r1 t) (substTypeExpr (i+1) r1 r2)
+substTypeExpr i r1 (In d) = In $ substDuctiveExpr i r1 d
+substTypeExpr i r1 (Coin d) = Coin $ substDuctiveExpr i r1 d
 substTypeExpr i r (e1 :@ e2) = substTypeExpr i r e1 :@ substExpr i r e2
 substTypeExpr _ _ e = e
+
+substDuctiveExpr :: Int -> Expr -> Ductive -> Ductive
+substDuctiveExpr i r1 Ductive{..} = Ductive { gamma = substCtx i r1 gamma
+                                            , sigmas = map (map $ substExpr i r1) sigmas
+                                            , as = map (substTypeExpr i r1) as
+                                            , gamma1s = map (substCtx i r1) gamma1s
+                                            }
 
 substCtx :: Int -> Expr -> Ctx -> Ctx
 substCtx _ _ [] = []
@@ -159,37 +188,38 @@ substExprs :: Int -> [Expr] -> Expr -> Expr
 substExprs _ [] e = e
 substExprs n (v:vs) e = substExprs (n+1) vs (substExpr n v e)
 
-substData :: Text -> TypeExpr -> TypeExpr -> TypeExpr
-substData n x (Inductive m)
-  | n == m = x
-substData n x (Coinductive m)
-  | n == m = x
-substData n x (e1 :@ e2) = substData n x e1 :@ e2
-substData n x (Abstr t e) = Abstr (substData n x t) (substData n x e)
-substData n x atom    = atom
+substType :: Int -> TypeExpr -> TypeExpr -> TypeExpr
+substType i r v@(LocalTypeVar j)
+  | i == j = r
+  | otherwise = v
+substType i r (GlobalTypeVar var) = undefined
+substType i r1 (Abstr t r2) = Abstr (substType i r1 t) (substType i r1 r2)
+substType i r (In d) = In $ substDuctiveTypeExpr i r d
+substType i r (Coin d) = Coin $ substDuctiveTypeExpr i r d
+substType i r (e1 :@ e2) = substType i r e1 :@ e2
+substType _ _ e = e
 
-applyToStr :: Text -> Expr -> Expr -> Expr
-applyToStr n e (getArgs -> (c@(Constructor m),args))
-  | n == m = e :@: applyArgs (c,map (applyToStr n e) args)
-  | otherwise = applyArgs (c,map (applyToStr n e) args)
-applyToStr n e (getArgs -> (d@(Destructor m),args))
-  | n == m = e :@: applyArgs (d,map (applyToStr n e) args)
-  | otherwise = applyArgs (d,map (applyToStr n e) args)
-applyToStr n e (f :@: arg) = applyToStr n e f :@: applyToStr n e arg
-applyToStr n e r@Rec{..} =
-  r { matches = map (\m -> m {matchExpr = applyToStr n e (matchExpr m)}) matches }
-applyToStr n e c@Corec{..} =
-  c { matches = map (\m -> m {matchExpr = applyToStr n e (matchExpr m)}) matches }
-applyToStr _ _ atom = atom
+substDuctiveTypeExpr :: Int -> TypeExpr -> Ductive -> Ductive
+substDuctiveTypeExpr i r1 d@Ductive{..} = d { as = map (substType (i+1) r1) as }
 
--- | splits up a chain of left associative applications into a list of
--- arguments
-getArgs :: Expr -> (Expr,[Expr])
-getArgs (expr :@: arg) = second (++ [arg]) (getArgs expr)
-getArgs arg = (arg,[])
 
-applyArgs :: (Expr,[Expr]) -> Expr
-applyArgs (f,args) = foldl (:@:) f args
+-- | splits up a chain of left associative applications to a expression
+-- into a list of  arguments
+getExprArgs :: Expr -> (Expr,[Expr])
+getExprArgs (expr :@: arg) = second (++ [arg]) (getExprArgs expr)
+getExprArgs arg = (arg,[])
+
+applyExprArgs :: (Expr,[Expr]) -> Expr
+applyExprArgs (f,args) = foldl (:@:) f args
+
+-- | splits up a chain of left associative applications to a type into a
+-- list of  arguments
+getTypeExprArgs :: TypeExpr -> (TypeExpr,[Expr])
+getTypeExprArgs (expr :@ arg) = second (++ [arg]) (getTypeExprArgs expr)
+getTypeExprArgs arg = (arg,[])
+
+applyTypeExprArgs :: (TypeExpr,[Expr]) -> TypeExpr
+applyTypeExprArgs (f,args) = foldl (:@) f args
 
 -- | lookup lifted to the TI monad
 lookupTI :: Eq a => a -> [(a,b)] -> TI b
@@ -224,13 +254,19 @@ lookupDefKindTI :: Text -> TI Kind
 lookupDefKindTI t = view defCtx >>= lookupDefKindTI' t
   where
     lookupDefKindTI' _ [] = throwError "Variable not defined"
-    lookupDefKindTI' n (InductiveDef{..}:stmts)
-      | n == name = pure gamma
-      | otherwise = lookupDefKindTI' n stmts
-    lookupDefKindTI' n (CoinductiveDef{..}:stmts)
-      | n == name = pure gamma
+    lookupDefKindTI' n (TypeDef{..}:stmts)
+      | n == name = pure $ fromJust kind
       | otherwise = lookupDefKindTI' n stmts
     lookupDefKindTI' n (_:stmts) = lookupDefKindTI' n stmts
+
+lookupDefTypeExprTI :: Text -> TI TypeExpr
+lookupDefTypeExprTI t = view defCtx >>= lookupDefTypeExprTI' t
+  where
+    lookupDefTypeExprTI' _ [] = throwError "Variable not defined"
+    lookupDefTypeExprTI' n (TypeDef{..}:stmts)
+      | n == name = pure typeExpr
+      | otherwise = lookupDefTypeExprTI' n stmts
+    lookupDefTypeExprTI' n (_:stmts) = lookupDefTypeExprTI' n stmts
 
 assert :: Bool -> Text -> TI ()
 assert True  _   = pure ()
