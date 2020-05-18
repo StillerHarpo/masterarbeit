@@ -97,8 +97,34 @@ inferTerm (Destructor d@Ductive{..} i) =
   inferTypeDuctive d
   >> pure ( substType 0 (as !! i) (Coin d) : gamma1s !! i
           , applyTypeExprArgs (Coin d, sigmas !! i))
-inferTerm Rec{..} = undefined
-inferTerm Corec{..} = undefined
+inferTerm Rec{..} = do
+  valTo <- evalTypeExpr toRec
+  valFrom <- evalDuctive fromRec
+  gamma' <- inferType valTo
+  let Ductive{..} = valFrom
+  zipWithM_ betaeq gamma' gamma
+  sequence_ $ zipWith4 (\ gamma1 sigma a match ->
+                          local (over ctx ((substType 0 valTo a:gamma1)++))
+                                (checkTerm match ([],applyTypeExprArgs (valTo,sigma))))
+                       gamma1s sigmas as matches
+  pure ( applyTypeExprArgs (In valFrom, idCtx gamma):gamma
+       , applyTypeExprArgs (valTo,idCtx gamma))
+inferTerm Corec{..} = do
+  valTo <- evalDuctive toCorec
+  valFrom <- evalTypeExpr fromCorec
+  gamma' <- inferType valFrom
+  let Ductive{..} = valTo
+  zipWithM_ betaeq gamma' gamma
+  sequence_ $ zipWith4 (\ gamma1 sigma a match ->
+                          local (over ctx ((applyTypeExprArgs (valFrom,sigma):gamma1)++))
+                                (checkTerm match ([],substType 0 valFrom a)))
+                       gamma1s sigmas as matches
+  pure ( applyTypeExprArgs (valFrom, idCtx gamma):gamma
+       , applyTypeExprArgs (Coin valTo,idCtx gamma))
+
+zipWith4 :: (a -> b -> c -> d -> e) -> [a] -> [b] -> [c] -> [d] -> [e]
+zipWith4 f (a:as) (b:bs) (c:cs) (d:ds) = f a b c d : zipWith4 f as bs cs ds
+zipWith4 _ _      _      _      _      = []
 
 betaeq :: TypeExpr -> TypeExpr -> TI ()
 betaeq e1 e2 = do
@@ -211,6 +237,9 @@ getExprArgs arg = (arg,[])
 
 applyExprArgs :: (Expr,[Expr]) -> Expr
 applyExprArgs (f,args) = foldl (:@:) f args
+
+idCtx :: Ctx -> [Expr]
+idCtx ctx = LocalExprVar <$> take (length ctx) [0..]
 
 -- | splits up a chain of left associative applications to a type into a
 -- list of  arguments
