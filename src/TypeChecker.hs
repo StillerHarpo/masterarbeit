@@ -66,11 +66,19 @@ inferType (Coin d) = inferTypeDuctive d
 
 inferTypeDuctive :: Ductive -> TI Kind
 inferTypeDuctive Ductive{..} = do
-  -- TODO check context morphism
+  zipWithM_ (\sigma gamma1 -> checkContextMorph sigma gamma1 gamma) sigmas gamma1s
   zipWithM_ (\gamma1 a ->
               local (over tyCtx (gamma:) . over ctx (gamma1++)) (checkType a []))
             gamma1s as
   pure gamma
+
+checkContextMorph :: [Expr] -> Ctx -> Ctx -> TI ()
+checkContextMorph [] gamma1 [] = checkCtx gamma1
+checkContextMorph [] _ _ = throwError $ "Invalid context morphism:"
+                                        <> "Gamma2 should be empty for empty morphism"
+checkContextMorph (t:ts) gamma1 (a:gamma2) = do
+  local (over ctx (const gamma1)) (checkTerm t  ([], substTypeExprs 0 ts a))
+  checkContextMorph ts gamma1 gamma2
 
 checkTerm :: Expr -> Type -> TI ()
 checkTerm e (ctx1,a1) = do
@@ -213,6 +221,10 @@ substCtx i r (e:ctx) = substTypeExpr i r e : substCtx (i+1) r ctx
 substExprs :: Int -> [Expr] -> Expr -> Expr
 substExprs _ [] e = e
 substExprs n (v:vs) e = substExprs (n+1) vs (substExpr n v e)
+
+substTypeExprs :: Int -> [Expr] -> TypeExpr -> TypeExpr
+substTypeExprs _ [] e = e
+substTypeExprs n (v:vs) e = substTypeExprs (n+1) vs (substTypeExpr n v e)
 
 substType :: Int -> TypeExpr -> TypeExpr -> TypeExpr
 substType i r v@(LocalTypeVar j)
