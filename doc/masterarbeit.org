@@ -180,10 +180,10 @@
     with length $n$
     #+begin_example
     length = rec VectorUnit to Nat where
-               NilUnit' _ = zero
-               ConsUnit' k _ = Succ @ k
+               NilUnit _ = zero
+               ConsUnit k _ = Succ @ k
     replicate = lambda_Nat_VectorUnit n ((rec Nat to VectorUnit where
-                                            Zero' _ = NilUnit' @ ()
+                                            Zero _ = NilUnit @ ()
                                             Suc   m = ConsUnit @ (length @ m) @ m) @ n)
     #+end_example
     The following shows the steps for evaluating /replicate/ on 1.  We omit
@@ -198,17 +198,21 @@
                      Apply n _ = rep @ n)@())
     $\succ$ $\widehat{\text{VecUnit}}(\underbrace{\text{corec Pi to Unit where \{ Apply n \_ = rep @ n \} @ x}}_t)$[rep@n/x][1,()]
     = (rec VecUnit to VecUnit where
-         VecNil x = VecNil @ $\widehat{()}$(t,y)
-         VecCons n x = VecCons @ n @ $\widehat{Y}$(t,y))@n@x[rep@n/x][1,()]
+         VecNil x = VecNil @ $\widehat{()}$(t,x)
+         VecCons n x = VecCons @ n @ $\widehat{(y).Y}$(t,x))@n@x[rep@n/x][1,()]
+    = (rec VecUnit to VecUnit where
+         VecNil x = VecNil @ $\widehat{()}$(t,x)
+         VecCons n x = VecCons @ n @ $\widehat{Y}$(t,x))@n@x[rep@n/x][1,()]
     = (rec VecUnit to VecUnit
-         VecNil x = VecNil@x
-         VecCons n x = VecCons'@n@y)@n@x[rep@n/x][1,()]
+         VecNil x = VecNil@()
+         VecCons n x = VecCons'@n@x)@n@x[rep@n/x][1,()]
     = (rec VecUnit to VecUnit
          VecNil x = VecNil@x
          VecCons n x = VecCons@n@y)@n@(rep@n)[1,()]
     = (rec VecUnit to VecUnit
          VecNil x = VecNil@x
-         VecCons n x = VecCons@n@y)@1@(rep@1)
+         VecCons n x = VecCons@n@x)@1@(rep@1)
+    = ConsUnit @ (NilUnit @ ())
     \end{lstlisting}
 
 ** Sigma Type
