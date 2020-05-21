@@ -278,15 +278,24 @@
       tl : (k : ExNat) -> PStr A (succE k) -> PStr A k
    #+end_example
 ** List
-   List A =  $\nu(X:*;\epsilon_2;(\textbf{1},X))$
-   + $\Gamma_1=\emptyset$
-   + $\Gamma_2=A$
+   ListA descripes a list of type elements with type A.  It is defined
+   as follows
 
+   \begin{equation*}
+   ListA =  \nu(X:*;\epsilon_2;(\textbf{1},A\times X))
+   \end{equation*}
+   where $\Gamma_1=\emptyset$ and $\Gamma_2\vdash A:*$
+
+   In the implemented syntax is written like this
    #+begin_example
-   data List<A> : Set where
-      Nil : Terminal -> List
-      Cons : A -> List -> List
-   nil A = Nil<A> @ ()
+   data A : ...
+   data ProductAListA : Set where
+     Fst : Product -> A
+     Snd : Product -> ListA
+   data ListA : Set where
+      NilA : Terminal -> ListA
+      ConsA : ProductAListA -> ListA
+   nilA = NilA @ ()
    #+end_example
 
 ** Length function on lists of Units
