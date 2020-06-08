@@ -1,6 +1,8 @@
 #+LATEX_HEADER: \usepackage{listings}
 #+LATEX_HEADER: \usepackage{bussproofs}
+#+LATEX_HEADER: \usepackage{stmaryrd}
 #+LATEX_HEADER: \usepackage{xcolor}
+#+LATEX_HEADER: \usepackage{amsthm}
 #+LATEX_HEADER: \lstset{
 #+LATEX_HEADER:  basicstyle=\ttfamily,
 #+LATEX_HEADER:   mathescape
@@ -9,6 +11,7 @@
 #+LATEX_HEADER:\newenvironment{scprooftree}[1]%
 #+LATEX_HEADER:  {\gdef\scalefactor{#1}\begin{center}\proofSkipAmount \leavevmode}%
 #+LATEX_HEADER:  {\scalebox{\scalefactor}{\DisplayProof}\proofSkipAmount \end{center} }
+#+LATEX_HEADER: \usepackage{esvect}
 #+TITLE: Masterarbeit
 * Abstract Syntax
 ** Statements
@@ -27,17 +30,17 @@
 
    "/Name/" , "$Constr_1\dots Contr_m$" and "$Destr_1\dots Destr_m$" are arbitrary distinct names
 
-   The statements correspond to $\rho(X:\Gamma\rightarrow*;\vec\sigma;\vec{A}):\Gamma\rightarrow*$ as follows.
+   The statements correspond to $\rho(X:\Gamma\rat*;\vv\sigma;\vv{A}):\Gamma\rat*$ as follows.
    + $x_1: B_1,\dots,x_n: B_n$ is $\Gamma$
    + /Name/ is X
-   + $Constr_1,\dots, Contr_m$ stands for $\alpha_1^{\mu(X:\Gamma\rightarrow *;\vec\sigma;\vec A)},\dots,\alpha_m^{\mu(X:\Gamma\rightarrow *;\vec\sigma;\vec A)}$
-   + $Destr_1,\dots, Destr_m$ stands for $\xi_1^{\mu(X:\Gamma\rightarrow *;\vec\sigma;\vec A)},\dots,\xi_m^{\mu(X:\Gamma\rightarrow *;\vec\sigma;\vec A)}$
+   + $Constr_1,\dots, Contr_m$ stands for $\alpha_1^{\mu(X:\Gamma\rat *;\vv\sigma;\vv A)},\dots,\alpha_m^{\mu(X:\Gamma\rat *;\vv\sigma;\vv A)}$
+   + $Destr_1,\dots, Destr_m$ stands for $\xi_1^{\mu(X:\Gamma\rat *;\vv\sigma;\vv A)},\dots,\xi_m^{\mu(X:\Gamma\rat *;\vv\sigma;\vv A)}$
    + $Name_i$ is $A_i[\Gamma/X]$
    + $(x_{1_1}:B_{1_1},\dots,x_{n_1}: B_{n_1}),\dots,(x_{1_m}:B_{1_m},\dots,x_{n_m}:B_{n_m})$ stands for $\Gamma_1,\dots,\Gamma_m$
    + $C_1\dots C_n$ have to be of *, they are for polymorphism.  If we call a constructor we have to give this types,
      to relate the right type to it.
 
-   We take $B_1\rightarrow\dots\rightarrow B_n$ as syntactic sugar for $(\_:B_1,\dots,\_:B_n)$ where _ stands for a unused termvariable
+   We take $B_1\rat\dots\rat B_n$ as syntactic sugar for $(\_:B_1,\dots,\_:B_n)$ where _ stands for a unused termvariable
 
    We will also need a extra context which relates constructors to their types
 
@@ -59,6 +62,8 @@
 
    $x_{1_1},\dots, x_{n_m}$ are termvariables
 
+
+* Examples
 ** Terminal Object
    #+begin_example
    codata Terminal : Set where
@@ -114,14 +119,14 @@
     \AxiomC{(x:Nat) $\vdash$ Snd @ x : ProductNat \textcircled{a}}
     \noLine
     \UnaryInfC{(y : Nat) $\vdash$ Fst @ y : ProductNat \textcircled{b}}
-    \BinaryInfC{swap : (y : ProductNat) $\rightarrow$ ProductNat}
+    \BinaryInfC{swap : (y : ProductNat) $\rat$ ProductNat}
     \end{prooftree}
     We show \textcircled{a} in the following proof.  \textcircled{b} works analog
     \begin{prooftree}
     \AxiomC{ProductNat : $*$}
-    \UnaryInfC{$\vdash$ Snd (y : Nat) $\rightarrow$ ProductNat}
+    \UnaryInfC{$\vdash$ Snd (y : Nat) $\rat$ ProductNat}
     \AxiomC{Nat : $*$}
-    \BinaryInfC{(x : Nat) $\vdash$ Snd (y :Nat) $\rightarrow$ ProductNat}
+    \BinaryInfC{(x : Nat) $\vdash$ Snd (y :Nat) $\rat$ ProductNat}
     \AxiomC{Nat : $*$}
     \UnaryInfC{(x : Nat) $\vdash$ x : Nat}
     \BinaryInfC{(x : Nat) $\vdash$ Snd @ x : ProductNat}
@@ -248,7 +253,7 @@
     \UnaryInfC{(\_ : Unit) $\vdash$ ConsUnit @ 0 @ (NilUnit' @ ()) : (x).(VecUnit @ (Suc @ x)) @ 0}
     \noLine
     \UnaryInfC{(k : Nat, v : (x).(Vec @ (Suc @ x)) @ k) $\vdash$ ConsUnit @ (Suc @ k) @ v : (x).(Vec @ (Suc @ x)) @ (Suc @ k)}
-    \UnaryInfC{$\vdash$ app : (k:Nat,y : (x).Vec (Suc x)) $\rightarrow$ (x).(Vec @ (Suc x)) @ k}
+    \UnaryInfC{$\vdash$ app : (k:Nat,y : (x).Vec (Suc x)) $\rat$ (x).(Vec @ (Suc x)) @ k}
     \end{scprooftree}
     As an example we evaluate a vector of length 1 with this function.  We choose length one
     to see all rec cases.
@@ -282,7 +287,7 @@
    as follows
 
    \begin{equation*}
-   ListA =  \nu(X:*;\epsilon_2;(\textbf{1},A\times X))
+   ListA =  \mu(X:*;\epsilon_2;(\textbf{1},A\times X))
    \end{equation*}
    where $\Gamma_1=\emptyset$ and $\Gamma_2\vdash A:*$
 
@@ -375,7 +380,7 @@
    \hskip 1.5em
    \AxiomC{$\vdash\Theta$ \textbf{TyCtx}}
    \AxiomC{$\vdash\Gamma$ \textbf{Ctx}}
-   \BinaryInfC{$\vdash\Theta,X:\Gamma\rightarrow*$ \textbf{TyCtx}}
+   \BinaryInfC{$\vdash\Theta,X:\Gamma\rat*$ \textbf{TyCtx}}
    \DisplayProof
    \vskip 0.5em
    \AxiomC{}
@@ -387,19 +392,19 @@
    \DisplayProof
    \end{center}
 
-   We use the notation $\Theta(X)\rightsquigarrow\Gamma\rightarrow*$ for
+   We use the notation $\Theta(X)\rightsquigarrow\Gamma\rat*$ for
    looking up the type-variable $X$ in type-context $\Theta$ yields type
-   $\Gamma\rightarrow*$. We add 2 rules for looking up something in a
+   $\Gamma\rat*$. We add 2 rules for looking up something in a
    type-context.  They are:
    \begin{center}
      \AxiomC{$\vdash \Theta$ \textbf{TyCtx}}
      \AxiomC{$\vdash \Gamma$ \textbf{Ctx}}
-     \BinaryInfC{$\Theta,X:\Gamma\rightarrow*(X)\rightsquigarrow\Gamma\rightarrow*$}
+     \BinaryInfC{$\Theta,X:\Gamma\rat*(X)\rightsquigarrow\Gamma\rat*$}
      \DisplayProof
      \hskip 1.5em
      \AxiomC{$\vdash \Gamma_1$ \textbf{Ctx}}
-     \AxiomC{$\Theta(X) \rightsquigarrow\Gamma_2\rightarrow*$}
-     \BinaryInfC{$\Theta,Y:\Gamma_1\rightarrow*(X)\rightsquigarrow\Gamma_2\rightarrow*$}
+     \AxiomC{$\Theta(X) \rightsquigarrow\Gamma_2\rat*$}
+     \BinaryInfC{$\Theta,Y:\Gamma_1\rat*(X)\rightsquigarrow\Gamma_2\rat*$}
      \DisplayProof
    \end{center}
    Here $Y$ and $X$ are different variables
@@ -459,7 +464,7 @@
 %   \vskip 0.5em
 %   \AxiomC{$\Theta_1\equiv_\beta \Theta_2$}
 %   \AxiomC{$\Gamma_1\equiv_\beta \Gamma_2$}
-%   \BinaryInfC{$\Theta_1,X:\Gamma_1\rightarrow*\equiv_\beta\Theta_2,X:\Gamma_2\rightarrow*$}
+%   \BinaryInfC{$\Theta_1,X:\Gamma_1\rat*\equiv_\beta\Theta_2,X:\Gamma_2\rat*$}
 %   \DisplayProof
    \end{center}
    \end{center}
@@ -488,47 +493,47 @@
      \AxiomC{$\vdash \Theta$ \textbf{TyCtx}}
      \AxiomC{$\vdash \Gamma$ \textbf{Ctx}}
      \RightLabel{\textbf{(TyVar-I)}}
-     \BinaryInfC{$\Theta,X:\Gamma\rightarrow*|\emptyset\vdash X : \Gamma \rightarrow *$}
+     \BinaryInfC{$\Theta,X:\Gamma\rat*|\emptyset\vdash X : \Gamma \rat *$}
    \end{prooftree}
    gets rewritten to
 
     \begin{prooftree}
-     \AxiomC{\colorbox{gray}{$\Theta(X)\rightsquigarrow\Gamma'\rightarrow*$}}
+     \AxiomC{\colorbox{gray}{$\Theta(X)\rightsquigarrow\Gamma'\rat*$}}
      \AxiomC{\colorbox{gray}{$\vdash \Gamma_1$ \textbf{Ctx}}}
      \AxiomC{\colorbox{gray}{$\Gamma'\equiv_\beta\Gamma$}}
      \RightLabel{\textbf{(TyVar-I)}}
-     \TrinaryInfC{$\Theta|$\colorbox{gray}{$\Gamma_1$}$\vdash X : \Gamma \rightarrow *$}
+     \TrinaryInfC{$\Theta|$\colorbox{gray}{$\Gamma_1$}$\vdash X : \Gamma \rat *$}
    \end{prooftree}
 
 ** Type instantiation
    The rule
    \begin{prooftree}
-     \AxiomC{$\Theta|\Gamma_1\vdash A:(x:B,\Gamma_2)\rightarrow*$}
+     \AxiomC{$\Theta|\Gamma_1\vdash A:(x:B,\Gamma_2)\rat*$}
      \AxiomC{$\Gamma_1\vdash t:B$}
-     \BinaryInfC{$\Theta|\Gamma_1\vdash A@t:\Gamma_2[t/x]\rightarrow*$}
+     \BinaryInfC{$\Theta|\Gamma_1\vdash A@t:\Gamma_2[t/x]\rat*$}
    \end{prooftree}
    gets rewritten to
     \begin{prooftree}
-     \AxiomC{$\Theta|\Gamma_1\vdash A:(x:B,\Gamma_2)\rightarrow*$}
+     \AxiomC{$\Theta|\Gamma_1\vdash A:(x:B,\Gamma_2)\rat*$}
      \AxiomC{$\Gamma_1\vdash t:$\colorbox{gray}{$B'$}}
      \AxiomC{\colorbox{gray}{$B\equiv_\beta B'$}}
-     \TrinaryInfC{$\Theta|\Gamma_1\vdash A@t:\Gamma_2[t/x]\rightarrow*$}
+     \TrinaryInfC{$\Theta|\Gamma_1\vdash A@t:\Gamma_2[t/x]\rat*$}
    \end{prooftree}
 
 
 ** Parameter abstraction
    The rule
    \begin{center}
-     \AxiomC{$\Theta|\Gamma_1,x:A\vdash B:\Gamma_2\rightarrow*$}
+     \AxiomC{$\Theta|\Gamma_1,x:A\vdash B:\Gamma_2\rat*$}
      \RightLabel{\textbf{(Param-Abstr)}}
-     \UnaryInfC{$\Theta|\Gamma_1\vdash(x).B:(x:A,\Gamma_2)\rightarrow*$}
+     \UnaryInfC{$\Theta|\Gamma_1\vdash(x).B:(x:A,\Gamma_2)\rat*$}
      \DisplayProof
    \end{center}
    gets rewritten to
    \begin{center}
-     \AxiomC{$\Theta|\Gamma_1,x:A\vdash B:\Gamma_2\rightarrow*$}
+     \AxiomC{$\Theta|\Gamma_1,x:A\vdash B:\Gamma_2\rat*$}
      \RightLabel{\textbf{(Param-Abstr)}}
-     \UnaryInfC{$\Theta|\Gamma_1\vdash(x$\colorbox{gray}{$:A$}$).B:(x:A,\Gamma_2)\rightarrow*$}
+     \UnaryInfC{$\Theta|\Gamma_1\vdash(x$\colorbox{gray}{$:A$}$).B:(x:A,\Gamma_2)\rat*$}
      \DisplayProof
    \end{center}
 
@@ -536,23 +541,23 @@
    The rule
    \begin{prooftree}
    \AxiomC{$\sigma_k:\Gamma_k\triangleright\Gamma$}
-   \AxiomC{$\Theta,X:\Gamma\rightarrow*|\Gamma_k\vdash A_k:*$}
+   \AxiomC{$\Theta,X:\Gamma\rat*|\Gamma_k\vdash A_k:*$}
    \RightLabel{(\textbf{FP-Ty})}
-   \BinaryInfC{$\Theta | \emptyset \vdash \rho(X : \Gamma \rightarrow *;\vec{\sigma};\vec{A}):\Gamma\rightarrow *$}
+   \BinaryInfC{$\Theta | \emptyset \vdash \rho(X : \Gamma \rat *;\vv{\sigma};\vv{A}):\Gamma\rat *$}
    \end{prooftree}
    gets rewritten to
    \begin{prooftree}
    \AxiomC{$\sigma_k:\Gamma_k\triangleright\Gamma$}
-   \AxiomC{$\Theta,X:\Gamma\rightarrow*|\Gamma_k\vdash A_k:*$}
+   \AxiomC{$\Theta,X:\Gamma\rat*|\Gamma_k\vdash A_k:*$}
    \RightLabel{(\textbf{FP-Ty})}
-   \BinaryInfC{$\Theta | $\colorbox{gray}{$\Gamma_1$} $\vdash$ data X $\Gamma$ -> Set where; $\overrightarrow{Constr_k : \Gamma_k\text{ -> }A_k\text{ -> }X \sigma_k}$}
+   \BinaryInfC{$\Theta | $\colorbox{gray}{$\Gamma_1$} $\vdash$ data X $\Gamma$ -> Set where; $\vv{Constr_k : \Gamma_k\text{ -> }A_k\text{ -> }X \sigma_k}$}
    \end{prooftree}
    and
    \begin{prooftree}
    \AxiomC{$\sigma_k:\Gamma_k\triangleright\Gamma$}
-   \AxiomC{$\Theta,X:\Gamma\rightarrow*|\Gamma_k\vdash A_k:*$}
+   \AxiomC{$\Theta,X:\Gamma\rat*|\Gamma_k\vdash A_k:*$}
    \RightLabel{(\textbf{FP-Ty})}
-   \BinaryInfC{$\Theta |$\colorbox{gray}{$\Gamma_1$} $ \vdash$ codata X $\Gamma$ -> Set where; $\overrightarrow{Destr_k : \Gamma_k \text{ -> } X \sigma_k \text{ -> } A_k}$}
+   \BinaryInfC{$\Theta |$\colorbox{gray}{$\Gamma_1$} $ \vdash$ codata X $\Gamma$ -> Set where; $\vv{Destr_k : \Gamma_k \text{ -> } X \sigma_k \text{ -> } A_k}$}
    \end{prooftree}
 
 ** Unit expression introduction
@@ -574,19 +579,19 @@
 ** Expression Instantiation
    The rule
    \begin{center}
-     \AxiomC{$\Gamma_1\vdash t:(x:A,\Gamma_2)\rightarrow B$}
+     \AxiomC{$\Gamma_1\vdash t:(x:A,\Gamma_2)\rat B$}
      \AxiomC{$\Gamma_1\vdash s:A$}
      \RightLabel{\textbf{(Inst)}}
-     \BinaryInfC{$\Gamma_1\vdash t@s:\Gamma_2[s/x]\rightarrow B[s/x]$}
+     \BinaryInfC{$\Gamma_1\vdash t@s:\Gamma_2[s/x]\rat B[s/x]$}
      \DisplayProof
    \end{center}
    gets rewritten to
    \begin{center}
-     \AxiomC{$\Gamma_1\vdash t:(x:A,\Gamma_2)\rightarrow B$}
+     \AxiomC{$\Gamma_1\vdash t:(x:A,\Gamma_2)\rat B$}
      \AxiomC{$\Gamma_1\vdash s:$\colorbox{gray}{$A'$}}
      \AxiomC{\colorbox{gray}{$A\equiv_\beta A'$}}
      \RightLabel{\textbf{(Inst)}}
-     \TrinaryInfC{$\Gamma_1\vdash t@s:\Gamma_2[s/x]\rightarrow B[s/x]$}
+     \TrinaryInfC{$\Gamma_1\vdash t@s:\Gamma_2[s/x]\rat B[s/x]$}
      \DisplayProof
    \end{center}
 
@@ -610,17 +615,17 @@
 ** Constructor
    The rule
    \begin{center}
-     \AxiomC{$\mu(X:\Gamma\rightarrow*;\vec{\sigma};\vec{A}):\Gamma\rightarrow*$}
-     \AxiomC{$1\leq k\leq|\vec{A}|$}
+     \AxiomC{$\mu(X:\Gamma\rat*;\vv{\sigma};\vv{A}):\Gamma\rat*$}
+     \AxiomC{$1\leq k\leq|\vv{A}|$}
      \RightLabel{\textbf{(Ind-I)}}
-     \BinaryInfC{$\vdash\alpha_k^{\mu(X:\Gamma\rightarrow*;\vec{\sigma};\vec{A})}:(\Gamma_k,y:A_k[\mu/X])\rightarrow\mu@\sigma_k$}
+     \BinaryInfC{$\vdash\alpha_k^{\mu(X:\Gamma\rat*;\vv{\sigma};\vv{A})}:(\Gamma_k,y:A_k[\mu/X])\rat\mu@\sigma_k$}
      \DisplayProof
    \end{center}
    gets rewritten to
    \begin{center}
-     \AxiomC{\colorbox{gray}{$\Sigma$(Constr)$\rightsquigarrow(\Gamma_k,y:A_k[\mu/X])\rightarrow\mu@\sigma_k$}}
+     \AxiomC{\colorbox{gray}{$\Sigma$(Constr)$\rightsquigarrow(\Gamma_k,y:A_k[\mu/X])\rat\mu@\sigma_k$}}
      \RightLabel{\textbf{(Ind-I)}}
-     \UnaryInfC{\colorbox{gray}{$\Sigma|\Theta|\Gamma$}$\vdash$Constr$:(\Gamma_k,y:A_k[\mu/X])\rightarrow\mu@\sigma_k$}
+     \UnaryInfC{\colorbox{gray}{$\Sigma|\Theta|\Gamma$}$\vdash$Constr$:(\Gamma_k,y:A_k[\mu/X])\rat\mu@\sigma_k$}
      \DisplayProof
    \end{center}
 
@@ -628,10 +633,10 @@
 ** Destructor
    The rule
    \begin{center}
-     \AxiomC{$\nu(X:\Gamma\rightarrow*;\vec{\sigma};\vec{A}):\Gamma\rightarrow*$}
-     \AxiomC{$1\leq k\leq|\vec{A}|$}
+     \AxiomC{$\nu(X:\Gamma\rat*;\vv{\sigma};\vv{A}):\Gamma\rat*$}
+     \AxiomC{$1\leq k\leq|\vv{A}|$}
      \RightLabel{\textbf{(Coind-E)}}
-     \BinaryInfC{$\vdash\xi_k^{\nu(X;\Gamma\rightarrow*;\vec{\sigma};\vec{A})}:(\Gamma_k,y:\nu@\sigma_k)\rightarrow
+     \BinaryInfC{$\vdash\xi_k^{\nu(X;\Gamma\rat*;\vv{\sigma};\vv{A})}:(\Gamma_k,y:\nu@\sigma_k)\rat
        A_k[\nu/X]$}
      \DisplayProof
    \end{center}
@@ -640,7 +645,7 @@
      \AxiomC{\colorbox{gray}{$\Sigma$(Destr)$\rightsquigarrow(\Gamma_k,y:\nu@\sigma_k)\rightarrow
        A_k[\nu/X]$}}
      \RightLabel{\textbf{(Ind-I)}}
-     \UnaryInfC{\colorbox{gray}{$\Sigma|\Theta|\Gamma$}$\vdash$Destr$:(\Gamma_k,y:\nu@\sigma_k)\rightarrow
+     \UnaryInfC{\colorbox{gray}{$\Sigma|\Theta|\Gamma$}$\vdash$Destr$:(\Gamma_k,y:\nu@\sigma_k)\rat
        A_k[\nu/X]$}
      \DisplayProof
    \end{center}
@@ -648,46 +653,47 @@
 
 ** Recursion
    \begin{center}
-     \AxiomC{$\vdash C:\Gamma\rightarrow*$}
+     \AxiomC{$\vdash C:\Gamma\rat*$}
      \AxiomC{$\Delta,\Gamma_k,y_k:A_k[C/X]\vdash g_k:(C@\sigma_k)$}
      \AxiomC{$\forall k=1,\dots,n$}
      \RightLabel{\textbf{(Ind-E)}}
      \TrinaryInfC{$\Delta\vdash$ rec
-       $\overrightarrow{(\Gamma_k,y_k).g_k}:(\Gamma,y:\mu@id_\Gamma)\rightarrow C@id_\Gamma$}
+       $\vv{(\Gamma_k,y_k).g_k}:(\Gamma,y:\mu@id_\Gamma)\rat C@id_\Gamma$}
      \DisplayProof
    \end{center}
 
    \begin{prooftree}
-     \AxiomC{$\vdash C:\Gamma\rightarrow*$}
-     \AxiomC{\colorbox{gray}{$\overrightarrow{\vdash B_k\equiv_\beta(C@\sigma_k)}$}}
-     \AxiomC{\colorbox{gray}{$\overrightarrow{\Sigma \vdash\text{Constr}_k:(\Gamma_k,y:A_k[\mu/X])\rightarrow\mu@\sigma_k}$}}
+     \AxiomC{$\vdash C:\Gamma\rat*$}
+     \AxiomC{\colorbox{gray}{$\vv{\vdash B_k\equiv_\beta(C@\sigma_k)}$}}
+     \AxiomC{\colorbox{gray}{$\vv{\Sigma \vdash\text{Constr}_k:(\Gamma_k,y:A_k[\mu/X])\rat\mu@\sigma_k}$}}
      \noLine
-     \UnaryInfC{$\overrightarrow{\Delta,\Gamma_k,y_k:A_k[C/X]\vdash g_k:\text{\colorbox{gray}{$B_k$}}}$}
+     \UnaryInfC{$\vv{\Delta,\Gamma_k,y_k:A_k[C/X]\vdash g_k:\text{\colorbox{gray}{$B_k$}}}$}
      \RightLabel{\textbf{(Ind-E)}}
      \TrinaryInfC{\colorbox{gray}{$\Sigma|\Theta|$}$\Delta\vdash$ rec \colorbox{gray}{$\mu$ to C};
-       $\overrightarrow{\text{Constr}_k\overrightarrow{x_k}\text{ } y_k = g_k}:(\Gamma,y:\mu@id_\Gamma)\rightarrow C@id_\Gamma$}
+       $\vv{\text{Constr}_k\vv{x_k}\text{ } y_k = g_k}:(\Gamma,y:\mu@id_\Gamma)\rat C@id_\Gamma$}
     \end{prooftree}
 
 
 ** Corecursion
    \begin{center}
-     \AxiomC{$\vdash C:\Gamma\rightarrow*$}
+     \AxiomC{$\vdash C:\Gamma\rat*$}
      \AxiomC{$\Delta,\Gamma_k,y_k:(C@\sigma_k)\vdash g_k:A_k[C/X]$}
      \AxiomC{$\forall k=1,\dots,n$}
      \RightLabel{\textbf{(Coind-I)}}
      \TrinaryInfC{$\Delta\vdash$ corec
-       $\overrightarrow{(\Gamma_k,y_k).g_k}:(\Gamma,y:C@id_\Gamma)\rightarrow \nu@id_\Gamma$}
+       $\vv{(\Gamma_k,y_k).g_k}:(\Gamma,y:C@id_\Gamma)\rat \nu@id_\Gamma$}
      \DisplayProof
    \end{center}
 
    \begin{prooftree}
-     \AxiomC{$\vdash C:\Gamma\rightarrow*$}
-     \AxiomC{\colorbox{gray}{$\overrightarrow{\vdash B_k\equiv_\beta A_k[C/X]}$}}
-     \AxiomC{\colorbox{gray}{$\overrightarrow{\Sigma \vdash\text{Destr}_k:(\Gamma_k,y:\nu@\sigma_k)\rightarrow
+     \AxiomC{$\vdash C:\Gamma\rat*$}
+     \AxiomC{\colorbox{gray}{$\vv{\vdash B_k\equiv_\beta A_k[C/X]}$}}
+     \AxiomC{\colorbox{gray}{$\vv{\Sigma \vdash\text{Destr}_k:(\Gamma_k,y:\nu@\sigma_k)\rat
        A_k[\nu/X]}$}}
      \noLine
-     \UnaryInfC{$\overrightarrow{\Delta,\Gamma_k,y_k:(\Gamma_k,y:(C@\sigma_k))\vdash g_k:\text{\colorbox{gray}{$B_k$}}}$}
+     \UnaryInfC{$\vv{\Delta,\Gamma_k,y_k:(\Gamma_k,y:(C@\sigma_k))\vdash g_k:\text{\colorbox{gray}{$B_k$}}}$}
      \RightLabel{\textbf{(Coind-I)}}
      \TrinaryInfC{\colorbox{gray}{$\Sigma|\Theta|$}$\Delta\vdash$ rec \colorbox{gray}{C to $\nu$};
-       $\overrightarrow{\text{Destr}_k\overrightarrow{x_k}\text{ } y_k = g_k}:(\Gamma,y:C@id_\Gamma)\rightarrow \nu@id_\Gamma$}
+       $\vv{\text{Destr}_k\vv{x_k}\text{ } y_k = g_k}:(\Gamma,y:C@id_\Gamma)\rat \nu@id_\Gamma$}
+    \end{prooftree}
     \end{prooftree}
