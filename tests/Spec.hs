@@ -45,7 +45,8 @@ main = hspec $ do
                     gamma = [],
                     sigmas = [[]],
                     as = [ Abstr UnitType UnitType ],
-                    gamma1s = [[]]}
+                    gamma1s = [[]],
+                    nameDuc = Nothing}
                 , kind = Nothing}]
     it "parses a abstraction with multiple arguments" $
       parse parseProgram "" (T.unlines [ "data A : Set where"
@@ -57,7 +58,8 @@ main = hspec $ do
                     gamma = [],
                     sigmas = [[]],
                     as = [ Abstr UnitType (Abstr UnitType UnitType)],
-                    gamma1s = [[]]}
+                    gamma1s = [[]],
+                    nameDuc = Nothing}
                 , kind = Nothing}]
     it "parse a application left associative" $
       parse parseProgram "" "() @ () @ ()"
@@ -74,7 +76,8 @@ main = hspec $ do
     let c = Ductive { gamma = []
                     , sigmas = [[]]
                     , as = [LocalTypeVar 0]
-                    , gamma1s = [[]]}
+                    , gamma1s = [[]]
+                    , nameDuc = Nothing}
     it "parses data" $
       parse parseProgram "" "data C : Set where { C1 : C -> C }"
       `shouldParse`
@@ -119,7 +122,8 @@ main = hspec $ do
                    as = [ LocalTypeVar 0 :@ LocalExprVar 0
                         , LocalTypeVar 0 :@ UnitExpr ],
                    gamma1s = [ []
-                             , []]}
+                             , []],
+                   nameDuc = Nothing}
                , kind = Nothing}]
     it "parses a program" $
       parse parseProgram "" (T.unlines [ "x = () @ ()"
@@ -143,7 +147,8 @@ main = hspec $ do
                     as = [ LocalTypeVar 0 :@ LocalExprVar 0
                          , LocalTypeVar 0 :@ UnitExpr],
                     gamma1s = [ []
-                              , []]}
+                              , []],
+                    nameDuc = Nothing}
                 , kind = Nothing}
       , Expression $ GlobalExprVar "x" :@: GlobalExprVar "z" ]
     it "parses a rec programm" $
@@ -156,13 +161,14 @@ main = hspec $ do
       (let a = Ductive { gamma = []
                        , sigmas = [[]]
                        , as = [LocalTypeVar 0]
-                       , gamma1s = [[]]}
+                       , gamma1s = [[]]
+                       , nameDuc = Nothing}
       in [ TypeDef { name = "A"
                    , typeExpr = In a
                    , kind = Nothing}
          , Expression Rec { fromRec = a
                           , toRec = GlobalTypeVar "A"
-                          , matches = [ Constructor a 0 :@: LocalExprVar 0 ]}])
+                          , matches = [ Constructor a 0 Nothing :@: LocalExprVar 0 ]}])
     it "orders matches right" $
        parse parseProgram "" (T.unlines [ "data A : Set where"
                                         , "  C1 : A -> A"
@@ -186,25 +192,26 @@ main = hspec $ do
                        , gamma1s = [ [UnitType, UnitType, UnitType]
                                    , [UnitType, UnitType]
                                    , [UnitType]
-                                   , []]}
+                                   , []]
+                       , nameDuc = Nothing}
       in [ TypeDef { name = "A"
                    , typeExpr = In a
                    , kind = Nothing}
          , Expression Rec { fromRec = a
                           , toRec = GlobalTypeVar "A"
-                          , matches = [ Constructor a 0
+                          , matches = [ Constructor a 0 Nothing
                                         :@: LocalExprVar 3
                                         :@: LocalExprVar 2
                                         :@: LocalExprVar 1
                                         :@: LocalExprVar 0
-                                      , Constructor a 1
+                                      , Constructor a 1 Nothing
                                         :@: LocalExprVar 2
                                         :@: LocalExprVar 1
                                         :@: LocalExprVar 0
-                                      , Constructor a 2
+                                      , Constructor a 2 Nothing
                                         :@: LocalExprVar 1
                                         :@: LocalExprVar 0
-                                      , Constructor a 3
+                                      , Constructor a 3 Nothing
                                         :@: LocalExprVar 0]}])
 
   describe "Type Checker works" $ do

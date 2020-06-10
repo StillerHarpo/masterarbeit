@@ -97,11 +97,11 @@ inferTerm (t :@: s) = inferTerm t >>= \case
     assert (null ctx) "Type Ctx should be empty"
     betaeq a a'
     pure (substCtx 0 s ctx2, substTypeExpr 0 s b)
-inferTerm (Constructor d@Ductive{..} i) =
+inferTerm (Constructor d@Ductive{..} i _) =
   inferTypeDuctive d
   >> pure ( substType 0 (as !! i) (In d) : gamma1s !! i
           , applyTypeExprArgs (In d, sigmas !! i))
-inferTerm (Destructor d@Ductive{..} i) =
+inferTerm (Destructor d@Ductive{..} i _) =
   inferTypeDuctive d
   >> pure ( substType 0 (as !! i) (Coin d) : gamma1s !! i
           , applyTypeExprArgs (Coin d, sigmas !! i))
@@ -212,6 +212,7 @@ substDuctiveExpr i r1 Ductive{..} = Ductive { gamma = substCtx i r1 gamma
                                             , sigmas = map (map $ substExpr i r1) sigmas
                                             , as = map (substTypeExpr i r1) as
                                             , gamma1s = map (substCtx i r1) gamma1s
+                                            , nameDuc = nameDuc
                                             }
 
 substCtx :: Int -> Expr -> Ctx -> Ctx

@@ -85,7 +85,8 @@ parseData = nonIndented $ parseBlock
      checkName name
      parseConstructorDef name)
   (\(name, gammaP) constructorDefsP -> do
-     let (constructors, gamma1s, as, sigmas) = unzip4 constructorDefsP
+     let nameDuc = Just name
+         (constructors, gamma1s, as, sigmas) = unzip4 constructorDefsP
          (_,gamma) = unzip gammaP
      localExprVars %= drop (length gamma)
      mapM_ checkName constructors
@@ -101,7 +102,8 @@ parseCodata = nonIndented $ parseBlock
       checkName name
       parseDestructorDef name)
   (\(name, gammaP) destructorDefsP -> do
-     let (destructors, gamma1s, sigmas, as) = unzip4 destructorDefsP
+     let nameDuc = Just name
+         (destructors, gamma1s, sigmas, as) = unzip4 destructorDefsP
          (_,gamma) = unzip gammaP
      localExprVars %= drop (length gamma)
      mapM_ checkName destructors
@@ -230,8 +232,8 @@ parseStrVar = ((,) <$> parseTypeStrVarT
     lookupStr var [] = singleFailure "Con/Destrunctor not defined"
     lookupStr var ((_,(strs,inOrCoin,ductive)):ductives) =
       case (saveIdx var strs, inOrCoin) of
-        (Just i, InTag) -> pure $ Constructor ductive i
-        (Just i, CoinTag) -> pure $ Destructor ductive i
+        (Just i, InTag) -> pure $ Constructor ductive i (Just var)
+        (Just i, CoinTag) -> pure $ Destructor ductive i (Just var)
         (Nothing, _) -> lookupStr var ductives
 
 saveIdx :: Eq a => a -> [a] -> Maybe Int
