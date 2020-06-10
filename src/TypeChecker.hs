@@ -11,6 +11,8 @@ import Control.Monad.Except
 import Control.Monad.Reader
 import Control.Arrow (second)
 
+import Data.List
+
 import Lens.Micro.Platform
 
 import Data.Text (Text)
@@ -129,10 +131,6 @@ inferTerm Corec{..} = do
                        gamma1s sigmas as matches
   pure ( applyTypeExprArgs (valFrom, idCtx gamma):gamma
        , applyTypeExprArgs (Coin valTo,idCtx gamma))
-
-zipWith4 :: (a -> b -> c -> d -> e) -> [a] -> [b] -> [c] -> [d] -> [e]
-zipWith4 f (a:as) (b:bs) (c:cs) (d:ds) = f a b c d : zipWith4 f as bs cs ds
-zipWith4 _ _      _      _      _      = []
 
 betaeq :: TypeExpr -> TypeExpr -> TI ()
 betaeq e1 e2 = do
