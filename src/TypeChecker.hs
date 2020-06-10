@@ -101,11 +101,11 @@ inferTerm (t :@: s) = inferTerm t >>= \case
     pure (substCtx 0 s ctx2, substTypeExpr 0 s b)
 inferTerm (Constructor d@Ductive{..} i _) =
   inferTypeDuctive d
-  >> pure ( substType 0 (as !! i) (In d) : gamma1s !! i
+  >> pure ( substType 0 (In d) (as !! i) : gamma1s !! i
           , applyTypeExprArgs (In d, sigmas !! i))
 inferTerm (Destructor d@Ductive{..} i _) =
   inferTypeDuctive d
-  >> pure ( substType 0 (as !! i) (Coin d) : gamma1s !! i
+  >> pure ( substType 0 (Coin d) (as !! i): gamma1s !! i
           , applyTypeExprArgs (Coin d, sigmas !! i))
 inferTerm Rec{..} = do
   valTo <- evalTypeExpr toRec
@@ -181,12 +181,27 @@ evalExpr (f :@: arg) = do
             _               -> pure valF
   valArg <- evalExpr arg
   case (valF', valArg) of
-    -- TODO gamma can be empty
-    (r@Rec{..}, getExprArgs -> (Constructor ductive i,constrArgs)) -> do
-      typeTo <- inferType toRec
-      recTy <- inferTerm r
-      undefined
-    (d@(Destructor ductive i), _) -> undefined
+    -- TODO Should we check if _ = sigma_k\cric \tau
+    ( getExprArgs -> (r@Rec{..}, _), getExprArgs -> (Constructor _ i _, constrArgs)) -> do
+      (_,typeU) <- inferTerm (last constrArgs) -- has to be A_k[\mu/X]
+      evalExpr $ substExprs 0 constrArgs
+                         (substExpr 0 (typeAction 0 (as fromRec !! i)
+                                                    [applyExprArgs (r, idCtx (gamma fromRec))
+                                                     :@: LocalExprVar 0]
+                                                    [gamma1s fromRec !! i]
+                                                    [typeU]
+                                                    [toRec])
+                                      (matches !! i))
+    (getExprArgs -> (Destructor ductive i _, tau) , getExprArgs -> (c@Corec{..}, args)) -> do
+      (_,typeU) <- inferTerm (matches !! i)
+      evalExpr $ substExprs 0 (tau ++ [last args])
+                          (substExpr 0 (matches !! i)
+                                       (typeAction 0 (as toCorec !! i)
+                                                     [applyExprArgs (c, idCtx (gamma toCorec))
+                                                      :@: LocalExprVar 0]
+                                                     [gamma1s toCorec !! i]
+                                                     [typeU]
+                                                     [fromCorec]))
     _ -> pure $ valF :@: valArg
 evalExpr atom = pure atom
 
@@ -196,6 +211,16 @@ substExpr i r v@(LocalExprVar j)
   | otherwise = v
 substExpr i r (GlobalExprVar var) = undefined
 substExpr i r (e1 :@: e2) = substExpr i r e1 :@: substExpr i r e2
+substExpr i r re@Rec{..} = let Ductive{..} = fromRec
+                               newMatches  = zipWith (\i m -> substExpr i r m)
+                                                     (map ((+1) . (+i) . length) gamma1s)
+                                                     matches
+                           in re { matches = newMatches}
+substExpr i r c@Corec{..} = let Ductive{..} = toCorec
+                                newMatches  = zipWith (\i m -> substExpr i r m)
+                                                      (map ((+1) . (+i) . length) gamma1s)
+                                                      matches
+                            in c { matches = newMatches }
 substExpr _ _ e = e
 
 substTypeExpr :: Int -> Expr -> TypeExpr -> TypeExpr
@@ -236,9 +261,54 @@ substType i r (Coin d) = Coin $ substDuctiveTypeExpr i r d
 substType i r (e1 :@ e2) = substType i r e1 :@ e2
 substType _ _ e = e
 
+substTypes :: Int -> [TypeExpr] -> TypeExpr -> TypeExpr
+substTypes _ [] e = e
+substTypes n (v:vs) e = substTypes (n+1) vs (substType n v e)
+
 substDuctiveTypeExpr :: Int -> TypeExpr -> Ductive -> Ductive
 substDuctiveTypeExpr i r1 d@Ductive{..} = d { as = map (substType (i+1) r1) as }
 
+typeAction :: Int -> TypeExpr -> [Expr] -> [Ctx] -> [TypeExpr] -> [TypeExpr] -> Expr
+typeAction i (LocalTypeVar n) terms _ _ _ = terms !! n
+typeAction i (GlobalTypeVar n) terms _ _ _ = undefined
+typeAction i (c :@ s) terms gammas as' bs = substExpr 0 (typeAction i c terms gammas as' bs) s
+typeAction i (Abstr _ c) terms gammas as' bs = typeAction i c terms gammas as' bs
+typeAction i (In d) terms gammas as' bs =
+  let idDeltas = map idCtx (gamma1s d)
+      fromRec = d { as = map (substTypes 0 (zipWith abstrArgs as' gammas)) (as d) } -- R_a in paper
+      toRecDuctive = d { as = map (substTypes 0 (zipWith abstrArgs bs gammas)) (as d) }
+      toRec = In toRecDuctive
+      matches = zipWith5 (\idDelta dk a b i ->
+                             let j = 1 + length idDelta
+                             in applyExprArgs (Constructor toRecDuctive i Nothing, init idDelta)
+                                :@: typeAction i dk
+                                               -- TODO is this the right variable?
+                                               -- Could be bound by wrong binder.
+                                               (LocalExprVar j : terms)
+                                               (gamma d:gammas)
+                                               (a:as')
+                                               (b:bs)) -- g_k in paper
+                              idDeltas (as d) (as fromRec) (as toRecDuctive) [1..]
+  in applyExprArgs (Rec {..}  ,idCtx (gamma d)) :@: LocalExprVar i
+typeAction i (Coin d) terms gammas as' bs =
+  let idDeltas = map idCtx (gamma1s d)
+      fromCorecDuctive = d { as = map (substTypes 0 (zipWith abstrArgs as' gammas)) (as d) } -- R_a in paper
+      fromCorec = Coin fromCorecDuctive
+      toCorec = d { as = map (substTypes 0 (zipWith abstrArgs bs gammas)) (as d) }
+      matches = zipWith5 (\idDelta dk a b i ->
+                             let j = 1 + length idDelta
+                             in substExpr 0 (typeAction i dk
+                                               -- TODO is this the right variable?
+                                               -- Could be bound by wrong binder.
+                                                       (LocalExprVar j : terms)
+                                                       (gamma d:gammas)
+                                                       (a:as')
+                                                       (b:bs))
+                                            (applyExprArgs (Destructor fromCorecDuctive i Nothing
+                                                           , idDelta))) -- g_k in paper
+                              idDeltas (as d) (as fromCorecDuctive) (as toCorec) [1..]
+  in applyExprArgs (Corec {..}  ,idCtx (gamma d)) :@: LocalExprVar i
+typeAction i _ _ _ _ _ = LocalExprVar i
 
 -- | splits up a chain of left associative applications to a expression
 -- into a list of  arguments
@@ -248,6 +318,9 @@ getExprArgs arg = (arg,[])
 
 applyExprArgs :: (Expr,[Expr]) -> Expr
 applyExprArgs (f,args) = foldl (:@:) f args
+
+abstrArgs :: TypeExpr -> [TypeExpr] -> TypeExpr
+abstrArgs = foldr Abstr
 
 idCtx :: Ctx -> [Expr]
 idCtx ctx = LocalExprVar <$> take (length ctx) [0..]

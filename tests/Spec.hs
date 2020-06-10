@@ -230,3 +230,64 @@ main = hspec $ do
       inferTerm UnitExpr
       `shouldCheck`
       ([],UnitType)
+    let natDuc = Ductive { gamma = []
+                         , sigmas = [[],[]]
+                         , as = [UnitType, LocalTypeVar 0]
+                         , gamma1s = [[],[]]
+                         , nameDuc = Just "nat"}
+        nat = In natDuc
+        idNat = Rec { fromRec = natDuc
+                    , toRec = nat
+                    , matches = [ Constructor natDuc 0 (Just "Z") :@: LocalExprVar 0
+                                , Constructor natDuc 1 (Just "S") :@: LocalExprVar 0]
+                    }
+        zero = Constructor natDuc 0 (Just "Z"):@: UnitExpr
+        one = Constructor natDuc 1 (Just "S") :@: zero
+    it "evaluates the identity function to the identity function" $
+      evalExpr idNat
+      `shouldCheck`
+      idNat
+    it "evaluates the zero to the zero" $
+      evalExpr zero
+      `shouldCheck`
+      zero
+    it "infer type of expr UnitExpr yiels UnitType" $
+      inferTerm UnitExpr
+      `shouldCheck`
+      ([], UnitType)
+    it "typeaction works" $
+      typeAction 0 UnitType [idNat :@: LocalExprVar 0] [[]] [UnitType] [nat]
+      `shouldBe`
+      LocalExprVar 0
+    it "evaluates the identity function on zero to zero" $
+      evalExpr (idNat :@: zero)
+      `shouldCheck`
+      zero
+    it "evaluates the one to the one" $
+      evalExpr one
+      `shouldCheck`
+      one
+    it "infer type of expr zero yiels Nat" $
+      inferTerm zero
+      `shouldCheck`
+      ([], nat)
+    it "infer type of expr one yiels Nat" $
+      inferTerm one
+      `shouldCheck`
+      ([], nat)
+    it "typeaction works on typeVar" $
+      typeAction 0 (LocalTypeVar 0) [idNat :@: LocalExprVar 0] [[]] [nat] [nat]
+      `shouldBe`
+      idNat :@: LocalExprVar 0
+    it "substExpr works" $
+      substExpr 0 (idNat :@: LocalExprVar 0) (Constructor natDuc 1 (Just "S") :@: LocalExprVar 0)
+      `shouldBe`
+      Constructor natDuc 1 (Just "S") :@: (idNat :@: LocalExprVar 0)
+    it "substExprs works" $
+      substExprs 0 [zero] (Constructor natDuc 1 (Just "S") :@: (idNat :@: LocalExprVar 0))
+      `shouldBe`
+      (Constructor natDuc 1 (Just "S") :@: (idNat :@: zero))
+    it "evaluates the identity function on one to one" $
+      evalExpr (idNat :@: one)
+      `shouldCheck`
+      one
