@@ -93,7 +93,7 @@ inferTerm UnitExpr = pure ([],UnitType)
 inferTerm (LocalExprVar idx) = ([],) <$> (view ctx >>= lookupLocalVarTI idx)
 inferTerm (GlobalExprVar x) = lookupDefTypeTI x
 inferTerm (t :@: s) = inferTerm t >>= \case
-  ([],_) -> throwError "Can't apply someting to a type with a empty context"
+  ([],_) -> throwError "Can't apply something to a type with a empty context"
   (a:ctx2,b) -> do
     (ctx,a') <- inferTerm s
     assert (null ctx) "Type Ctx should be empty"
