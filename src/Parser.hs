@@ -202,7 +202,9 @@ parseExprVar = do
   if var `Set.member` _exprDefs
   then pure $ GlobalExprVar var
   else case elemIndex var _localExprVars of
-         Just idx -> pure $ LocalExprVar $ length _localExprVars - idx - 1
+         Just idx ->
+           pure $ LocalExprVar (length _localExprVars - idx - 1)
+                               (Just var)
          Nothing  ->
            fancyFailure $ Set.singleton $ ErrorFail "Name not defined"
 
@@ -220,7 +222,9 @@ parseTypeVar = do
   if var `Set.member` _typeExprDefs
   then pure $ GlobalTypeVar var
   else case elemIndex var _localTypeVars of
-         Just idx -> pure $ LocalTypeVar $ length _localTypeVars - idx - 1
+         Just idx ->
+           pure $ LocalTypeVar (length _localTypeVars - idx - 1)
+                               (Just var)
          Nothing  ->
            fancyFailure $ Set.singleton $ ErrorFail "Name not defined"
 

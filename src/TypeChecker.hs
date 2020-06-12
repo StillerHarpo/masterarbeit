@@ -50,8 +50,8 @@ checkType e k = inferType e >>= zipWithM_ betaeq k
 
 inferType :: TypeExpr -> TI Kind
 inferType UnitType = pure []
-inferType (LocalTypeVar idx) = do
-  ty <- view tyCtx >>= lookupLocalVarTI idx
+inferType v@(LocalTypeVar idx _) = do
+  ty <- view tyCtx >>= lookupLocalVarTI idx (T.pack $ show v)
   view ctx >>= checkCtx
   pure ty
 inferType (GlobalTypeVar var) = lookupDefKindTI var
@@ -90,7 +90,8 @@ checkTerm e (ctx1,a1) = do
 
 inferTerm :: Expr -> TI Type
 inferTerm UnitExpr = pure ([],UnitType)
-inferTerm (LocalExprVar idx) = ([],) <$> (view ctx >>= lookupLocalVarTI idx)
+inferTerm v@(LocalExprVar idx _) =
+  ([],) <$> (view ctx >>= lookupLocalVarTI idx(T.pack $ show v))
 inferTerm (GlobalExprVar x) = lookupDefTypeTI x
 inferTerm (t :@: s) = inferTerm t >>= \case
   ([],_) -> throwError "Can't apply something to a type with a empty context"
@@ -187,7 +188,7 @@ evalExpr (f :@: arg) = do
       evalExpr $ substExprs 0 constrArgs
                          (substExpr 0 (typeAction 0 (as fromRec !! i)
                                                     [applyExprArgs (r, idCtx (gamma fromRec))
-                                                     :@: LocalExprVar 0]
+                                                     :@: LocalExprVar 0 Nothing]
                                                     [gamma1s fromRec !! i]
                                                     [typeU]
                                                     [toRec])
@@ -198,7 +199,7 @@ evalExpr (f :@: arg) = do
                           (substExpr 0 (matches !! i)
                                        (typeAction 0 (as toCorec !! i)
                                                      [applyExprArgs (c, idCtx (gamma toCorec))
-                                                      :@: LocalExprVar 0]
+                                                      :@: LocalExprVar 0 Nothing]
                                                      [gamma1s toCorec !! i]
                                                      [typeU]
                                                      [fromCorec]))
@@ -206,7 +207,7 @@ evalExpr (f :@: arg) = do
 evalExpr atom = pure atom
 
 substExpr :: Int -> Expr -> Expr -> Expr
-substExpr i r v@(LocalExprVar j)
+substExpr i r v@(LocalExprVar j _)
   | i == j = r
   | otherwise = v
 substExpr i r (GlobalExprVar var) = undefined
@@ -251,7 +252,7 @@ substTypeExprs _ [] e = e
 substTypeExprs n (v:vs) e = substTypeExprs (n+1) vs (substTypeExpr n v e)
 
 substType :: Int -> TypeExpr -> TypeExpr -> TypeExpr
-substType i r v@(LocalTypeVar j)
+substType i r v@(LocalTypeVar j _)
   | i == j = r
   | otherwise = v
 substType i r (GlobalTypeVar var) = undefined
@@ -269,7 +270,7 @@ substDuctiveTypeExpr :: Int -> TypeExpr -> Ductive -> Ductive
 substDuctiveTypeExpr i r1 d@Ductive{..} = d { as = map (substType (i+1) r1) as }
 
 typeAction :: Int -> TypeExpr -> [Expr] -> [Ctx] -> [TypeExpr] -> [TypeExpr] -> Expr
-typeAction i (LocalTypeVar n) terms _ _ _ = terms !! n
+typeAction i (LocalTypeVar n _) terms _ _ _ = terms !! n
 typeAction i (GlobalTypeVar n) terms _ _ _ = undefined
 typeAction i (c :@ s) terms gammas as' bs = substExpr 0 (typeAction i c terms gammas as' bs) s
 typeAction i (Abstr _ c) terms gammas as' bs = typeAction i c terms gammas as' bs
@@ -284,12 +285,12 @@ typeAction i (In d) terms gammas as' bs =
                                 :@: typeAction i dk
                                                -- TODO is this the right variable?
                                                -- Could be bound by wrong binder.
-                                               (LocalExprVar j : terms)
+                                               (LocalExprVar j Nothing : terms)
                                                (gamma d:gammas)
                                                (a:as')
                                                (b:bs)) -- g_k in paper
                               idDeltas (as d) (as fromRec) (as toRecDuctive) [1..]
-  in applyExprArgs (Rec {..}  ,idCtx (gamma d)) :@: LocalExprVar i
+  in applyExprArgs (Rec {..}  ,idCtx (gamma d)) :@: LocalExprVar i Nothing
 typeAction i (Coin d) terms gammas as' bs =
   let idDeltas = map idCtx (gamma1s d)
       fromCorecDuctive = d { as = map (substTypes 0 (zipWith abstrArgs as' gammas)) (as d) } -- R_a in paper
@@ -300,15 +301,15 @@ typeAction i (Coin d) terms gammas as' bs =
                              in substExpr 0 (typeAction i dk
                                                -- TODO is this the right variable?
                                                -- Could be bound by wrong binder.
-                                                       (LocalExprVar j : terms)
+                                                       (LocalExprVar j Nothing : terms)
                                                        (gamma d:gammas)
                                                        (a:as')
                                                        (b:bs))
                                             (applyExprArgs (Destructor fromCorecDuctive i Nothing
                                                            , idDelta))) -- g_k in paper
                               idDeltas (as d) (as fromCorecDuctive) (as toCorec) [1..]
-  in applyExprArgs (Corec {..}  ,idCtx (gamma d)) :@: LocalExprVar i
-typeAction i _ _ _ _ _ = LocalExprVar i
+  in applyExprArgs (Corec {..}  ,idCtx (gamma d)) :@: LocalExprVar i Nothing
+typeAction i _ _ _ _ _ = LocalExprVar i Nothing
 
 -- | splits up a chain of left associative applications to a expression
 -- into a list of  arguments
@@ -323,7 +324,7 @@ abstrArgs :: TypeExpr -> [TypeExpr] -> TypeExpr
 abstrArgs = foldr Abstr
 
 idCtx :: Ctx -> [Expr]
-idCtx ctx = LocalExprVar <$> take (length ctx) [0..]
+idCtx ctx = take (length ctx) $ map (flip LocalExprVar Nothing) [0..]
 
 -- | splits up a chain of left associative applications to a type into a
 -- list of  arguments
@@ -334,52 +335,50 @@ getTypeExprArgs arg = (arg,[])
 applyTypeExprArgs :: (TypeExpr,[Expr]) -> TypeExpr
 applyTypeExprArgs (f,args) = foldl (:@) f args
 
--- | lookup lifted to the TI monad
-lookupTI :: Eq a => a -> [(a,b)] -> TI b
-lookupTI var ctx = case lookup var ctx of
-                     Just t   -> pure t
-                     Nothing -> throwError "Variable not defined"
-
-lookupLocalVarTI :: Int -> [a] -> TI a
-lookupLocalVarTI _ []     = throwError "Variable not defined"
-lookupLocalVarTI 0 (x:_)  = pure x
-lookupLocalVarTI n (x:xs) = lookupLocalVarTI (n-1) xs
+lookupLocalVarTI :: Int -> Text -> [a] -> TI a
+lookupLocalVarTI _ t []     = throwError (t <> " not defined")
+lookupLocalVarTI 0 _ (x:_)  = pure x
+lookupLocalVarTI n t (x:xs) = lookupLocalVarTI (n-1) t xs
 
 lookupDefTypeTI :: Text -> TI Type
-lookupDefTypeTI t = view defCtx >>= lookupDefTypeTI' t
+lookupDefTypeTI t = view defCtx >>= lookupDefTypeTI'
   where
-    lookupDefTypeTI' _ [] = throwError "Variable not defined"
-    lookupDefTypeTI' n (ExprDef{..}:stmts)
-      | n == name = pure $ fromJust ty
-      | otherwise = lookupDefTypeTI' n stmts
-    lookupDefTypeTI' n (_:stmts) = lookupDefTypeTI' n stmts
+    lookupDefTypeTI' :: [Statement] -> TI Type
+    lookupDefTypeTI' [] = throwError $ "Variable " <> t <> " not defined"
+    lookupDefTypeTI' (ExprDef{..}:stmts)
+      | t == name = pure $ fromJust ty
+      | otherwise = lookupDefTypeTI' stmts
+    lookupDefTypeTI' (_:stmts) = lookupDefTypeTI' stmts
 
 lookupDefExprTI :: Text -> TI Expr
-lookupDefExprTI t = view defCtx >>= lookupDefExprTI' t
+lookupDefExprTI t = view defCtx >>= lookupDefExprTI'
   where
-    lookupDefExprTI' _ [] = throwError "Variable not defined"
-    lookupDefExprTI' n (ExprDef{..}:stmts)
-      | n == name = pure expr
-      | otherwise = lookupDefExprTI' n stmts
-    lookupDefExprTI' n (_:stmts) = lookupDefExprTI' n stmts
+    lookupDefExprTI' :: [Statement] -> TI Expr
+    lookupDefExprTI' [] = throwError $ "Variable " <> t <> " not defined"
+    lookupDefExprTI' (ExprDef{..}:stmts)
+      | t == name = pure expr
+      | otherwise = lookupDefExprTI' stmts
+    lookupDefExprTI' (_:stmts) = lookupDefExprTI' stmts
 
 lookupDefKindTI :: Text -> TI Kind
-lookupDefKindTI t = view defCtx >>= lookupDefKindTI' t
+lookupDefKindTI t = view defCtx >>= lookupDefKindTI'
   where
-    lookupDefKindTI' _ [] = throwError "Variable not defined"
-    lookupDefKindTI' n (TypeDef{..}:stmts)
-      | n == name = pure $ fromJust kind
-      | otherwise = lookupDefKindTI' n stmts
-    lookupDefKindTI' n (_:stmts) = lookupDefKindTI' n stmts
+    lookupDefKindTI' :: [Statement] -> TI Kind
+    lookupDefKindTI' [] = throwError $ "Variable " <> t <> " not defined"
+    lookupDefKindTI' (TypeDef{..}:stmts)
+      | t == name = pure $ fromJust kind
+      | otherwise = lookupDefKindTI' stmts
+    lookupDefKindTI' (_:stmts) = lookupDefKindTI' stmts
 
 lookupDefTypeExprTI :: Text -> TI TypeExpr
-lookupDefTypeExprTI t = view defCtx >>= lookupDefTypeExprTI' t
+lookupDefTypeExprTI t = view defCtx >>= lookupDefTypeExprTI'
   where
-    lookupDefTypeExprTI' _ [] = throwError "Variable not defined"
-    lookupDefTypeExprTI' n (TypeDef{..}:stmts)
-      | n == name = pure typeExpr
-      | otherwise = lookupDefTypeExprTI' n stmts
-    lookupDefTypeExprTI' n (_:stmts) = lookupDefTypeExprTI' n stmts
+    lookupDefTypeExprTI' :: [Statement] -> TI TypeExpr
+    lookupDefTypeExprTI' [] = throwError $ "Variable " <> t <> " not defined"
+    lookupDefTypeExprTI' (TypeDef{..}:stmts)
+      | t == name = pure typeExpr
+      | otherwise = lookupDefTypeExprTI' stmts
+    lookupDefTypeExprTI' (_:stmts) = lookupDefTypeExprTI' stmts
 
 assert :: Bool -> Text -> TI ()
 assert True  _   = pure ()

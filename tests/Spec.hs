@@ -75,7 +75,7 @@ main = hspec $ do
       [ExprDef "x" UnitExpr Nothing]
     let c = Ductive { gamma = []
                     , sigmas = [[]]
-                    , as = [LocalTypeVar 0]
+                    , as = [LocalTypeVar 0 (Just "C")]
                     , gamma1s = [[]]
                     , nameDuc = Nothing}
     it "parses data" $
@@ -119,8 +119,9 @@ main = hspec $ do
                    gamma = [UnitType],
                    sigmas = [ [UnitExpr]
                             , [UnitExpr]],
-                   as = [ LocalTypeVar 0 :@ LocalExprVar 0
-                        , LocalTypeVar 0 :@ UnitExpr ],
+                   as = [ LocalTypeVar 0 (Just "C")
+                          :@ LocalExprVar 0 (Just "y")
+                        , LocalTypeVar 0 (Just "C") :@ UnitExpr ],
                    gamma1s = [ []
                              , []],
                    nameDuc = Nothing}
@@ -144,8 +145,8 @@ main = hspec $ do
                     gamma = [ UnitType],
                     sigmas = [ [UnitExpr]
                              , [UnitExpr]],
-                    as = [ LocalTypeVar 0 :@ LocalExprVar 0
-                         , LocalTypeVar 0 :@ UnitExpr],
+                    as = [ LocalTypeVar 0 (Just "A") :@ LocalExprVar 0 (Just "y")
+                         , LocalTypeVar 0 (Just "A"):@ UnitExpr],
                     gamma1s = [ []
                               , []],
                     nameDuc = Nothing}
@@ -160,7 +161,7 @@ main = hspec $ do
       `shouldParse`
       (let a = Ductive { gamma = []
                        , sigmas = [[]]
-                       , as = [LocalTypeVar 0]
+                       , as = [LocalTypeVar 0 (Just "A")]
                        , gamma1s = [[]]
                        , nameDuc = Nothing}
       in [ TypeDef { name = "A"
@@ -168,7 +169,8 @@ main = hspec $ do
                    , kind = Nothing}
          , Expression Rec { fromRec = a
                           , toRec = GlobalTypeVar "A"
-                          , matches = [ Constructor a 0 Nothing :@: LocalExprVar 0 ]}])
+                          , matches = [ Constructor a 0 Nothing
+                                        :@: LocalExprVar 0 (Just "x") ]}])
     it "orders matches right" $
        parse parseProgram "" (T.unlines [ "data A : Set where"
                                         , "  C1 : A -> A"
@@ -185,10 +187,10 @@ main = hspec $ do
       `shouldParse`
       (let a = Ductive { gamma = []
                        , sigmas = [[],[],[],[]]
-                       , as = [ LocalTypeVar 0
-                              , LocalTypeVar 0
-                              , LocalTypeVar 0
-                              , LocalTypeVar 0]
+                       , as = [ LocalTypeVar 0 (Just "A")
+                              , LocalTypeVar 0 (Just "A")
+                              , LocalTypeVar 0 (Just "A")
+                              , LocalTypeVar 0 (Just "A")]
                        , gamma1s = [ [UnitType, UnitType, UnitType]
                                    , [UnitType, UnitType]
                                    , [UnitType]
@@ -200,19 +202,19 @@ main = hspec $ do
          , Expression Rec { fromRec = a
                           , toRec = GlobalTypeVar "A"
                           , matches = [ Constructor a 0 Nothing
-                                        :@: LocalExprVar 3
-                                        :@: LocalExprVar 2
-                                        :@: LocalExprVar 1
-                                        :@: LocalExprVar 0
+                                        :@: LocalExprVar 3 (Just "x")
+                                        :@: LocalExprVar 2 (Just "y")
+                                        :@: LocalExprVar 1 (Just "z")
+                                        :@: LocalExprVar 0 (Just "u")
                                       , Constructor a 1 Nothing
-                                        :@: LocalExprVar 2
-                                        :@: LocalExprVar 1
-                                        :@: LocalExprVar 0
+                                        :@: LocalExprVar 2 (Just "x")
+                                        :@: LocalExprVar 1 (Just "y")
+                                        :@: LocalExprVar 0 (Just "z")
                                       , Constructor a 2 Nothing
-                                        :@: LocalExprVar 1
-                                        :@: LocalExprVar 0
+                                        :@: LocalExprVar 1 (Just "x")
+                                        :@: LocalExprVar 0 (Just "y")
                                       , Constructor a 3 Nothing
-                                        :@: LocalExprVar 0]}])
+                                        :@: LocalExprVar 0 (Just "x")]}])
 
   describe "Type Checker works" $ do
     let shouldCheck :: (HasCallStack, Show a, Eq a) => TI a -> a -> Expectation
@@ -232,14 +234,16 @@ main = hspec $ do
       ([],UnitType)
     let natDuc = Ductive { gamma = []
                          , sigmas = [[],[]]
-                         , as = [UnitType, LocalTypeVar 0]
+                         , as = [UnitType, LocalTypeVar 0 (Just "X")]
                          , gamma1s = [[],[]]
                          , nameDuc = Just "nat"}
         nat = In natDuc
         idNat = Rec { fromRec = natDuc
                     , toRec = nat
-                    , matches = [ Constructor natDuc 0 (Just "Z") :@: LocalExprVar 0
-                                , Constructor natDuc 1 (Just "S") :@: LocalExprVar 0]
+                    , matches = [ Constructor natDuc 0 (Just "Z")
+                                  :@: LocalExprVar 0 (Just "y1")
+                                , Constructor natDuc 1 (Just "S")
+                                  :@: LocalExprVar 0 (Just "y2")]
                     }
         zero = Constructor natDuc 0 (Just "Z"):@: UnitExpr
         one = Constructor natDuc 1 (Just "S") :@: zero
@@ -256,9 +260,11 @@ main = hspec $ do
       `shouldCheck`
       ([], UnitType)
     it "typeaction works" $
-      typeAction 0 UnitType [idNat :@: LocalExprVar 0] [[]] [UnitType] [nat]
+      typeAction 0 UnitType
+                   [idNat :@: LocalExprVar 0 Nothing]
+                   [[]] [UnitType] [nat]
       `shouldBe`
-      LocalExprVar 0
+      LocalExprVar 0 Nothing
     it "evaluates the identity function on zero to zero" $
       evalExpr (idNat :@: zero)
       `shouldCheck`
@@ -276,15 +282,21 @@ main = hspec $ do
       `shouldCheck`
       ([], nat)
     it "typeaction works on typeVar" $
-      typeAction 0 (LocalTypeVar 0) [idNat :@: LocalExprVar 0] [[]] [nat] [nat]
+      typeAction 0 (LocalTypeVar 0 Nothing)
+                   [idNat :@: LocalExprVar 0 Nothing]
+                   [[]] [nat] [nat]
       `shouldBe`
-      idNat :@: LocalExprVar 0
+      idNat :@: LocalExprVar 0 Nothing
     it "substExpr works" $
-      substExpr 0 (idNat :@: LocalExprVar 0) (Constructor natDuc 1 (Just "S") :@: LocalExprVar 0)
+      substExpr 0 (idNat :@: LocalExprVar 0 Nothing)
+                  (Constructor natDuc 1 (Just "S")
+                   :@: LocalExprVar 0 Nothing)
       `shouldBe`
-      Constructor natDuc 1 (Just "S") :@: (idNat :@: LocalExprVar 0)
+      Constructor natDuc 1 (Just "S")
+      :@: (idNat :@: LocalExprVar 0 Nothing)
     it "substExprs works" $
-      substExprs 0 [zero] (Constructor natDuc 1 (Just "S") :@: (idNat :@: LocalExprVar 0))
+      substExprs 0 [zero] (Constructor natDuc 1 (Just "S")
+                           :@: (idNat :@: LocalExprVar 0 Nothing))
       `shouldBe`
       (Constructor natDuc 1 (Just "S") :@: (idNat :@: zero))
     it "evaluates the identity function on one to one" $

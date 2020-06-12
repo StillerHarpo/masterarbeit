@@ -25,12 +25,26 @@ data Statement = ExprDef { name :: Text
 
 data TypeExpr = UnitType -- verum type
               | TypeExpr :@ Expr
-              | LocalTypeVar Int
+              -- If numbers are the same the names should also be the
+              -- same
+              -- TODO Maybe throw error if this is not the case
+              | LocalTypeVar Int (Maybe Text)
               | GlobalTypeVar Text
               | Abstr TypeExpr TypeExpr
               | In Ductive
               | Coin Ductive
-  deriving (Eq, Show)
+  deriving (Eq)
+
+instance Show TypeExpr where
+  show UnitType   = "Unit"
+  show (e1 :@ e2) = show e1 <> "@" <> show e2
+  show (LocalTypeVar i Nothing) = "tmpTy" <> show i
+  show (LocalTypeVar _ (Just n)) = T.unpack n
+  show (GlobalTypeVar n) = T.unpack n
+  -- TODO find name of variable if defined
+  show (Abstr ty body) = "\\?:" <> show ty <> " -> " <> show body
+  show (In d) = "mu" <> show d
+  show (Coin d) = "nu" <> show d
 
 data Ductive = Ductive { gamma :: Ctx
                        , sigmas :: [[Expr]]
@@ -50,7 +64,10 @@ instance Eq Ductive where
     g1 == g2 && s1 == s2 && a1 == a2 && g11 == g12
 
 data Expr = UnitExpr -- verum value
-          | LocalExprVar Int -- Ctx-- term variables
+          -- If numbers are the same the names should also be the
+          -- same
+          -- TODO Maybe throw error if this is not the case
+          | LocalExprVar Int (Maybe Text) -- Ctx-- term variables
           | GlobalExprVar Text
           | Expr :@: Expr
           | Constructor Ductive Int (Maybe Text)
@@ -66,7 +83,8 @@ data Expr = UnitExpr -- verum value
 
 instance Show Expr where
   show UnitExpr                   = "<>"
-  show (LocalExprVar i)           = show i
+  show (LocalExprVar i Nothing)   = "tmp" <> show i
+  show (LocalExprVar i (Just n))  = T.unpack n
   show (GlobalExprVar n)          = T.unpack n
   show (e1 :@: e2)                = show e1 <> "@" <> show e2
   show (Constructor _ _ (Just n)) = T.unpack n
@@ -81,7 +99,7 @@ instance Show Expr where
 
 instance Eq Expr where
   UnitExpr              == UnitExpr              = True
-  (LocalExprVar i)      == (LocalExprVar j)      = i == j
+  (LocalExprVar i _)    == (LocalExprVar j _)    = i == j
   (GlobalExprVar n)     == (GlobalExprVar m)     = n == m
   (e1 :@: e2)           == (e3 :@: e4)           = e1 == e3 && e2 == e4
   (Constructor d1 i1 _) == (Constructor d2 i2 _) = d1 == d2 && i1 == i2
