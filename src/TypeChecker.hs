@@ -233,12 +233,14 @@ substTypeExpr i r (e1 :@ e2) = substTypeExpr i r e1 :@ substExpr i r e2
 substTypeExpr _ _ e = e
 
 substDuctiveExpr :: Int -> Expr -> Ductive -> Ductive
-substDuctiveExpr i r1 Ductive{..} = Ductive { gamma = substCtx i r1 gamma
-                                            , sigmas = map (map $ substExpr i r1) sigmas
-                                            , as = map (substTypeExpr i r1) as
-                                            , gamma1s = map (substCtx i r1) gamma1s
-                                            , nameDuc = nameDuc
-                                            }
+substDuctiveExpr i r1 dIn@Ductive{..} =
+  let dOut = Ductive { gamma = substCtx i r1 gamma
+                     , sigmas = zipWith (\s g -> map (substExpr (i+length g) r1) s) sigmas gamma1s
+                     , as = zipWith (`substTypeExpr` r1) (map ((+i) . length) gamma1s) as
+                     , gamma1s = map (substCtx i r1) gamma1s
+                     , nameDuc = Nothing
+                     }
+  in if dOut == dIn then dIn else dOut
 
 substCtx :: Int -> Expr -> Ctx -> Ctx
 substCtx _ _ [] = []
@@ -268,7 +270,11 @@ substTypes _ [] e = e
 substTypes n (v:vs) e = substTypes (n+1) vs (substType n v e)
 
 substDuctiveTypeExpr :: Int -> TypeExpr -> Ductive -> Ductive
-substDuctiveTypeExpr i r1 d@Ductive{..} = d { as = map (substType (i+1) r1) as }
+substDuctiveTypeExpr i r1 dOld@Ductive{..} =
+  let dNew =  dOld { as = map (substType (i+1) r1) as
+                   , nameDuc = Nothing }
+  in if dNew == dOld then dOld else dNew
+
 
 typeAction :: Int -> TypeExpr -> [Expr] -> [Ctx] -> [TypeExpr] -> [TypeExpr] -> Expr
 typeAction i (LocalTypeVar n _) terms _ _ _ = terms !! n
@@ -277,8 +283,10 @@ typeAction i (c :@ s) terms gammas as' bs = substExpr 0 (typeAction i c terms ga
 typeAction i (Abstr _ c) terms gammas as' bs = typeAction i c terms gammas as' bs
 typeAction i (In d) terms gammas as' bs =
   let idDeltas = map idCtx (gamma1s d)
-      fromRec = d { as = map (substTypes 0 (zipWith abstrArgs as' gammas)) (as d) } -- R_a in paper
-      toRecDuctive = d { as = map (substTypes 0 (zipWith abstrArgs bs gammas)) (as d) }
+      fromRec = d { as = map (substTypes 0 (zipWith abstrArgs as' gammas)) (as d)
+                  , nameDuc = Nothing} -- R_a in paper
+      toRecDuctive = d { as = map (substTypes 0 (zipWith abstrArgs bs gammas)) (as d)
+                       , nameDuc = Nothing}
       toRec = In toRecDuctive
       matches = zipWith5 (\idDelta dk a b i ->
                              let j = 1 + length idDelta
@@ -294,7 +302,8 @@ typeAction i (In d) terms gammas as' bs =
   in applyExprArgs (Rec {..}  ,idCtx (gamma d)) :@: LocalExprVar i Nothing
 typeAction i (Coin d) terms gammas as' bs =
   let idDeltas = map idCtx (gamma1s d)
-      fromCorecDuctive = d { as = map (substTypes 0 (zipWith abstrArgs as' gammas)) (as d) } -- R_a in paper
+      fromCorecDuctive = d { as = map (substTypes 0 (zipWith abstrArgs as' gammas)) (as d)
+                           , nameDuc = Nothing} -- R_a in paper
       fromCorec = Coin fromCorecDuctive
       toCorec = d { as = map (substTypes 0 (zipWith abstrArgs bs gammas)) (as d) }
       matches = zipWith5 (\idDelta dk a b i ->
