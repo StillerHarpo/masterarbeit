@@ -22,6 +22,7 @@ import Data.Maybe (fromJust)
 
 import AbstractSyntaxTree
 
+import PrettyPrinter
 
 data ContextTI = ContextTI { _ctx :: Ctx
                            , _tyCtx :: TyCtx

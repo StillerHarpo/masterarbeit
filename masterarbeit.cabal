@@ -33,10 +33,12 @@ library
                        containers,
                        parser-combinators,
                        microlens-platform,
-                       mtl
+                       mtl,
+                       prettyprinter
   exposed-modules:     AbstractSyntaxTree,
                        Parser,
-                       TypeChecker
+                       TypeChecker,
+                       PrettyPrinter
   default-language:   Haskell2010
 
 test-suite tests

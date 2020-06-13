@@ -1,6 +1,7 @@
 { mkDerivation, base, containers, hspec, hspec-discover
-, hspec-megaparsec, megaparsec, microlens-platform, mtl
-, parser-combinators, stdenv, text
+, hspec-expectations, hspec-megaparsec, megaparsec
+, microlens-platform, mtl, parser-combinators, prettyprinter
+, stdenv, text
 }:
 mkDerivation {
   pname = "masterarbeit";
@@ -10,12 +11,12 @@ mkDerivation {
   isExecutable = true;
   libraryHaskellDepends = [
     base containers megaparsec microlens-platform mtl
-    parser-combinators text
+    parser-combinators prettyprinter text
   ];
   executableHaskellDepends = [ base ];
   testHaskellDepends = [
-    base containers hspec hspec-megaparsec megaparsec
-    microlens-platform mtl text
+    base containers hspec hspec-expectations hspec-megaparsec
+    megaparsec microlens-platform mtl text
   ];
   testToolDepends = [ hspec-discover ];
   description = "inductive coinductive dependent types interpreter";
