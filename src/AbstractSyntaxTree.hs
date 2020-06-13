@@ -32,8 +32,16 @@ data TypeExpr = UnitType -- verum type
               | Abstr TypeExpr TypeExpr
               | In Ductive
               | Coin Ductive
-  deriving (Eq)
 
+instance Eq TypeExpr where
+  UnitType            == UnitType            = True
+  (tE1 :@ e1)         == (tE2 :@ e2)         = tE1 == tE2 && e1 == e2
+  (LocalTypeVar i1 _) == (LocalTypeVar i2 _) = i1 == i2
+  (GlobalTypeVar n1)  == (GlobalTypeVar n2)  = n1 == n2
+  (Abstr ty1 e1)      == (Abstr ty2 e2)      = ty1 == ty2 && e1 == e2
+  (In d1)             == (In d2)             = d1 == d2
+  (Coin d1)           == (Coin d2)           = d1 == d2
+  _                   == _                   = False
 
 data Ductive = Ductive { gamma :: Ctx
                        , sigmas :: [[Expr]]
