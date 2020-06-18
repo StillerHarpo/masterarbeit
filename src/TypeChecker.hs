@@ -117,7 +117,7 @@ inferTerm Rec{..} = do
   let Ductive{..} = valFrom
   zipWithM_ betaeq gamma' gamma
   sequence_ $ zipWith4 (\ gamma1 sigma a match ->
-                          local (over ctx ((substType 0 valTo a:gamma1)++))
+                          local (over ctx (++gamma1++[substType 0 valTo a]))
                                 (checkTerm match ([],applyTypeExprArgs (valTo,sigma))))
                        gamma1s sigmas as matches
   pure ( applyTypeExprArgs (In valFrom, idCtx gamma):gamma
@@ -129,7 +129,7 @@ inferTerm Corec{..} = do
   let Ductive{..} = valTo
   zipWithM_ betaeq gamma' gamma
   sequence_ $ zipWith4 (\ gamma1 sigma a match ->
-                          local (over ctx ((applyTypeExprArgs (valFrom,sigma):gamma1)++))
+                          local (over ctx (++gamma1++[applyTypeExprArgs (valFrom,sigma)]))
                                 (checkTerm match ([],substType 0 valFrom a)))
                        gamma1s sigmas as matches
   pure ( applyTypeExprArgs (valFrom, idCtx gamma):gamma
