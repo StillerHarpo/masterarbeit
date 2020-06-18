@@ -11,6 +11,8 @@ import Control.Monad.State.Strict
 
 import qualified Data.Text as T
 
+import Lens.Micro.Platform
+
 import Parser
 import TypeChecker
 import AbstractSyntaxTree
@@ -217,13 +219,15 @@ main = hspec $ do
                                         :@: LocalExprVar 0 (Just "x")]}])
 
   describe "Type Checker works" $ do
-    let shouldCheck :: (HasCallStack, Show a, Eq a) => TI a -> a -> Expectation
-        shouldCheck ti val = runTI ti (ContextTI { _ctx = []
-                                                 , _tyCtx = []
-                                                 , _defCtx = []
-                                                 , _strCtx = []})
-                             `shouldBe`
-                             Right val
+    let emptyCtx :: ContextTI
+        emptyCtx = ContextTI { _ctx = []
+                             , _tyCtx = []
+                             , _defCtx = []
+                             , _strCtx = []}
+        shouldCheckIn :: (HasCallStack, Show a, Eq a) => TI a -> ContextTI -> a -> Expectation
+        shouldCheckIn ti ctx' val = runTI ti ctx' `shouldBe` Right val
+        shouldCheck :: (HasCallStack, Show a, Eq a) => TI a -> a -> Expectation
+        shouldCheck ti = shouldCheckIn ti emptyCtx
     it "type check unit type" $
       inferType UnitType
       `shouldCheck`
