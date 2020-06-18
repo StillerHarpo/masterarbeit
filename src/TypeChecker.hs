@@ -104,11 +104,11 @@ inferTerm (t :@: s) = inferTerm t >>= \case
     pure (substCtx 0 s ctx2, substTypeExpr 0 s b)
 inferTerm (Constructor d@Ductive{..} i _) =
   inferTypeDuctive d
-  >> pure ( substType 0 (In d) (as !! i) : gamma1s !! i
+  >> pure (gamma1s !! i ++ [substType 0 (In d) (as !! i)]
           , applyTypeExprArgs (In d, sigmas !! i))
 inferTerm (Destructor d@Ductive{..} i _) =
   inferTypeDuctive d
-  >> pure ( substType 0 (Coin d) (as !! i): gamma1s !! i
+  >> pure (gamma1s !! i ++ [substType 0 (Coin d) (as !! i)]
           , applyTypeExprArgs (Coin d, sigmas !! i))
 inferTerm Rec{..} = do
   valTo <- evalTypeExpr toRec
