@@ -347,9 +347,14 @@ applyTypeExprArgs :: (TypeExpr,[Expr]) -> TypeExpr
 applyTypeExprArgs (f,args) = foldl (:@) f args
 
 lookupLocalVarTI :: Int -> Text -> [a] -> TI a
-lookupLocalVarTI _ t []     = throwError (t <> " not defined")
-lookupLocalVarTI 0 _ (x:_)  = pure x
-lookupLocalVarTI n t (x:xs) = lookupLocalVarTI (n-1) t xs
+lookupLocalVarTI i t ctx = lookupLocalVarTI' i (reverse ctx)
+  where
+    lookupLocalVarTI' :: Int -> [a] -> TI a
+    lookupLocalVarTI' _ []     = throwError (t <> " not defined")
+    lookupLocalVarTI' 0 (x:_)  = pure x
+    lookupLocalVarTI' n (x:xs)
+      | n < 0 = error "internal error negative variable lookup"
+      | otherwise = lookupLocalVarTI' (n-1) xs
 
 lookupDefTypeTI :: Text -> TI Type
 lookupDefTypeTI t = view defCtx >>= lookupDefTypeTI'
