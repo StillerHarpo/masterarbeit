@@ -69,9 +69,10 @@ inferType (Coin d) = inferTypeDuctive d
 
 inferTypeDuctive :: Ductive -> TI Kind
 inferTypeDuctive Ductive{..} = do
-  zipWithM_ (\sigma gamma1 -> checkContextMorph sigma gamma1 gamma) sigmas gamma1s
+  -- in sigmas shouldn't be variables wich refer to unittype
+  zipWithM_ (\sigma gamma1 -> checkContextMorph sigma (gamma1++[UnitType]) gamma) sigmas gamma1s
   zipWithM_ (\gamma1 a ->
-              local (over tyCtx (gamma:) . over ctx (gamma1++)) (checkType a []))
+              local (over tyCtx (gamma:) . set ctx gamma1) (checkType a []))
             gamma1s as
   pure gamma
 
