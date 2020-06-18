@@ -48,8 +48,8 @@ instance Pretty Ductive where
 
 instance PrettyPresc Expr where
   prettyPresc _ UnitExpr                   = pretty "<>"
-  prettyPresc _ (LocalExprVar i Nothing)   = pretty "tmp" <> pretty i
-  prettyPresc _ (LocalExprVar i (Just n))  = pretty n
+  prettyPresc _ (LocalExprVar i Nothing)   = pretty "tmp{" <> pretty i <> pretty "}"
+  prettyPresc _ (LocalExprVar i (Just n))  = pretty n <> pretty "{" <> pretty i <> pretty "}"
   prettyPresc _ (GlobalExprVar n)          = pretty n
   prettyPresc p (e1 :@: e2)                = parensIf p $ pretty e1
                                                           <+> pretty "@"
