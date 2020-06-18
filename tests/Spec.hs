@@ -307,3 +307,38 @@ main = hspec $ do
       evalExpr (idNat :@: one)
       `shouldCheck`
       one
+    -- vector without pair typ, just save the element in gamma2
+    let suc = Constructor natDuc 1 (Just "S")
+        vec2Duc = Ductive { gamma = [ nat ]
+                          , sigmas = [ [zero]
+                                     , [suc :@: LocalExprVar 2 (Just "k")]]
+                          , as = [ UnitType
+                                 , LocalTypeVar 0 (Just "X") :@ LocalExprVar 1 (Just "k")]
+                          , gamma1s = [[],[nat, UnitType]]
+                          , nameDuc = Just "vec2"}
+
+        vec2 = In vec2Duc
+        emptyVec2 = Constructor vec2Duc 0 (Just "[]") :@: UnitExpr
+        oneVec2 = Constructor vec2Duc 1 (Just "::") :@: zero :@: UnitExpr
+                 :@: emptyVec2
+        idVec2 = Rec { fromRec = vec2Duc
+                     , toRec = vec2
+                     , matches = [ Constructor vec2Duc 0 (Just "[]")
+                                   :@: LocalExprVar 0 (Just "y1")
+                                 , Constructor vec2Duc 1 (Just "::")
+                                   :@: LocalExprVar 2 (Just "k")
+                                   :@: LocalExprVar 1 (Just "x")
+                                   :@: LocalExprVar 0 (Just "y2")]
+                     }
+    it "infers type vec2 for emptyVec2" $
+      inferTerm emptyVec2
+      `shouldCheck`
+      ([],vec2 :@ zero)
+    it "infers type vec2 for oneVec2" $
+      inferTerm oneVec2
+      `shouldCheck`
+      ([],vec2 :@ one)
+    it "infers type vec2 for identity function on oneVec2" $
+      inferTerm (idVec2 :@: one :@: oneVec2)
+      `shouldCheck`
+      ([],vec2 :@ one)
