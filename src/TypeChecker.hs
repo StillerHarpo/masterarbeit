@@ -93,7 +93,8 @@ checkTerm e (ctx1,a1) = do
 inferTerm :: Expr -> TI Type
 inferTerm UnitExpr = pure ([],UnitType)
 inferTerm v@(LocalExprVar idx _) =
-  ([],) <$> (view ctx >>= lookupLocalVarTI idx(T.pack $ show v))
+  ([],) . shiftFreeVarsTypeExpr (idx + 1) 0
+  <$> (view ctx >>= lookupLocalVarTI idx (T.pack $ show v))
 inferTerm (GlobalExprVar x) = lookupDefTypeTI x
 inferTerm (t :@: s) = inferTerm t >>= \case
   ([],_) -> throwError "Can't apply something to a term with a empty context"
@@ -101,7 +102,16 @@ inferTerm (t :@: s) = inferTerm t >>= \case
     (ctx,a') <- inferTerm s
     assert (null ctx) "Type Ctx should be empty"
     betaeq a a'
-    pure (substCtx 0 s ctx2, substTypeExpr 0 s b)
+    --shift free vars 0
+    pure ( shiftFreeVarsCtx (-1)
+                            0
+                            (substCtx 0 (shiftFreeVarsExpr 1 0 s) ctx2)
+         , shiftFreeVarsTypeExpr
+             (-1)
+             0
+             (substTypeExpr (length ctx2)
+                            (shiftFreeVarsExpr (length ctx2+1) 0 s)
+                             b))
 inferTerm (Constructor d@Ductive{..} i _) =
   inferTypeDuctive d
   >> pure (gamma1s !! i ++ [substType 0 (In d) (as !! i)]
@@ -120,8 +130,9 @@ inferTerm Rec{..} = do
                           local (over ctx (++gamma1++[substType 0 valTo a]))
                                 (checkTerm match ([],applyTypeExprArgs (valTo,sigma))))
                        gamma1s sigmas as matches
-  pure ( applyTypeExprArgs (In valFrom, idCtx gamma):gamma
-       , applyTypeExprArgs (valTo,idCtx gamma))
+  pure ( gamma ++ [applyTypeExprArgs (In valFrom, idCtx gamma)]
+       , applyTypeExprArgs ( valTo
+                           , map (shiftFreeVarsExpr 1 0) (idCtx gamma)))
 inferTerm Corec{..} = do
   valTo <- evalDuctive toCorec
   valFrom <- evalTypeExpr fromCorec
@@ -132,8 +143,9 @@ inferTerm Corec{..} = do
                           local (over ctx (++gamma1++[applyTypeExprArgs (valFrom,sigma)]))
                                 (checkTerm match ([],substType 0 valFrom a)))
                        gamma1s sigmas as matches
-  pure ( applyTypeExprArgs (valFrom, idCtx gamma):gamma
-       , applyTypeExprArgs (Coin valTo,idCtx gamma))
+  pure ( gamma ++ [applyTypeExprArgs (valFrom, idCtx gamma)]
+       , applyTypeExprArgs (Coin valTo
+                           , map (shiftFreeVarsExpr 1 0) (idCtx gamma)))
 
 betaeq :: TypeExpr -> TypeExpr -> TI ()
 betaeq e1 e2 = do
@@ -227,7 +239,9 @@ substExpr i r c@Corec{..} = let Ductive{..} = toCorec
 substExpr _ _ e = e
 
 substTypeExpr :: Int -> Expr -> TypeExpr -> TypeExpr
-substTypeExpr i r1 (Abstr t r2) = Abstr (substTypeExpr i r1 t) (substTypeExpr (i+1) r1 r2)
+substTypeExpr i r1 (Abstr t r2) =
+  Abstr (substTypeExpr i r1 t)
+        (substTypeExpr (i+1) (shiftFreeVarsExpr 0 1 r1) r2)
 substTypeExpr i r1 (In d) = In $ substDuctiveExpr i r1 d
 substTypeExpr i r1 (Coin d) = Coin $ substDuctiveExpr i r1 d
 substTypeExpr i r (e1 :@ e2) = substTypeExpr i r e1 :@ substExpr i r e2
@@ -235,17 +249,33 @@ substTypeExpr _ _ e = e
 
 substDuctiveExpr :: Int -> Expr -> Ductive -> Ductive
 substDuctiveExpr i r1 dIn@Ductive{..} =
-  let dOut = Ductive { gamma = substCtx i r1 gamma
-                     , sigmas = zipWith (\s g -> map (substExpr (i+length g) r1) s) sigmas gamma1s
-                     , as = zipWith (`substTypeExpr` r1) (map ((+i) . length) gamma1s) as
-                     , gamma1s = map (substCtx i r1) gamma1s
-                     , nameDuc = Nothing
-                     }
+  let dOut = Ductive
+        { gamma = substCtx i r1 gamma
+        , sigmas =
+            zipWith (\s g -> map (substExpr
+                                     (1+i+length g)
+                                     (shiftFreeVarsExpr 0
+                                                        (1+i+length g)
+                                                        r1))
+                                     s)
+                    sigmas gamma1s
+        , as =
+            zipWith (\g a -> substTypeExpr
+                               (i + length g)
+                               (shiftFreeVarsExpr 0
+                                                  (i + length g)
+                                                  r1)
+                               a)
+                    gamma1s as
+        , gamma1s = map (substCtx i r1) gamma1s
+        , nameDuc = Nothing
+        }
   in if dOut == dIn then dIn else dOut
 
 substCtx :: Int -> Expr -> Ctx -> Ctx
 substCtx _ _ [] = []
-substCtx i r (e:ctx) = substTypeExpr i r e : substCtx (i+1) r ctx
+substCtx i r (e:ctx) =
+  substTypeExpr i r e : substCtx (i+1) (shiftFreeVarsExpr 1 0 r) ctx
 
 substExprs :: Int -> [Expr] -> Expr -> Expr
 substExprs _ [] e = e
@@ -399,3 +429,30 @@ lookupDefTypeExprTI t = view defCtx >>= lookupDefTypeExprTI'
 assert :: Bool -> Text -> TI ()
 assert True  _   = pure ()
 assert False msg = throwError msg
+
+shiftFreeVarsCtx :: Int -> Int -> Ctx -> Ctx
+shiftFreeVarsCtx _ _ []       = []
+shiftFreeVarsCtx k j (ty:tys) =
+  shiftFreeVarsTypeExpr k j ty : shiftFreeVarsCtx k (j+1) tys
+
+shiftFreeVarsTypeExpr :: Int -> Int -> TypeExpr -> TypeExpr
+shiftFreeVarsTypeExpr j k (e1 :@ e2) = e1 :@ shiftFreeVarsExpr j k e2
+-- every thing else shouldn't contain free variables
+shiftFreeVarsTypeExpr _ _ e = e
+
+shiftFreeVarsExpr :: Int -> Int -> Expr -> Expr
+shiftFreeVarsExpr k j v@(LocalExprVar i n)
+  | i < j = v
+  | otherwise = LocalExprVar (i+k) n
+-- TODO maybe GlobaleExprVar
+shiftFreeVarsExpr k j (e1 :@: e2) = shiftFreeVarsExpr k j e1
+                                    :@: shiftFreeVarsExpr k j e2
+shiftFreeVarsExpr k j r@Rec{..} =
+  r {matches = zipWith (shiftFreeVarsExpr k) (map ((j+). length)
+                                             (gamma1s fromRec))
+                       matches }
+shiftFreeVarsExpr k j c@Corec{..} =
+  c {matches = zipWith (shiftFreeVarsExpr k) (map ((j+). length)
+                                             (gamma1s toCorec))
+                       matches }
+shiftFreeVarsExpr _ _ e = e
