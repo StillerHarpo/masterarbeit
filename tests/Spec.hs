@@ -173,11 +173,20 @@ main = hspec $ do
                           , toRec = GlobalTypeVar "A"
                           , matches = [ Constructor a 0 Nothing
                                         :@: LocalExprVar 0 (Just "x") ]}])
+    it "parses context with spaces" $
+       parse parseProgram "" "data A : (x : Unit, y : Unit) -> Set where"
+       `shouldParse`
+       [ TypeDef { name = "A"
+                 , typeExpr = In Ductive { gamma = [UnitType, UnitType]
+                                         , sigmas = []
+                                         , as = []
+                                         , gamma1s = []
+                                         , nameDuc = Nothing}
+                 , kind = Nothing }]
     it "orders matches right" $
        parse parseProgram "" (T.unlines [ "data A : Set where"
                                         , "  C1 : A -> A"
                                         , "  C2 : (x:Unit) -> A -> A"
-                                        -- TODO allow space in contexts
                                         , "  C3 : (x:Unit,y:Unit) -> A -> A"
                                         , "  C4 : (x:Unit,y:Unit,z:Unit) -> A -> A"
                                         , "rec A to A where"

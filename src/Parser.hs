@@ -316,8 +316,8 @@ parseCtxNE = symbol "(" *> parseCtxRest
           checkName var
           void $ symbol ":"
           expr <- parseTypeExpr
-          c <- char ',' <|> char ')'
-          if c == ','
+          c <- symbol "," <|> symbol ")"
+          if c == ","
           then ((var,expr):) <$> withLocalExprVars [var] parseCtxRest
           else pure [(var,expr)]
 
