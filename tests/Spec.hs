@@ -114,7 +114,7 @@ main = hspec $ do
     it "parses indented data definition" $
       parse parseProgram "" (T.unlines [ "data C : (y:Unit) -> Set where"
                                        , "  C1 : (C @ ()) -> C ()"
-                                       , "  C2 : (C @ y) -> C ()"])
+                                       , "  C2 : (y:Unit) -> (C @ y) -> C ()"])
       `shouldParse`
       [TypeDef { name = "C"
                , typeExpr = In Ductive {
@@ -124,7 +124,7 @@ main = hspec $ do
                    as = [ LocalTypeVar 0 (Just "C")
                           :@ LocalExprVar 0 (Just "y")
                         , LocalTypeVar 0 (Just "C") :@ UnitExpr ],
-                   gamma1s = [ []
+                   gamma1s = [ [UnitType]
                              , []],
                    nameDuc = Nothing}
                , kind = Nothing}]
@@ -133,7 +133,7 @@ main = hspec $ do
                                        , "z = ()"
                                        , "data A : (y:Unit) -> Set where"
                                        , "  C1 : (A @ ()) -> A ()"
-                                       , "  C2 : (A @ y) -> A ()"
+                                       , "  C2 : (y:Unit) -> (A @ y) -> A ()"
                                        , "x @ z"])
       `shouldParse`
       [ ExprDef { name = "x"
@@ -149,7 +149,7 @@ main = hspec $ do
                              , [UnitExpr]],
                     as = [ LocalTypeVar 0 (Just "A") :@ LocalExprVar 0 (Just "y")
                          , LocalTypeVar 0 (Just "A"):@ UnitExpr],
-                    gamma1s = [ []
+                    gamma1s = [ [UnitType]
                               , []],
                     nameDuc = Nothing}
                 , kind = Nothing}

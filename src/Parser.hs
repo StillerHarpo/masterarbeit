@@ -137,8 +137,6 @@ parseDataHeader = do
   name <- lexeme parseTypeStrVarT
   void $ symbol ":"
   gammaP <- lexeme parseCtx
-  let vars = map fst gammaP
-  localExprVars %= (vars++)
   void $ if null gammaP
          then symbols ["Set", "where"]
          else symbols ["->", "Set", "where"]
