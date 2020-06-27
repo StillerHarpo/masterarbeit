@@ -55,7 +55,7 @@ inferType v@(LocalTypeVar idx _) = do
   ty <- view tyCtx >>= lookupLocalVarTI idx (T.pack $ show v)
   view ctx >>= checkCtx
   pure ty
-inferType (GlobalTypeVar var) = lookupDefKindTI var
+inferType (GlobalTypeVar var pars) = lookupDefKindTI pars var
 inferType (a :@ t) = inferType a >>= \case
     [] -> throwError "Can't apply someting to a type with a empty context"
     (b:gamma2) -> do
@@ -87,7 +87,7 @@ checkContextMorph (t:ts) gamma1 (a:gamma2) = do
 checkTerm :: Expr -> Type -> TI ()
 checkTerm e (ctx1,a1) = do
   (ctx2, a2) <- inferTerm e
-  zipWithM_ betaeq ctx1 ctx2
+  betaeqCtx ctx1 ctx2
   betaeq a1 a2
 
 inferTerm :: Expr -> TI Type
@@ -125,7 +125,7 @@ inferTerm Rec{..} = do
   valFrom <- evalDuctive fromRec
   gamma' <- inferType valTo
   let Ductive{..} = valFrom
-  zipWithM_ betaeq gamma' gamma
+  betaeqCtx gamma' gamma
   sequence_ $ zipWith4 (\ gamma1 sigma a match ->
                           local (over ctx (++gamma1++[substType 0 valTo a]))
                                 (checkTerm match ([],applyTypeExprArgs (valTo,sigma))))
@@ -138,7 +138,7 @@ inferTerm Corec{..} = do
   valFrom <- evalTypeExpr fromCorec
   gamma' <- inferType valFrom
   let Ductive{..} = valTo
-  zipWithM_ betaeq gamma' gamma
+  betaeqCtx gamma' gamma
   sequence_ $ zipWith4 (\ gamma1 sigma a match ->
                           local (over ctx (++gamma1++[applyTypeExprArgs (valFrom,sigma)]))
                                 (checkTerm match ([],substType 0 valFrom a)))
@@ -146,6 +146,8 @@ inferTerm Corec{..} = do
   pure ( gamma ++ [applyTypeExprArgs (valFrom, idCtx gamma)]
        , applyTypeExprArgs (Coin valTo
                            , map (shiftFreeVarsExpr 1 0) (idCtx gamma)))
+inferTerm (WithParameters ps e) = inferTerm $ substTypesInExpr 0 ps e
+
 
 betaeq :: TypeExpr -> TypeExpr -> TI ()
 betaeq e1 e2 = do
@@ -157,6 +159,12 @@ betaeq e1 e2 = do
                   <> T.pack (show e1)
                   <> " with type "
                   <> T.pack (show e2)
+
+betaeqCtx :: Ctx -> Ctx -> TI ()
+betaeqCtx = zipWithM_ betaeq
+
+betaeqTyCtx :: TyCtx -> TyCtx -> TI ()
+betaeqTyCtx = zipWithM_ betaeqCtx
 
 evalTypeExpr :: TypeExpr -> TI TypeExpr
 evalTypeExpr (Abstr ty expr) = Abstr <$> evalTypeExpr ty
@@ -183,11 +191,11 @@ evalDuctive Ductive{..} = do
   pure Ductive{..}
 
 evalExpr :: Expr -> TI Expr
-evalExpr r@Rec{..} = Rec fromRec
-                         <$> evalTypeExpr toRec
+evalExpr r@Rec{..} = Rec <$> evalDuctive fromRec
+                         <*> evalTypeExpr toRec
                          <*> mapM evalExpr matches
 evalExpr r@Corec{..} = Corec <$> evalTypeExpr fromCorec
-                             <*> pure toCorec
+                             <*> evalDuctive toCorec
                              <*> mapM evalExpr matches
 evalExpr (f :@: arg) = do
   valF <- evalExpr f
@@ -289,7 +297,7 @@ substType :: Int -> TypeExpr -> TypeExpr -> TypeExpr
 substType i r v@(LocalTypeVar j _)
   | i == j = r
   | otherwise = v
-substType i r (GlobalTypeVar var) = undefined
+substType i r (GlobalTypeVar ps var) = undefined
 substType i r1 (Abstr t r2) = Abstr (substType i r1 t) (substType i r1 r2)
 substType i r (In d) = In $ substDuctiveTypeExpr i r d
 substType i r (Coin d) = Coin $ substDuctiveTypeExpr i r d
@@ -306,10 +314,26 @@ substDuctiveTypeExpr i r1 dOld@Ductive{..} =
                    , nameDuc = Nothing }
   in if dNew == dOld then dOld else dNew
 
+substTypeInExpr :: Int -> TypeExpr -> Expr -> Expr
+substTypeInExpr i r (e1 :@: e2) = substTypeInExpr i r e1 :@: substTypeInExpr i r e2
+substTypeInExpr i r c@Constructor{..} = c {ductive = substDuctiveTypeExpr i r ductive }
+substTypeInExpr i r d@Destructor{..} = d {ductive = substDuctiveTypeExpr i r ductive }
+substTypeInExpr i r re@Rec{..} = re { fromRec = substDuctiveTypeExpr i r fromRec
+                                    , toRec = substType i r toRec
+                                    }
+substTypeInExpr i r c@Corec{..} = c { fromCorec = substType i r fromCorec
+                                    , toCorec = substDuctiveTypeExpr i r toCorec
+                                    }
+substTypeInExpr i r (WithParameters ps e) = substTypeInExpr (i+length ps) r e
+substTypeInExpr _ _ atom = atom
+
+substTypesInExpr :: Int -> [TypeExpr] -> Expr -> Expr
+substTypesInExpr _ [] e = e
+substTypesInExpr n (v:vs) e = substTypesInExpr (n+1) vs (substTypeInExpr n v e)
 
 typeAction :: Int -> TypeExpr -> [Expr] -> [Ctx] -> [TypeExpr] -> [TypeExpr] -> Expr
 typeAction i (LocalTypeVar n _) terms _ _ _ = terms !! n
-typeAction i (GlobalTypeVar n) terms _ _ _ = undefined
+typeAction i (GlobalTypeVar ps n) terms _ _ _ = undefined
 typeAction i (c :@ s) terms gammas as' bs = substExpr 0 (typeAction i c terms gammas as' bs) s
 typeAction i (Abstr _ c) terms gammas as' bs = typeAction i c terms gammas as' bs
 typeAction i (In d) terms gammas as' bs =
@@ -406,13 +430,20 @@ lookupDefExprTI t = view defCtx >>= lookupDefExprTI'
       | otherwise = lookupDefExprTI' stmts
     lookupDefExprTI' (_:stmts) = lookupDefExprTI' stmts
 
-lookupDefKindTI :: Text -> TI Kind
-lookupDefKindTI t = view defCtx >>= lookupDefKindTI'
+lookupDefKindTI :: [TypeExpr] -- ^ parameters to check
+                -> Text -- ^ name of type var
+                -> TI Kind
+lookupDefKindTI pars t = view defCtx >>= lookupDefKindTI'
   where
     lookupDefKindTI' :: [Statement] -> TI Kind
     lookupDefKindTI' [] = throwError $ "Variable " <> t <> " not defined"
     lookupDefKindTI' (TypeDef{..}:stmts)
-      | t == name = pure $ fromJust kind
+      | t == name = do
+          assert (length pars == length parameterCtx)
+                 "parameters to type variables have to be complete"
+          parsKinds <- mapM inferType pars
+          betaeqTyCtx parsKinds parameterCtx
+          pure (fromJust kind)
       | otherwise = lookupDefKindTI' stmts
     lookupDefKindTI' (_:stmts) = lookupDefKindTI' stmts
 

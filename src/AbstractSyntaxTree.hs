@@ -16,6 +16,7 @@ data Statement = ExprDef { name :: Text
                          , ty :: Maybe Type
                          }
                | TypeDef { name :: Text
+                         , parameterCtx :: TyCtx
                          , typeExpr :: TypeExpr
                          , kind :: Maybe Kind
                          }
@@ -28,20 +29,20 @@ data TypeExpr = UnitType -- verum type
               -- same
               -- TODO Maybe throw error if this is not the case
               | LocalTypeVar Int (Maybe Text)
-              | GlobalTypeVar Text
+              | GlobalTypeVar Text [TypeExpr]
               | Abstr TypeExpr TypeExpr
               | In Ductive
               | Coin Ductive
 
 instance Eq TypeExpr where
-  UnitType            == UnitType            = True
-  (tE1 :@ e1)         == (tE2 :@ e2)         = tE1 == tE2 && e1 == e2
-  (LocalTypeVar i1 _) == (LocalTypeVar i2 _) = i1 == i2
-  (GlobalTypeVar n1)  == (GlobalTypeVar n2)  = n1 == n2
-  (Abstr ty1 e1)      == (Abstr ty2 e2)      = ty1 == ty2 && e1 == e2
-  (In d1)             == (In d2)             = d1 == d2
-  (Coin d1)           == (Coin d2)           = d1 == d2
-  _                   == _                   = False
+  UnitType              == UnitType              = True
+  (tE1 :@ e1)           == (tE2 :@ e2)           = tE1 == tE2 && e1 == e2
+  (LocalTypeVar i1 _)   == (LocalTypeVar i2 _)   = i1 == i2
+  (GlobalTypeVar n1 p1) == (GlobalTypeVar n2 p2) = n1 == n2 && p1 == p2
+  (Abstr ty1 e1)        == (Abstr ty2 e2)        = ty1 == ty2 && e1 == e2
+  (In d1)               == (In d2)               = d1 == d2
+  (Coin d1)             == (Coin d2)             = d1 == d2
+  _                     == _                     = False
 
 data Ductive = Ductive { gamma :: Ctx
                        , sigmas :: [[Expr]]
@@ -61,8 +62,14 @@ data Expr = UnitExpr -- verum value
           | LocalExprVar Int (Maybe Text) -- Ctx-- term variables
           | GlobalExprVar Text
           | Expr :@: Expr
-          | Constructor Ductive Int (Maybe Text)
-          | Destructor Ductive Int (Maybe Text)
+          | Constructor { ductive :: Ductive
+                        , num :: Int
+                        , nameStr :: Maybe Text
+                        }
+          | Destructor { ductive :: Ductive
+                       , num :: Int
+                       , nameStr :: Maybe Text
+                       }
           | Rec { fromRec :: Ductive
                 , toRec :: TypeExpr
                 , matches :: [Expr]
@@ -71,19 +78,21 @@ data Expr = UnitExpr -- verum value
                   , toCorec :: Ductive
                   , matches :: [Expr]
                   }
+          | WithParameters [TypeExpr] Expr
 
 instance Eq Expr where
-  UnitExpr              == UnitExpr              = True
-  (LocalExprVar i _)    == (LocalExprVar j _)    = i == j
-  (GlobalExprVar n)     == (GlobalExprVar m)     = n == m
-  (e1 :@: e2)           == (e3 :@: e4)           = e1 == e3 && e2 == e4
-  (Constructor d1 i1 _) == (Constructor d2 i2 _) = d1 == d2 && i1 == i2
-  (Destructor d1 i1 _)  == (Destructor d2 i2 _)  = d1 == d2 && i1 == i2
-  (Rec fr1 tr1 ms1)     == (Rec fr2 tr2 ms2)     = fr1 == fr2 && tr1 == tr2
-                                                   && and (zipWith (==) ms1 ms2)
-  (Corec fc1 tc1 ms1)   == (Corec fc2 tc2 ms2)   = fc1 == fc2 && tc1 == tc2
-                                                   && and (zipWith (==) ms1 ms2)
-  _                     == _                     = False
+  UnitExpr                == UnitExpr                = True
+  (LocalExprVar i _)      == (LocalExprVar j _)      = i == j
+  (GlobalExprVar n)       == (GlobalExprVar m)       = n == m
+  (e1 :@: e2)             == (e3 :@: e4)             = e1 == e3 && e2 == e4
+  (Constructor d1 i1 _)   == (Constructor d2 i2 _)   = d1 == d2 && i1 == i2
+  (Destructor d1 i1 _)    == (Destructor d2 i2 _)    = d1 == d2 && i1 == i2
+  (Rec fr1 tr1 ms1)       == (Rec fr2 tr2 ms2)       = fr1 == fr2 && tr1 == tr2
+                                                       && and (zipWith (==) ms1 ms2)
+  (Corec fc1 tc1 ms1)     == (Corec fc2 tc2 ms2)     = fc1 == fc2 && tc1 == tc2
+                                                       && and (zipWith (==) ms1 ms2)
+  (WithParameters te1 e1) == (WithParameters te2 e2) = te1 == te2 && e1 == e2
+  _                       == _                       = False
 
 
 type Ctx = [TypeExpr]

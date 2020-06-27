@@ -43,6 +43,7 @@ main = hspec $ do
                                        , "   C : ((x:Unit).Unit) -> A"])
       `shouldParse`
       [ TypeDef { name = "A"
+                , parameterCtx = []
                 , typeExpr = In Ductive {
                     gamma = [],
                     sigmas = [[]],
@@ -56,6 +57,7 @@ main = hspec $ do
                                        , "   C : ((x:Unit,y:Unit).Unit) -> A"])
       `shouldParse`
       [ TypeDef { name = "A"
+                , parameterCtx = []
                 , typeExpr = In Ductive {
                     gamma = [],
                     sigmas = [[]],
@@ -83,21 +85,21 @@ main = hspec $ do
     it "parses data" $
       parse parseProgram "" "data C : Set where { C1 : C -> C }"
       `shouldParse`
-      [TypeDef "C" (In c) Nothing]
+      [TypeDef "C" [] (In c) Nothing]
     it "parses codata" $
       parse parseProgram "" "codata C : Set where { C1 : C -> C }"
       `shouldParse`
-      [TypeDef "C" (Coin c) Nothing]
+      [TypeDef "C" [] (Coin c) Nothing]
     -- TODO Tests for constructors and destructors
     it "parses rec" $
       parse parseProgram "" "data C : Set where { A : C -> C};rec C to Unit where { A x = () }"
       `shouldParse`
-      [ TypeDef "C" (In c) Nothing
+      [ TypeDef "C" [] (In c) Nothing
       , Expression $ Rec c UnitType [UnitExpr]]
     it "parses corec" $
       parse parseProgram "" "codata C : Set where { A : C -> C}; corec Unit to C where { A x = ()}"
       `shouldParse`
-      [ TypeDef "C" (Coin c) Nothing
+      [ TypeDef "C" [] (Coin c) Nothing
       , Expression $ Corec UnitType c [UnitExpr]]
     it "parses multiline program" $
       parse parseProgram "" "y = (); y"
@@ -117,6 +119,7 @@ main = hspec $ do
                                        , "  C2 : (y:Unit) -> (C @ y) -> C ()"])
       `shouldParse`
       [TypeDef { name = "C"
+               , parameterCtx = []
                , typeExpr = In Ductive {
                    gamma = [UnitType],
                    sigmas = [ [UnitExpr]
@@ -143,6 +146,7 @@ main = hspec $ do
                 , expr = UnitExpr
                 , ty = Nothing}
       , TypeDef { name = "A"
+                , parameterCtx = []
                 , typeExpr = In $ Ductive {
                     gamma = [ UnitType],
                     sigmas = [ [UnitExpr]
@@ -167,22 +171,60 @@ main = hspec $ do
                        , gamma1s = [[]]
                        , nameDuc = Nothing}
       in [ TypeDef { name = "A"
+                   , parameterCtx = []
                    , typeExpr = In a
                    , kind = Nothing}
          , Expression Rec { fromRec = a
-                          , toRec = GlobalTypeVar "A"
+                          , toRec = GlobalTypeVar "A" []
                           , matches = [ Constructor a 0 Nothing
                                         :@: LocalExprVar 0 (Just "x") ]}])
     it "parses context with spaces" $
        parse parseProgram "" "data A : (x : Unit, y : Unit) -> Set where"
        `shouldParse`
        [ TypeDef { name = "A"
+                 , parameterCtx = []
                  , typeExpr = In Ductive { gamma = [UnitType, UnitType]
                                          , sigmas = []
                                          , as = []
                                          , gamma1s = []
                                          , nameDuc = Nothing}
                  , kind = Nothing }]
+    it "parses parameters of inducive type" $
+      parse parseProgram "" (T.unlines [ "data A<B : Set> : Set where"
+                                       , "  C : B -> A"
+                                       , "C<Unit>@()"])
+      `shouldParse`
+      let duc = Ductive { gamma = []
+                        , sigmas = [[]]
+                        , as = [LocalTypeVar 0 (Just "B")]
+                        , gamma1s = [[]]
+                        , nameDuc = Nothing}
+      in [ TypeDef { name = "A"
+                   , parameterCtx = [[]]
+                   , typeExpr = In duc
+                   , kind = Nothing}
+         , Expression (WithParameters [UnitType] (Constructor { ductive = duc
+                                                              , num = 0
+                                                              , nameStr = Nothing})
+                       :@: UnitExpr)]
+    it "parses parameters of coinducive type" $
+      parse parseProgram "" (T.unlines [ "codata A<B : Set> : Set where"
+                                       , "  C : A -> B"
+                                       , "corec<Unit> Unit to A where"
+                                       , "  C x = ()"])
+      `shouldParse`
+      let duc = Ductive { gamma = []
+                        , sigmas = [[]]
+                        , as = [LocalTypeVar 0 (Just "B")]
+                        , gamma1s = [[]]
+                        , nameDuc = Just "A"}
+      in [ TypeDef { name = "A"
+                   , parameterCtx = [[]]
+                   , typeExpr = Coin duc
+                   , kind = Nothing}
+         , Expression (WithParameters [UnitType] (Corec { fromCorec = UnitType
+                                                        , toCorec = duc
+                                                        , matches = [UnitExpr]}))]
     it "orders matches right" $
        parse parseProgram "" (T.unlines [ "data A : Set where"
                                         , "  C1 : A -> A"
@@ -208,10 +250,11 @@ main = hspec $ do
                                    , []]
                        , nameDuc = Nothing}
       in [ TypeDef { name = "A"
+                   , parameterCtx = []
                    , typeExpr = In a
                    , kind = Nothing}
          , Expression Rec { fromRec = a
-                          , toRec = GlobalTypeVar "A"
+                          , toRec = GlobalTypeVar "A" []
                           , matches = [ Constructor a 0 Nothing
                                         :@: LocalExprVar 3 (Just "x")
                                         :@: LocalExprVar 2 (Just "y")

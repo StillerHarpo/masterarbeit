@@ -36,6 +36,8 @@ import qualified Text.Megaparsec.Char.Lexer as L
 -- | Context to parse
 type CtxP = [(Text, TypeExpr)]
 
+type TyCtxP = [(Text, CtxP)]
+
 data InOrCoin = InTag | CoinTag
 
 data ParserState = ParserState {
@@ -81,36 +83,44 @@ parseDefinition = lineFold $ do
 parseData :: Parser Statement
 parseData = nonIndented $ parseBlock
   (symbol "data" *> parseDataHeader)
-  (\(name, _) -> do
+  (\(name, _, _) -> do
      checkName name
      parseConstructorDef name)
-  (\(name, gammaP) constructorDefsP -> do
+  (\(name, gammaP, parametersCtxP) constructorDefsP -> do
      let nameDuc = Just name
          (constructors, gamma1s, as, sigmas) = unzip4 constructorDefsP
          (_,gamma) = unzip gammaP
-     localExprVars %= drop (length gamma)
+         parameterCtx = map (map snd . snd) parametersCtxP
+     localExprVars .= []
+     localTypeVars .= []
      mapM_ checkName constructors
      defDuctives %= ((name, (constructors, InTag, Ductive{..})):)
      typeExprDefs %= Set.insert name
      constructorDefs %= Set.union (Set.fromList constructors)
-     pure $ TypeDef name (In Ductive{..}) Nothing)
+     let typeExpr = In Ductive{..}
+         kind = Nothing
+     pure $ TypeDef{..})
 
 parseCodata :: Parser Statement
 parseCodata = nonIndented $ parseBlock
   (symbol "codata" *> parseDataHeader)
-  (\(name, _) -> do
+  (\(name, _, _) -> do
       checkName name
       parseDestructorDef name)
-  (\(name, gammaP) destructorDefsP -> do
+  (\(name, gammaP, parametersCtxP) destructorDefsP -> do
      let nameDuc = Just name
          (destructors, gamma1s, sigmas, as) = unzip4 destructorDefsP
-         (_,gamma) = unzip gammaP
-     localExprVars %= drop (length gamma)
+         gamma = map snd gammaP
+         parameterCtx = map (map snd . snd) parametersCtxP
+     localExprVars .= []
+     localTypeVars .= []
      mapM_ checkName destructors
      defDuctives %= ((name, (destructors, CoinTag, Ductive{..})):)
      typeExprDefs %= Set.insert name
      destructorDefs %= Set.union (Set.fromList destructors)
-     pure $ TypeDef name (Coin Ductive{..}) Nothing)
+     let typeExpr = Coin Ductive{..}
+         kind = Nothing
+     pure TypeDef{..})
 
 parseConstructorDef :: Text -> Parser (Text, Ctx, TypeExpr, [Expr])
 parseConstructorDef name = parseStructorDef $ (,)
@@ -132,15 +142,17 @@ parseDestructorDef name = parseStructorDef $ (,)
    -- name is only allowed here to make it strictly positve
   <*> withLocalTypeVar name (lexeme parseTypeExpr)
 
-parseDataHeader :: Parser (Text, CtxP)
+parseDataHeader :: Parser (Text, CtxP, TyCtxP)
 parseDataHeader = do
   name <- lexeme parseTypeStrVarT
+  parameters <- lexeme parseTyCtx
+  localTypeVars .= map fst parameters
   void $ symbol ":"
   gammaP <- lexeme parseCtx
   void $ if null gammaP
          then symbols ["Set", "where"]
          else symbols ["->", "Set", "where"]
-  pure (name, gammaP)
+  pure (name, gammaP, parameters)
 
 parseStructorDef :: Parser (a,b) -> Parser (Text, Ctx,a,b)
 parseStructorDef p = do
@@ -218,7 +230,7 @@ parseTypeVar = do
   var <- parseTypeStrVarT
   ParserState{..} <- get
   if var `Set.member` _typeExprDefs
-  then pure $ GlobalTypeVar var
+  then GlobalTypeVar var <$> parseParameters
   else case elemIndex var _localTypeVars of
          Just idx ->
            pure $ LocalTypeVar (length _localTypeVars - idx - 1)
@@ -227,16 +239,17 @@ parseTypeVar = do
            fancyFailure $ Set.singleton $ ErrorFail "Name not defined"
 
 parseStrVar :: Parser Expr
-parseStrVar = ((,) <$> parseTypeStrVarT
-                   <*> (view defDuctives <$> get))
-                   >>= uncurry lookupStr
-  where
-    lookupStr var [] = singleFailure "Con/Destrunctor not defined"
-    lookupStr var ((_,(strs,inOrCoin,ductive)):ductives) =
-      case (saveIdx var strs, inOrCoin) of
-        (Just i, InTag) -> pure $ Constructor ductive i (Just var)
-        (Just i, CoinTag) -> pure $ Destructor ductive i (Just var)
-        (Nothing, _) -> lookupStr var ductives
+parseStrVar = do
+  var <- parseTypeStrVarT
+  parameters <- parseParameters
+  let nameStr = Just var
+      lookupStr [] = singleFailure "Con/Destrunctor not defined"
+      lookupStr ((_,(strs,inOrCoin,ductive)):ductives) =
+        case (saveIdx var strs, inOrCoin) of
+          (Just num, InTag) -> pure $ Constructor{..}
+          (Just num, CoinTag) -> pure $ Destructor{..}
+          (Nothing, _) -> lookupStr ductives
+  withParameters parameters <$> ((view defDuctives <$> get) >>= lookupStr)
 
 saveIdx :: Eq a => a -> [a] -> Maybe Int
 saveIdx = saveIdxH 0
@@ -259,28 +272,30 @@ parseAbstr = do
   pure $ foldr Abstr (Abstr ty1 expr) tys
 
 parseRec :: Parser Expr
-parseRec = parseBlock ((,)
+parseRec = parseBlock ((,,)
                        <$ symbol "rec"
+                       <*> lexeme parseParameters
                        <*> lexeme parseTypeStrVarT
                        <* symbol "to"
                        <*> lexeme parseTypeExpr
                        <* symbol "where")
                       (const parseMatch)
-                      (\(from,toRec) matches -> do
+                      (\(parameters, from,toRec) matches -> do
                           (fromRec,matches) <- orderMatches from matches
-                          pure Rec{..})
+                          pure (withParameters parameters Rec{..}))
 
 parseCorec :: Parser Expr
-parseCorec = parseBlock ((,)
+parseCorec = parseBlock ((,,)
                          <$ symbol "corec"
+                         <*> lexeme parseParameters
                          <*> lexeme parseTypeExpr
                          <* symbol "to"
                          <*> lexeme parseTypeStrVarT
                          <* symbol "where")
                          (const parseMatch)
-                         (\(fromCorec,to) matches -> do
+                         (\(parameters, fromCorec,to) matches -> do
                              (toCorec,matches) <- orderMatches to matches
-                             pure Corec{..})
+                             pure (withParameters parameters Corec{..}))
 
 orderMatches :: Text -> [(Text,Expr)] -> Parser (Ductive,[Expr])
 orderMatches name matches = do
@@ -323,6 +338,40 @@ parseCtxNE = symbol "(" *> parseCtxRest
 
 parseCtx :: Parser CtxP
 parseCtx = try parseCtxNE <|> pure []
+
+parseTyCtxNE :: Parser TyCtxP
+parseTyCtxNE = symbol "<" *> parseTyCtxRest
+  where parseTyCtxRest = do
+          var <- lexeme parseTypeStrVarT
+          checkName var
+          void $ symbol ":"
+          ctx <- parseCtx
+          void $ if null ctx
+                 then symbols ["Set"]
+                 else symbols ["->", "Set"]
+          c <- symbol "," <|> symbol ">"
+          if c == ","
+          then ((var,ctx):) <$> withLocalTypeVar var parseTyCtxRest
+          else pure [(var,ctx)]
+
+parseTyCtx :: Parser TyCtxP
+parseTyCtx = try parseTyCtxNE <|> pure []
+
+parseParametersNE :: Parser [TypeExpr]
+parseParametersNE = symbol "<" *> parseParametersRest
+  where parseParametersRest = do
+          tyExpr <- lexeme parseTypeExpr
+          c <- symbol "," <|> symbol ">"
+          if c == ","
+          then (tyExpr:) <$> parseParametersRest
+          else pure [tyExpr]
+
+parseParameters :: Parser [TypeExpr]
+parseParameters = try parseParametersNE <|> pure []
+
+withParameters :: [TypeExpr] -> Expr -> Expr
+withParameters [] = id
+withParameters ps = WithParameters ps
 
 withLocalExprVars :: [Text] -> Parser a -> Parser a
 withLocalExprVars vars p =

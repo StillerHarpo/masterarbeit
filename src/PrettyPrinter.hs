@@ -25,7 +25,7 @@ instance PrettyPresc TypeExpr where
                                            <+> prettyParens e2
   prettyPresc _ (LocalTypeVar i Nothing) = pretty "tmpTy" <> pretty i
   prettyPresc _ (LocalTypeVar _ (Just n)) = pretty n
-  prettyPresc _ (GlobalTypeVar n) = pretty n
+  prettyPresc _ (GlobalTypeVar n par) = pretty n <+> pretty par
   -- TODO find name of variable if defined
   prettyPresc _ (Abstr ty body) = pretty "\\?:" <> pretty ty
                                                 <> pretty " -> "
@@ -47,23 +47,36 @@ instance Pretty Ductive where
                                               ]
 
 instance PrettyPresc Expr where
-  prettyPresc _ UnitExpr                   = pretty "<>"
-  prettyPresc _ (LocalExprVar i Nothing)   = pretty "tmp{" <> pretty i <> pretty "}"
-  prettyPresc _ (LocalExprVar i (Just n))  = pretty n <> pretty "{" <> pretty i <> pretty "}"
-  prettyPresc _ (GlobalExprVar n)          = pretty n
-  prettyPresc p (e1 :@: e2)                = parensIf p $ pretty e1
-                                                          <+> pretty "@"
-                                                          <+> prettyPresc True e2
-  prettyPresc _ (Constructor _ _ (Just n)) = pretty n
-  prettyPresc _ (Constructor d i Nothing)  = pretty "alpha_" <> pretty i <> pretty "^"
-                                             <> pretty d
-  prettyPresc _ (Destructor _ _ (Just n))  = pretty n
-  prettyPresc _ (Destructor d i Nothing)   = pretty "xi_" <> pretty i <> pretty "^" <> pretty d
-  prettyPresc _ Rec{..}                    = pretty "rec_" <> pretty fromRec <> pretty "^"
-                                             <> pretty toRec <> pretty matches
-  prettyPresc _ Corec{..}                  = pretty "rec_" <> pretty fromCorec <> pretty "^"
-                                             <> pretty toCorec <> pretty matches
+  prettyPresc _ UnitExpr                      = pretty "<>"
+  prettyPresc _ (LocalExprVar i Nothing)      = pretty "tmp{" <> pretty i <> pretty "}"
+  prettyPresc _ (LocalExprVar i (Just n))     = pretty n <> pretty "{" <> pretty i <> pretty "}"
+  prettyPresc _ (GlobalExprVar n)             = pretty n
+  prettyPresc p (e1 :@: e2)                   = parensIf p $ pretty e1
+                                                           <+> pretty "@"
+                                                           <+> prettyPresc True e2
+  prettyPresc _ (Constructor _ _ (Just n))  = pretty n
+  prettyPresc _ (Constructor d i Nothing)   = pretty "alpha_" <> pretty i
+                                              <> pretty "^" <> pretty d
+  prettyPresc _ (Destructor _ _ (Just n))   = pretty n
+  prettyPresc _ (Destructor d i Nothing)    = pretty "xi_" <> pretty i
+                                              <> pretty "^" <> pretty d
+  prettyPresc _ Rec{..}                       = pretty "rec_" <> pretty fromRec
+                                              <> pretty "^" <> pretty toRec
+                                              <> pretty matches
+  prettyPresc _ (WithParameters ps Rec{..})  = pretty "rec_" <> pretty fromRec
+                                              <> prettyPars ps <> pretty "^"
+                                              <> pretty toRec <> pretty matches
+  prettyPresc _ Corec{..}                     = pretty "corec_" <> pretty fromCorec
+                                              <> pretty "^" <> pretty toCorec
+                                              <> pretty matches
+  prettyPresc _ (WithParameters ps Corec{..}) = pretty "corec_" <> pretty fromCorec
+                                              <> pretty "^" <> pretty toCorec
+                                              <> prettyPars ps
+                                              <> pretty matches
+  prettyPresc _ (WithParameters ps e)     = pretty e <> prettyPars ps
 
+prettyPars :: [TypeExpr] -> Doc ann
+prettyPars = encloseSep langle rangle comma . map pretty
 
 instance Pretty TypeExpr where
   pretty = prettyPresc False
