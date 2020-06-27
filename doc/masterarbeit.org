@@ -12,9 +12,38 @@
 #+LATEX_HEADER:  {\gdef\scalefactor{#1}\begin{center}\proofSkipAmount \leavevmode}%
 #+LATEX_HEADER:  {\scalebox{\scalefactor}{\DisplayProof}\proofSkipAmount \end{center} }
 #+LATEX_HEADER: \usepackage{esvect}
-#+TITLE: Masterarbeit
+#+TITLE: Implementation of Type Theory based on dependent Inductive and Coinductive Types
+#+AUTHOR: Florian Engel
+#+begin_abstract
+  Dependent types are a useful tool to restrict possible type even further then
+  types of strongly typed languages like Haksell. This gives us further type
+  safty. With them we can also proof theorems. Coinductive types allow as to
+  define types by their observations rather then by their constructors. This is
+  useful for infinite types like streams. In this work I will implement the type
+  theory from ref{?}. This type theory has both dependent types and coinductive types.
+#+end_abstract
+
+* Introduction
+  In section [[Abstract Syntax]] I will develop the abstract syntax of our language from
+  the rare syntax in the paper
+
+* Coinductive Types
+
+* Coniductive Types in dependent languages
+** Coinductive Types in Coq
+** Coinductive Types in Agda
 * Abstract Syntax
+  In the following I will scratch out the abstract syntax. I will give every
+  inductive and coinductive type a name. They will be defined via statements. We
+  will also be able to bind expressions to names. This will be described in
+  section [[Statements]] . In section [[Expressions]] we will define the syntax of
+  expressions. This will mostly be in 1 to 1 correspondence to the syntax of the
+  paper. Note however that we use the names of the constructors in the matches.
 ** Statements
+   With the keywords data and codata we define  inductive and coinductive
+   types respectively.  After that we will write the name.  We will also
+   give names to every constructor and destructor.  If we write a name 
+   before a equal sign we can bind the following expression to the name
    \begin{lstlisting}
    statement =
      data Name : $(x_1 : B_1,\dots,x_n : B_n)$ -> Set where
