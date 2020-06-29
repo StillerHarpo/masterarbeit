@@ -3,6 +3,8 @@
 #+LATEX_HEADER: \usepackage{stmaryrd}
 #+LATEX_HEADER: \usepackage{xcolor}
 #+LATEX_HEADER: \usepackage{amsthm}
+#+latex_header: \usepackage[citestyle=authoryear-icomp,bibstyle=authoryear, hyperref=true,backref=true,maxcitenames=3,url=true,backend=biber,natbib=true] {biblatex}
+#+latex_header: \addbibresource{~/Dokumente/bibliography/references.bib}
 #+LATEX_HEADER: \lstset{
 #+LATEX_HEADER:  basicstyle=\ttfamily,
 #+LATEX_HEADER:   mathescape
@@ -21,10 +23,10 @@
 #+begin_abstract
   Dependent types are a useful tool to restrict possible type even further then
   types of strongly typed languages like Haksell. This gives us further type
-  safty. With them we can also proof theorems. Coinductive types allow as to
+  safty. With them we can also proof theorems. Coinductive types allow us to
   define types by their observations rather then by their constructors. This is
   useful for infinite types like streams. In this work I will implement the type
-  theory from ref{?}. This type theory has both dependent types and coinductive types.
+  theory from cite:basold2016type.  This type theory has both dependent types and coinductive types.
 #+end_abstract
 
 * Introduction
@@ -1001,3 +1003,5 @@
    \end{prooftree}
 
   #+end_proof
+
+\printbibliography
