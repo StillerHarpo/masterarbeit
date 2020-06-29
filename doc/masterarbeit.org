@@ -27,6 +27,8 @@
   define types by their observations rather then by their constructors. This is
   useful for infinite types like streams. In this work I will implement the type
   theory from cite:basold2016type.  This type theory has both dependent types and coinductive types.
+  In this type theory the dependent function space becomes definable.  This leads
+  to a more symmetrical approach of coinduction in dependently typed languages.
 #+end_abstract
 
 * Introduction
