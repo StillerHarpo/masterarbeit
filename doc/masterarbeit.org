@@ -183,7 +183,7 @@
 ** Statements
    With the keywords data and codata we define  inductive and coinductive
    types respectively.  After that we will write the name.  We will also
-   give names to every constructor and destructor.  If we write a name 
+   give names to every constructor and destructor.  If we write a name
    before a equal sign we can bind the following expression to the name
    \begin{lstlisting}
    statement =
