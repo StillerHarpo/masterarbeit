@@ -12,6 +12,10 @@
 #+LATEX_HEADER:  {\gdef\scalefactor{#1}\begin{center}\proofSkipAmount \leavevmode}%
 #+LATEX_HEADER:  {\scalebox{\scalefactor}{\DisplayProof}\proofSkipAmount \end{center} }
 #+LATEX_HEADER: \usepackage{esvect}
+#+LATEX_HEADER: \newcommand{\id}[1]{\text{id}_{#1}}
+#+LATEX_HEADER: \newcommand{\rat}{\rightarrowtriangle}
+#+LATEX_HEADER: \newtheorem{theorem}{Theorem}
+#+LATEX_HEADER: \newtheorem{definition}{Definition}
 #+TITLE: Implementation of Type Theory based on dependent Inductive and Coinductive Types
 #+AUTHOR: Florian Engel
 #+begin_abstract
@@ -496,7 +500,6 @@
 %   \BinaryInfC{$\Theta_1,X:\Gamma_1\rat*\equiv_\beta\Theta_2,X:\Gamma_2\rat*$}
 %   \DisplayProof
    \end{center}
-   \end{center}
 
 ** Unit type introduction
    The rule
@@ -856,7 +859,7 @@
 
     Then we got the following induction hypothesis
     \begin{prooftree}
-      \AxiomC{$X_1:\Gamma_1\rat*,\dots,X_n:\Gamma_n\rightarrowtrianle*\mid\Gamma_2'\vdash C':(y:D,\Gamma_2)\rat*$}
+      \AxiomC{$X_1:\Gamma_1\rat*,\dots,X_n:\Gamma_n\rat*\mid\Gamma_2'\vdash C':(y:D,\Gamma_2)\rat*$}
       \AxiomC{$\Gamma_i,x:A_i\vdash t_i:B_i$}
       \BinaryInfC{$\Gamma_2',y:D,\Gamma_2,x:\widehat{C'}(\vv{A})\vdash\widehat{C'}(\vv{t}):\widehat{C'}(\vv{B}) $}
     \end{prooftree}
@@ -874,7 +877,7 @@
     \begin{prooftree}
       \AxiomC{$X_1:\Gamma_1\rat*,\dots,X_n\rat*\mid\Gamma_2'\vdash C'@s:\Gamma_2[s/y]\rat*$}
       \RightLabel{(*)}
-      \UnaryInfC{$X_1:\Gamma_1\rat*,\dots,X_n:\Gamma_n\rightarrowtrianle*\mid\Gamma_2'\vdash C':(y:D,\Gamma_2)\rat*$}
+      \UnaryInfC{$X_1:\Gamma_1\rat*,\dots,X_n:\Gamma_n\rat*\mid\Gamma_2'\vdash C':(y:D,\Gamma_2)\rat*$}
       \AxiomC{$\Gamma_i,x:A_i\vdash t_i:B_i$}
       \RightLabel{IdH.}
       \BinaryInfC{$\Gamma_2',y:D,\Gamma_2,x:\widehat{C'}(\vv{A})\vdash\widehat{C'}(\vv{t}):\widehat{C'}(\vv{B}) $}
