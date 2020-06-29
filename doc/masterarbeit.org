@@ -120,6 +120,58 @@
   In section [[Coinductive Types in Coq]] we will look at the implementation in coq.
   In section [[Coinductive Types in Agda]] we look at the implementation in agda
 ** Coinductive Types in Coq
+   Coidnuductive types in coq are defnined over constructors in coq.  The keyword
+   CoInducvive is used to indicate that we about to define a coinductive type.  For example
+   streams are defnined like the following.
+
+   #+begin_src coq
+     CoInductive Stream (A:Set): Set :=
+       Cons : A -> Stream A -> Stream A.
+   #+end_src
+
+   If this was a inductive type we coulnd't generate of this type.  To generate values
+   of coinductive types coq uses guarded recursion.  This checks if the recursive call
+   to the function occurs as a argument to a coinductive constructor.  In addition to the
+   guard condition the constructor can only nested in other constructors, fun or match
+   expressions.  With all of this in mind we can define
+   ~repeat~ like the following.
+
+   #+begin_src coq
+     CoFixpoint repeat (A:Set) (x:A) : Stream A := LCons x (repeat A x).
+   #+end_src
+
+   If we used a normal coq function i.e. write ~Fixpoint~ instead of
+   ~CoFixpoint~ coq wouldn't except our code. It rejects it, because there is
+   no argument which is structural decreasing. ~x~ stays always the same.
+   `CoFixpoint` on the other hand only checks the the previously mentioned
+   conditions. It sees the recursive call ~repeat A x~ occurs as an argument to
+   constructor ~LCons~ of the coinductive type ~Stream~. This constructor is
+   also not nested. So our definition is accepted.
+
+   We can use the normal pattern matching of coq to destruct a coinductive type.
+   We define ~nth~ like the following.
+
+   #+begin_src coq
+     Fixpoint nth (A:Set) (n:Nat) (s:Stream A) {struct n} : A :=
+       match l with
+         Cons a l' =>
+         match n with 0 => a | S p => nth p l' end
+       end.
+   #+end_src
+
+   The guard condition is necessary to ensure every expression is terminating.
+   If we didn't have the guard condition we could define the following.
+
+   #+begin_src coq
+     CoFixpoint loop (A: Set) : Stream A = loop A
+   #+end_src
+
+   Here the recursive call doesn't occur in a constructor.  So the guard
+   condition is violated.  With this definition the expression ~nth 0 loop~
+   wouldn't terminate.  ~nth~ would try to pattern match on ~loop~.  But to
+   succeed in that ~loop~ has to come has to unfold to something of the form
+   ~Cons a ?~ which it never does.  So ~nth 0 loop~ will never evaluate to a
+   value.  This would lead to undecidable type checking.
 ** Coinductive Types in Agda
 * Abstract Syntax
   In the following I will scratch out the abstract syntax. I will give every
