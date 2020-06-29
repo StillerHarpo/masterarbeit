@@ -54,6 +54,64 @@
   [[Examples]] we will see how the examples from the paper look in our syntax.
 
 * Coinductive Types
+  Inductive types are defined via their constructors.  Couinductive types on
+  the other hand are defined via their destructors.  In the paper cite:abel2013copatterns
+  functions, which have coinductive types as their output, are implemented via
+  copattern matching.  In this paper streams are defined like the following
+
+  #+begin_example
+  record Stream A = { head : A,
+                      tail : Stream A }
+  #+end_example
+
+  The A in the definition should be a concrete type. The type system in the
+  paper don't has dependent types.  What differentiate this from regular record
+  types (for example in haskell), is the recursive field tail. So they call it a
+  recursive record. In haskell we could never instantiate such a type, because
+  too do this we already need something of type ~Stream A~ to fill in the field
+  ~tail~. To remedy this the paper defines copattern matching. With the help of
+  copattern matching we can define function which outputs expressions of type
+  ~Stream A~. As an example we look at the difintion of repeat. This function
+  takes in an a of type Nat and generates an stream which just infintly repeats
+  it.
+
+  #+begin_example
+  repeat : Nat -> Stream Nat
+  head (repeat x) = x
+  tail (repeat x) = repeat x
+  #+end_example
+
+  As you can see copattern matching works via opservations i.e. we define
+  what should be the output of the fields applied to the function.  This fields
+  are also called observers, because we observe parts of the type.  Because
+  inhapitants of ~Stream~ are infinitly long we can't print out a stream.  So
+  we always have to use observers to show parts of it.  For example we can look
+  at the third value of ~repeat 2~ via ~head (tail (tail (repeat 2)))~ which
+  should evaluate to 2.  We can also implement a function which looks at the
+  nth. value.  Here it is.
+
+  #+begin_example
+  nth : Nat -> Stream A -> A
+  nth 0     x = head x
+  nth (S n) x = nth n x
+  #+end_example
+
+  As you can see we use ordinary pattern matching on the left hand side and
+  observers on the right hand side. `nth 3 (repeat 2)` will output 2 as expected.
+  Functions can also defined via a recursive record.  It is defined like the
+  following.
+
+  #+begin_example
+  record A -> B = { apply : (A -> B) -> A -> B }
+  #+end_example
+
+  In the paper ~f x~ means ~apply f x~.  We will also use this convention in
+  the following.  In fact we already used in the defintions of the functions
+  ~repeat~ and ~nth~.  ~nth 0 x~ is just a nested copattern.  We can also
+  write it with `apply` like so: ~apply (apply nth 0) x = head x~.  Here we
+  use currying.  So first apply is the sole observer of type ~Stream A -> A~
+  and the second of type ~Nat -> (Stream A -> A)~.
+
 
 * Coniductive Types in dependent languages
 ** Coinductive Types in Coq
