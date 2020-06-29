@@ -114,6 +114,11 @@
 
 
 * Coniductive Types in dependent languages
+  In this section i will look how coinductive types are implemented in dependently
+  typed language.  In dependently typed languages types can depend on values.  This
+  makes it neccessary to ensure that function terminate to make type checking decidable.
+  In section [[Coinductive Types in Coq]] we will look at the implementation in coq.
+  In section [[Coinductive Types in Agda]] we look at the implementation in agda
 ** Coinductive Types in Coq
 ** Coinductive Types in Agda
 * Abstract Syntax
