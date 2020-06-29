@@ -47,7 +47,7 @@ checkCtx (typ:ctx') =
   >> checkCtx ctx'
 
 checkType :: TypeExpr -> Kind -> TI ()
-checkType e k = inferType e >>= zipWithM_ betaeq k
+checkType e k = inferType e >>= betaeqCtx k
 
 inferType :: TypeExpr -> TI Kind
 inferType UnitType = pure []
