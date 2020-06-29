@@ -3,6 +3,10 @@ resources/
 **/*.pdf
 **/*.tex
 **/*.local
+**/*.local~
+**/*.bbl
+**/*.blg
+**/*.rej
 **/auto/
 **/ltximg/
 TAGS
