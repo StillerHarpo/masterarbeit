@@ -172,6 +172,46 @@
    succeed in that ~loop~ has to come has to unfold to something of the form
    ~Cons a ?~ which it never does.  So ~nth 0 loop~ will never evaluate to a
    value.  This would lead to undecidable type checking.
+
+   We illustrate the purpose of the other conditions on a example taken from
+   cite:chlipala2013certified.  First we implement the function ~tl~ like so.
+
+   #+begin_src coq
+     Definition tl A (s : Stream A) : Stream A :=
+       match s with
+       | Cons _ s' => s'
+       end.
+   #+end_src
+
+   This is just one normal pattern match on ~Stream~.  If we didn't had the
+   other condition we could define the following.
+
+   #+begin_src coq
+     CoFixpoint bad : Stream nat := tl (Cons 0 bad).
+   #+end_src
+
+   This doesn't violate the guard condition.  The recursive call ~bad~ is a
+   argument to the constructor ~Cons~.  But the constructor is nested in a
+   function.  If we would allow this, ~nth 0 bad~ would loop forever.  To
+   understand why, we first unfold ~tl~ in ~bad~.  So we get
+
+   #+begin_src coq
+     nth 0 (cofix bad : Stream nat :=
+              match (Cons 0 bad) with
+              | Cons _ s' => s'
+              end)
+   #+end_src
+
+   We can now simplify this to just
+
+   #+begin_src coq
+     nth 0 (cofix bad : Stream nat := bad)
+   #+end_src
+
+   After that bad isn't anymore an argument to a constructor.  Here we can also
+   see easily that the expression ~cofix bad : Stream nat := bad~ loops for ever.
+   So we never get the value at position ~0~.
+
 ** Coinductive Types in Agda
 * Abstract Syntax
   In the following I will scratch out the abstract syntax. I will give every
