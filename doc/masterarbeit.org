@@ -153,16 +153,25 @@
   is that it implements copattern matching.  To help agda with termination
   checking we can use sized types.
 ** Coinductive Types in Coq
-   Coidnuductive types in coq are defnined over constructors in coq.  The keyword
-   CoInducvive is used to indicate that we about to define a coinductive type.  For example
-   streams are defnined like the following.
+   There are two approaches to define coinductive types in coq.  The older one is
+   described in [[Postive Coinductive Types]].  It works over constructors.
+   Therefore they are called postive types.  The newer and recommended one is
+   described in section [[Negative Coinductive Types]]. They are defined
+   over primitive records (a relatively new feature of coq).  Therefore they are
+   called negative Types.
+
+*** Postive Coinductive Types
+   Positve coinductive types are defnined over constructors in coq.  The keyword
+   CoInducvive is used to indicate that we about to define a coinductive type.
+   This is the only syntactical difference from the definition of inductive
+   types. For example streams are defined like the following.
 
    #+begin_src coq
      CoInductive Stream (A:Set): Set :=
        Cons : A -> Stream A -> Stream A.
    #+end_src
 
-   If this was a inductive type we coulnd't generate of this type.  To generate values
+   If this was a inductive type we couldn't generate of this type.  To generate values
    of coinductive types coq uses guarded recursion.  This checks if the recursive call
    to the function occurs as a argument to a coinductive constructor.  In addition to the
    guard condition the constructor can only nested in other constructors, fun or match
@@ -170,16 +179,17 @@
    ~repeat~ like the following.
 
    #+begin_src coq
-     CoFixpoint repeat (A:Set) (x:A) : Stream A := LCons x (repeat A x).
+     CoFixpoint repeat (A:Set) (x:A) : Stream A := Cons A x (repeat x).
    #+end_src
 
-   If we used a normal coq function i.e. write ~Fixpoint~ instead of
-   ~CoFixpoint~ coq wouldn't except our code. It rejects it, because there is
-   no argument which is structural decreasing. ~x~ stays always the same.
-   `CoFixpoint` on the other hand only checks the the previously mentioned
-   conditions. It sees the recursive call ~repeat A x~ occurs as an argument to
-   constructor ~LCons~ of the coinductive type ~Stream~. This constructor is
-   also not nested. So our definition is accepted.
+   Then we can produce the constant zero stream with ~repeat nat 0~. If we used
+   a normal coq function i.e. write ~Fixpoint~ instead of ~CoFixpoint~ coq
+   wouldn't except our code. It rejects it, because there is no argument which
+   is structural decreasing. ~x~ stays always the same. ~CoFixpoint~ on the
+   other hand only checks the the previously mentioned conditions. It sees the
+   recursive call ~repeat A x~ occurs as an argument to constructor ~LCons~ of
+   the coinductive type ~Stream~. This constructor is also not nested. So our
+   definition is accepted.
 
    We can use the normal pattern matching of coq to destruct a coinductive type.
    We define ~nth~ like the following.
@@ -187,8 +197,8 @@
    #+begin_src coq
      Fixpoint nth (A:Set) (n:Nat) (s:Stream A) {struct n} : A :=
        match l with
-         Cons a l' =>
-         match n with 0 => a | S p => nth p l' end
+         Cons _ a l' =>
+         match n with 0 => a | S p => nth A p l' end
        end.
    #+end_src
 
@@ -196,7 +206,7 @@
    If we didn't have the guard condition we could define the following.
 
    #+begin_src coq
-     CoFixpoint loop (A: Set) : Stream A = loop A
+     CoFixpoint loop (A : Set) : Stream A = loop A.
    #+end_src
 
    Here the recursive call doesn't occur in a constructor.  So the guard
@@ -212,7 +222,7 @@
    #+begin_src coq
      Definition tl A (s : Stream A) : Stream A :=
        match s with
-       | Cons _ s' => s'
+       | Cons _ _ s' => s'
        end.
    #+end_src
 
@@ -220,7 +230,7 @@
    other condition we could define the following.
 
    #+begin_src coq
-     CoFixpoint bad : Stream nat := tl (Cons 0 bad).
+     CoFixpoint bad : Stream nat := tl nat (Cons nat 0 bad).
    #+end_src
 
    This doesn't violate the guard condition.  The recursive call ~bad~ is a
@@ -241,975 +251,1240 @@
      nth 0 (cofix bad : Stream nat := bad)
    #+end_src
 
-   After that bad isn't anymore an argument to a constructor.  Here we can also
+   After that ~bad~ isn't anymore an argument to a constructor.  Here we can also
    see easily that the expression ~cofix bad : Stream nat := bad~ loops for ever.
    So we never get the value at position ~0~.
 
+   With positive coinductive types subject reduction is no longer valid.  We
+   illustrate this by Oury's counterexample cite:oury2008.  First we define the
+   codata type ~U~ as follows
+
+   #+begin_src coq
+    CoInductive U : Set := In : U -> U.
+   #+end_src
+
+   We can now define a value of u with the following ~Cofixpoint~ like so
+
+   #+begin_src coq
+     CoFixpoint u : U := In u.
+   #+end_src
+
+   This generates an infinite succession of ~In~.  We use the function ~force~
+   to force the stream to evaluate one step i.e. stream ~s~ becomes ~Cons x xs~
+
+   #+begin_src coq
+     Definition force (x: U) : U :=
+       match x with
+         In y => In y
+       end.
+   #+end_src
+
+   The same trick will be used to define ~eq~ which sates that ~x~ is
+   definitonal equal to ~force x~
+
+   #+begin_src coq
+     Definition eq (x : U) : x = force x :=
+       match x with
+         In y => eq_refl
+       end.
+   #+end_src
+
+   This first matches on x to force it, to reduce to ~in y~.  Then the new goal
+   becomes ~in y = force (in y)~.  ~force (in y)~ evaluates to just ~in y~, as it
+   is just pattern matching on ~in y~.  So the final goal is ~in y = in y~ which
+   can be shown by ~refl~.  If we now instantiate ~eq~ with ~u~ we become ~eq u~
+
+   #+begin_src coq
+     Definition eq_u : u = In u := eq u
+   #+end_src
+
+   But ~u~ is not definitional equal to ~In u~.  As mentioned above expression
+   with a coinductive type are always values to prevent inifinite evaluation.
+   So ~in u~ is a value and ~u~ is also a value.  But values are only
+   definitional equal, if they are exactly the same.  The next section will
+   solve this problem through negative coinductive types.
+
+*** Negative Coinductive Types
+    In coq 8.5. primitive record were introduced.
+    With this it is now possible to define types over there destructors.  So we
+    can have negative , especially negative coinductive, types in coq.  With
+    primitive records we can define streams like the following
+
+    #+begin_src coq
+      CoInductive Stream (A : Set) : Set :=
+        Seq { hd : A; tl : Stream A }
+    #+end_src
+
+    Now we cant define ~repeat~ over the fields of ~Stream~
+
+    #+begin_src coq
+      CoFixpoint repeat (A:Set) (x:A) : Stream A :=
+        {| hd := x; tl := repeat A x|}.
+    #+end_src
+
+    To define ~repeat~ we must define what is the head of the constructed stream
+    and what it is tail.  The guard conditions say now that corecursive
+    occurrences must be guarded by a record field.  We can see that the
+    corecursive call ~repeat~ is a direct argument to the field ~tl~ of the
+    corecursive type ~Stream A~.  This means coq accepts the above definition.
+    If we want to access parts of a stream we use the destructrors ~hd~ and
+    ~tl~.  With them we can define nth again for the negative stream.
+
+    #+begin_src coq
+      Fixpoint nth' (A : Set) (n : nat) (s : Stream' A) : list A :=
+        match n with
+        | 0 => nil
+        | S n' => s.(hd' A) :: nth' A n' s.(tl' A)
+        end.
+    #+end_src
+
+    With negative coinductive types we can't form the above mentioned
+    counterexample to subject reduction anymore, because we can't pattern match
+    on negative types. Oury's example becomes.
+
+    #+begin_src coq
+      CoInductive U := { out : U }.
+    #+end_src
+
+    ~U~ is now defined over its destructor ~out~, instead of its constructor ~in~.
+     Then ~in~ becomes just a function.  In Fact its just a definition, because
+     we don't recurse or corecurse on it.
+
+    #+begin_src coq
+      Definition In (y : U) : U := {| out := y |}
+    #+end_src
+
+    We define it over the only field ~out~.  When we put a ~y~ in then we get
+    the same ~y~ out.  We can also again define ~u~
+
+    #+begin_src coq
+      CoFixpoint u : U := {| out := u |}
+    #+end_src
+
+    ~u~ With coinductive types it is know possible to define the pi type.
+
+    #+begin_src coq
+      CoInductive Pi (A : Set) (B : A -> Set) := { Apply (x : A) : B x }.
+    #+end_src
+
+    The Pi type is defined over its destructor ~Apply~.  If we evaluate ~Apply~
+    on a value of Pi (which is a function) and an argument, we get the result
+    i.e. we apply the value to the function.  To define a function we use
+    ~CoFixpoint~.  As a simple non recursive, non dependent example we use the
+    function ~plus2~.
+
+    #+begin_src coq
+      CoFixpoint plus2 : Pi nat (fun _ => nat) :=
+        {| Apply x  := S (S x) |}.
+    #+end_src
+
+    If we apply (i.e. call the destructor ~Apply~) an ~x~ to plus2 we give back
+    ~S (S x)~.  Which is twice the successor on ~x~.  So we add 2 to ~x~.  We
+    use ~_~ here because ~plus2~ is not a dependent function i.e. the result
+    type ~nat~ doesn't depend on the input value.  To define function with more
+    than one argument we just use currying i.e. we use the type ~Pi~ as the
+    second argument ~Pi~. For example a 2-ary non-dependent function from ~A~
+    and ~B~ to ~C~ would have type ~Pi A (fun _ => Pi B (fun _ => C))~.  It
+    would be fortunate if we could define ~plus~ like the following.
+
+    #+begin_src coq
+      CoFixpoint plus : Pi nat (fun _ => Pi nat (fun _ => nat)) :=
+        {| Apply := fun (n : nat)  =>
+             match n with
+             | O => {| Apply (m : nat) := m |}
+             | S n' => {| Apply m := S (Apply _ _ (Apply _ _  plus n') m) |}
+             end
+        |}.
+    #+end_src
+
+    But coq doesn't accept this definition.  The guard condition is violated.
+    ~plus n'~ is not a direct argument of the field ~Apply~.  The definition
+    should terminate because we are decreasing ~n~ and the case for ~0~ is
+    accepted.  In this case, there is no recursive call.
+
 ** Coinductive Types in Agda
-* Abstract Syntax
-  In the following I will scratch out the abstract syntax. I will give every
-  inductive and coinductive type a name. They will be defined via statements. We
-  will also be able to bind expressions to names. This will be described in
-  section [[Statements]] . In section [[Expressions]] we will define the syntax of
-  expressions. This will mostly be in 1 to 1 correspondence to the syntax of the
-  paper. Note however that we use the names of the constructors in the matches.
-** Statements
-   With the keywords data and codata we define  inductive and coinductive
-   types respectively.  After that we will write the name.  We will also
-   give names to every constructor and destructor.  If we write a name
-   before a equal sign we can bind the following expression to the name
-   \begin{lstlisting}
-   statement =
-     data Name : $(x_1 : B_1,\dots,x_n : B_n)$ -> Set where
-       $Constr_1$ : $(x_{1_1}:B_{1_1},\dots,x_{n_1}: B_{n_1})$ -> $A_1[Name/X]$ -> Name $\sigma_{1_1}\dots \sigma_{1_n}$
-              $\vdots$                $\vdots$             $\vdots$            $\vdots$
-       $Constr_m$ : $(x_{1_m}:B_{1_m},\dots,x_{n_m}: B_{n_m})$ -> $A_i[Name/X]$ -> Name $\sigma_{m_1}\dots \sigma_{m_n}$
-    | codata Name : $(x_1 : B_1,\dots,x_n : B_n)$ -> Set where
-       $Destr_1$ : $(x_{1_1}:B_{i_1},\dots,x_{n_1}: B_{n_1})$ -> Name $\sigma_{1_1}\dots \sigma_{1_n}$ -> $A_1[Name/X]$
-              $\vdots$                $\vdots$             $\vdots$            $\vdots$
-       $Destr_m$ : $(x_{1_m}:B_{1_m},\dots,x_{n_m}: B_{n_m})$ -> Name $\sigma_{m_1}\dots \sigma_{m_n}$ -> $A_i[Name/X]$
-    | name<C_1,\dots,C_n> $x_1:A_1 \dots x_n:A_n$ = expr
-   \end{lstlisting}
+   In agda coinductive types where first also introduced as positive types.
+   In the section [[Positive Coinductive Types in Agda]] we will look at them in
+   detail.  In section [[Negative Coinductive Types in Agda]] we describe the
+   correct way to implement coinductive types in agda.  There are function which
+   terminate but are rejected by the type checker.  In fact there have to be
+   such function because of the halting problem.  To allow more functions we can
+   use a unique feature of agda, sized types.  They are described in section
+   [[Termination Checking with Sized Types]].
 
-   "/Name/" , "$Constr_1\dots Contr_m$" and "$Destr_1\dots Destr_m$" are arbitrary distinct names
+*** Positive Coinductive Types in Agda
+   Agda doesn't has a special keyword to define coinductive types like coq.  It
+   uses the symbol $\infty$ to mark arguments to constructors as coinductive.
+   This symbol says that the computation of arguments of this type are suspended.
+   $\infty$ is just a type constructor.  So agda ensures productivity over type
+   checking. We define streams like so
 
-   The statements correspond to $\rho(X:\Gamma\rat*;\vv\sigma;\vv{A}):\Gamma\rat*$ as follows.
-   + $x_1: B_1,\dots,x_n: B_n$ is $\Gamma$
-   + /Name/ is X
-   + $Constr_1,\dots, Contr_m$ stands for $\alpha_1^{\mu(X:\Gamma\rat *;\vv\sigma;\vv A)},\dots,\alpha_m^{\mu(X:\Gamma\rat *;\vv\sigma;\vv A)}$
-   + $Destr_1,\dots, Destr_m$ stands for $\xi_1^{\mu(X:\Gamma\rat *;\vv\sigma;\vv A)},\dots,\xi_m^{\mu(X:\Gamma\rat *;\vv\sigma;\vv A)}$
-   + $Name_i$ is $A_i[\Gamma/X]$
-   + $(x_{1_1}:B_{1_1},\dots,x_{n_1}: B_{n_1}),\dots,(x_{1_m}:B_{1_m},\dots,x_{n_m}:B_{n_m})$ stands for $\Gamma_1,\dots,\Gamma_m$
-   + $C_1\dots C_n$ have to be of *, they are for polymorphism.  If we call a constructor we have to give this types,
-     to relate the right type to it.
+   #+begin_src agda
+     data Stream (A : Set) : Set where
+       cons : A → ∞ (Stream A) → Stream A
+   #+end_src
 
-   We take $B_1\rat\dots\rat B_n$ as syntactic sugar for $(\_:B_1,\dots,\_:B_n)$ where _ stands for a unused termvariable
+   Here the second argument to cons is marked with $\infty$. This is the tail of
+   the stream. Because it is infinitely long (we don't have a constructor of an
+   empty stream) we can't compute it completely, so we suspend the computation.
+   We can delay a computation with the constructor $\sharp$ and force it with
+   the function $\flat$. They're types are given below
 
-   We will also need a extra context which relates constructors to their types
+   #+begin_src agda
+     ♯_ : ∀ {a} {A : Set a} → A → ∞ A
+     ♭  : ∀ {a} {A : Set a} → ∞ A → A
+     #+end_src
 
-** Expressions
-   \begin{lstlisting}
-   expr =
-     rec $\mu$ to C where
-       $Constr_1$ $x_{1_1}$ $\dots$ $x_{n_1}$ $y_1$    = $g_1$
-               $\vdots$          $\vdots$
-       $Constr_m$ $x_{1_m}$ $\dots$ $x_{n_m}$ $y_m$ = $g_m$
-   | corec C to $\nu$ where
-       $Destr_1$ $x_{1_1}$ $\dots$ $x_{n_1}$ $y_1$   = $g_1$
-               $\vdots$         $\vdots$
-       $Destr_m$  $x_{1_m}$ $\dots$ $x_{n_m}$ $y_m$ = $g_m$
-   | expr @ expr | () | Unit | Constr expr* | Destr expr*
-   \end{lstlisting}
+   We can now again define our usual functions.  We begin with ~repeat~
 
-   $g_1,\dots,g_k$ are /expr/
+   #+begin_src agda
+     repeat : {A : Set} → A → Stream A
+     repeat x = cons x (♯ (repeat x))
+   #+end_src
 
-   $x_{1_1},\dots, x_{n_m}$ are termvariables
+   We first apply ~Cons~ to ~x~. So the head of the stream is ~x~. We then apply
+   it to the corecursive call ~repeat~. So the tail will be a repetition of xs.
+   We have to call the ~repeat~ with $\sharp$ to suspend the computation.
+   Otherwise the code doesn't type check. If we would write this function
+   without $\sharp$ on a stream which has no $\infty$ on the second argument of
+   ~cons~, the function would run forever. In fact the termination checker won't
+   allow us to write such an function. We can also write ~nth~ again, which
+   consumes a stream
+
+   #+begin_src agda
+     nth : {A : Set} → ℕ → Stream A → A
+     nth 0       (cons x _)  = x
+     nth (suc n) (cons _ xs) = nth n (♭ xs)
+   #+end_src
+
+   Here we have to use $\flat$ on the right hand side of the second case, to
+   force the computation of the tail of the input stream.  We have to do that
+   because ~nth~ wants a stream.  It doesn't want a suspended stream.
+   Productivity on coinductive types like stream is checked by only allowing non
+   decreasing recursive calls behind the $\sharp$ constructor
+**** TODO Look up and cite it
+
+*** Negative Coinductive Types in Agda
+    In agda we can also define negative coinductive types.  This is the
+    recommended way.  Agda implements the previously mentioned copattern matchings.
+    We can define a record with the keyword ~record~.  We use the keyword ~coinductive~
+    to make it possible to define recursive fields.  Stream is defined like the
+    following.
+
+    #+begin_src agda
+      record Stream (A : Set) : Set where
+        coinductive
+        field
+          hd : A
+          tl : Stream A
+    #+end_src
+
+    A Stream has 2 field. ~hd~ is the head of the stream. It has type ~A~. ~tl~
+    is the tail of the stream. It is another stream, so it has type ~Stream A~.
+    ~tl~ is a recursive field. So agda wouldn't accept the definition without
+    ~coinductive~. Stream can never be empty. Every stream has a head (a field
+    ~hd~) and an empty stream wouldn't have an head. So the tail of a stream can
+    never be empty. Therefor every stream is infinitely long. We can now define
+    ~repeat~ with copattern matching.
+
+    #+begin_src agda
+      repeat : ∀ {A : Set} → A → Stream A
+      hd (repeat x) = x
+      tl (repeat x) = repeat x
+    #+end_src
+
+    We have to copattern match on every field of ~Stream~, namely ~hd~ and ~tl~.
+    Because agda is total it won't accept non-exhaustive (co)pattern matches
+    like haskell.  First we define what the head of ~repeat x~ is.  We just
+    repeat ~x~ infinitly ofen.  So every element of the steam is ~x~, including
+    the head.  Therefor we just write ~x~.  In the second and last copattern we
+    define what the tail of the stream is.  The tail is just ~repeat x~.
+    Infinitly often repated ~x~ is the same as x and then infinitly repeated
+    ~x~.  We can use normal pattern matchings and the destructors for functions
+    which consume streams.  We define ~nth~ like the following.
+
+   #+begin_src agda
+     nth : ∀ {A : Set} → ℕ → Stream A → A
+     nth zero s = hd s
+     nth (suc n) s = nth n (tl s)
+   #+end_src
+
+   Here we just pattern macht on the first argument (exluding the implicit
+   argument of the type).  If it is zero the result is just the head of the
+   stream.  If it is $n+1$ the result is the recursive call of ~nth~ on ~n~ and
+   ~tl s~.  Agda accepts this code, because it is structural decreasing on the
+   first (or second if we count the implicit) argument.
 
 
-* Examples
-** Terminal Object
-   #+begin_example
-   codata Terminal : Set where
-      Terminal : Terminal -> Terminal
-   terminal = (corec Unit where
-                 Terminal x = x) @ ()
+*** Termination Checking with Sized Types
+   Termination Checking with sized types: https://agda.readthedocs.io/en/latest/language/sized-types.html
 
-   #+end_example
-** Intial Object
-   #+begin_example
-   data Initial : Set where
-      Initial : Intial -> Intial
-   edfalsum = rec Initial where
-                Initial x = x
-   #+end_example
+* Coinductive Types in other languages
+* Type Theory base of dependent Inductive and Coinductive Types
+* Implementation
+** Abstract Syntax
+   In the following I will scratch out the abstract syntax. I will give every
+   inductive and coinductive type a name. They will be defined via statements. We
+   will also be able to bind expressions to names. This will be described in
+   section [[Statements]] . In section [[Expressions]] we will define the syntax of
+   expressions. This will mostly be in 1 to 1 correspondence to the syntax of the
+   paper. Note however that we use the names of the constructors in the matches.
+*** Statements
+    With the keywords data and codata we define  inductive and coinductive
+    types respectively.  After that we will write the name.  We will also
+    give names to every constructor and destructor.  If we write a name
+    before a equal sign we can bind the following expression to the name
+    \begin{lstlisting}
+    statement =
+      data Name : $(x_1 : B_1,\dots,x_n : B_n)$ -> Set where
+        $Constr_1$ : $(x_{1_1}:B_{1_1},\dots,x_{n_1}: B_{n_1})$ -> $A_1[Name/X]$ -> Name $\sigma_{1_1}\dots \sigma_{1_n}$
+               $\vdots$                $\vdots$             $\vdots$            $\vdots$
+        $Constr_m$ : $(x_{1_m}:B_{1_m},\dots,x_{n_m}: B_{n_m})$ -> $A_i[Name/X]$ -> Name $\sigma_{m_1}\dots \sigma_{m_n}$
+     | codata Name : $(x_1 : B_1,\dots,x_n : B_n)$ -> Set where
+        $Destr_1$ : $(x_{1_1}:B_{i_1},\dots,x_{n_1}: B_{n_1})$ -> Name $\sigma_{1_1}\dots \sigma_{1_n}$ -> $A_1[Name/X]$
+               $\vdots$                $\vdots$             $\vdots$            $\vdots$
+        $Destr_m$ : $(x_{1_m}:B_{1_m},\dots,x_{n_m}: B_{n_m})$ -> Name $\sigma_{m_1}\dots \sigma_{m_n}$ -> $A_i[Name/X]$
+     | name<C_1,\dots,C_n> $x_1:A_1 \dots x_n:A_n$ = expr
+    \end{lstlisting}
 
-** Natural Numbers
-   #+begin_example
-   data Nat : Set where
-      Zero : Terminal -> Nat
-      Suc : Nat -> Nat
-   zero = Zero' @ ()
-   #+end_example
-** Binary Product
-   The product is defined as a coinductive type.  It has two destructrors.
-   The first gives back the first element.  And the second the second.
-   The types A and B have to be concrete types.  We don't have type
-   polymorphism in our language.
-   #+begin_example
-   codata Product : Set where
-      Fst : Product -> A
-      Snd : Product -> B
-   pair x y = (corec Unit where
-                 Fst _ -> x
-                 Snd _ -> y) @ ()
-   #+end_example
-   For differnt types we have to define different Products.  We will write
-   ProductNat for a prodcut of two nats. ProductNatUnit is the prodcuct,
-   where the first element is a Nat and the second a Unit.
+    "/Name/" , "$Constr_1\dots Contr_m$" and "$Destr_1\dots Destr_m$" are arbitrary distinct names
 
-*** Swap funtion
-    We use the swap function on a product of 2 numbers, to illustrate
-    how evaluation on a coninductive type works.  The swap function is
-    defined as follows.
-    #+begin_example
-    swap = corec ProductNat to ProductNat where
-             Fst x -> Snd x
-             Snd x -> Fst x
-    #+end_example
-    This is a well typed function as shown by the following proof
-    \begin{prooftree}
-    \AxiomC{$\vdash$ ProductNat : $*$}
-    \AxiomC{(x:Nat) $\vdash$ Snd @ x : ProductNat \textcircled{a}}
-    \noLine
-    \UnaryInfC{(y : Nat) $\vdash$ Fst @ y : ProductNat \textcircled{b}}
-    \BinaryInfC{swap : (y : ProductNat) $\rat$ ProductNat}
-    \end{prooftree}
-    We show \textcircled{a} in the following proof.  \textcircled{b} works analog
-    \begin{prooftree}
-    \AxiomC{ProductNat : $*$}
-    \UnaryInfC{$\vdash$ Snd (y : Nat) $\rat$ ProductNat}
-    \AxiomC{Nat : $*$}
-    \BinaryInfC{(x : Nat) $\vdash$ Snd (y :Nat) $\rat$ ProductNat}
-    \AxiomC{Nat : $*$}
-    \UnaryInfC{(x : Nat) $\vdash$ x : Nat}
-    \BinaryInfC{(x : Nat) $\vdash$ Snd @ x : ProductNat}
-    \end{prooftree}
-** Binary Coproduct
-   #+begin_example
-   data Coproduct<A,B> : Set where
-      Left : A -> Coproduct
-      Right : B -> Coproduct
-   #+end_example
-** Pi Type
-   #+begin_example
-   codata Pi : Set where
-      Apply : (x: A) -> Pi -> B
-   lambda x g = (corec Pi_A_B to Unit where
-                           Apply x _ = g) @ ()
-   apply t x = Apply @ x @ t
-   #+end_example
-*** identity function
-     The identity function on nats is defined like this
+    The statements correspond to $\rho(X:\Gamma\rat*;\vv\sigma;\vv{A}):\Gamma\rat*$ as follows.
+    + $x_1: B_1,\dots,x_n: B_n$ is $\Gamma$
+    + /Name/ is X
+    + $Constr_1,\dots, Contr_m$ stands for $\alpha_1^{\mu(X:\Gamma\rat *;\vv\sigma;\vv A)},\dots,\alpha_m^{\mu(X:\Gamma\rat *;\vv\sigma;\vv A)}$
+    + $Destr_1,\dots, Destr_m$ stands for $\xi_1^{\mu(X:\Gamma\rat *;\vv\sigma;\vv A)},\dots,\xi_m^{\mu(X:\Gamma\rat *;\vv\sigma;\vv A)}$
+    + $Name_i$ is $A_i[\Gamma/X]$
+    + $(x_{1_1}:B_{1_1},\dots,x_{n_1}: B_{n_1}),\dots,(x_{1_m}:B_{1_m},\dots,x_{n_m}:B_{n_m})$ stands for $\Gamma_1,\dots,\Gamma_m$
+    + $C_1\dots C_n$ have to be of *, they are for polymorphism.  If we call a constructor we have to give this types,
+      to relate the right type to it.
+
+    We take $B_1\rat\dots\rat B_n$ as syntactic sugar for $(\_:B_1,\dots,\_:B_n)$ where _ stands for a unused termvariable
+
+    We will also need a extra context which relates constructors to their types
+
+*** Expressions
+    \begin{lstlisting}
+    expr =
+      rec $\mu$ to C where
+        $Constr_1$ $x_{1_1}$ $\dots$ $x_{n_1}$ $y_1$    = $g_1$
+                $\vdots$          $\vdots$
+        $Constr_m$ $x_{1_m}$ $\dots$ $x_{n_m}$ $y_m$ = $g_m$
+    | corec C to $\nu$ where
+        $Destr_1$ $x_{1_1}$ $\dots$ $x_{n_1}$ $y_1$   = $g_1$
+                $\vdots$         $\vdots$
+        $Destr_m$  $x_{1_m}$ $\dots$ $x_{n_m}$ $y_m$ = $g_m$
+    | expr @ expr | () | Unit | Constr expr* | Destr expr*
+    \end{lstlisting}
+
+    $g_1,\dots,g_k$ are /expr/
+
+    $x_{1_1},\dots, x_{n_m}$ are termvariables
+
+*** Examples
+**** Terminal Object
      #+begin_example
-     id = lambda x x
+     codata Terminal : Set where
+        Terminal : Terminal -> Terminal
+     terminal = (corec Unit where
+                   Terminal x = x) @ ()
+
+     #+end_example
+**** Intial Object
+     #+begin_example
+     data Initial : Set where
+        Initial : Intial -> Intial
+     edfalsum = rec Initial where
+                  Initial x = x
      #+end_example
 
-     Evaluation on 1 goes as follows
+**** Natural Numbers
+     #+begin_example
+     data Nat : Set where
+        Zero : Terminal -> Nat
+        Suc : Nat -> Nat
+     zero = Zero' @ ()
+     #+end_example
+**** Binary Product
+     The product is defined as a coinductive type.  It has two destructrors.
+     The first gives back the first element.  And the second the second.
+     The types A and B have to be concrete types.  We don't have type
+     polymorphism in our language.
+     #+begin_example
+     codata Product : Set where
+        Fst : Product -> A
+        Snd : Product -> B
+     pair x y = (corec Unit where
+                   Fst _ -> x
+                   Snd _ -> y) @ ()
+     #+end_example
+     For differnt types we have to define different Products.  We will write
+     ProductNat for a prodcut of two nats. ProductNatUnit is the prodcuct,
+     where the first element is a Nat and the second a Unit.
 
-    \begin{lstlisting}
-    apply (lambda n n)) 1
-    = Apply @ 1 @ (lampda n n)
-    = Apply @ 1 @ ((corec Pi to Unit where
-                       Apply n _ = n ) @ ())
-    $\succ \widehat{\text{Nat}}$ ($\underbrace{\text{(corec Pi to Unit where Apply' n \_ = n)@x}}_t$)[n/x][1,()]
-    = (rec Nat to Nat where
-         Zero x = Zero @ ($\widehat{()}$(t,x))
-         Succ x = Suc @ ($\widehat{Y}$(t,x)))@x[n/x][1,()]
-    = (rec Nat to Nat where
-         Zero x = Zero @ ($\widehat{()}$(t))
-         Succ x = Suc @ x)@x[n/x][1,()]
-    = (rec Nat to Nat where
-         Zero x = Zero @ ($\widehat{()}$())
-         Succ x = Suc @ x)@x[n/x][1,()]
-    = (rec Nat to Nat where
-         Zero x = Zero @ x
-         Succ x = Suc @ x)@x[n/x][1,()]
-    = (rec Nat to Nat where
-         Zero x = Zero @ x
-         Succ x = Suc @ x)@n[1,()]
-    = (rec Nat to Nat where
-         Zero x = Zero @ x
-         Succ x = Suc @ x)@1
-    = 1
-    \end{lstlisting}
+***** Swap funtion
+      We use the swap function on a product of 2 numbers, to illustrate
+      how evaluation on a coninductive type works.  The swap function is
+      defined as follows.
+      #+begin_example
+      swap = corec ProductNat to ProductNat where
+               Fst x -> Snd x
+               Snd x -> Fst x
+      #+end_example
+      This is a well typed function as shown by the following proof
+      \begin{prooftree}
+      \AxiomC{$\vdash$ ProductNat : $*$}
+      \AxiomC{(x:Nat) $\vdash$ Snd @ x : ProductNat \textcircled{a}}
+      \noLine
+      \UnaryInfC{(y : Nat) $\vdash$ Fst @ y : ProductNat \textcircled{b}}
+      \BinaryInfC{swap : (y : ProductNat) $\rat$ ProductNat}
+      \end{prooftree}
+      We show \textcircled{a} in the following proof.  \textcircled{b} works analog
+      \begin{prooftree}
+      \AxiomC{ProductNat : $*$}
+      \UnaryInfC{$\vdash$ Snd (y : Nat) $\rat$ ProductNat}
+      \AxiomC{Nat : $*$}
+      \BinaryInfC{(x : Nat) $\vdash$ Snd (y :Nat) $\rat$ ProductNat}
+      \AxiomC{Nat : $*$}
+      \UnaryInfC{(x : Nat) $\vdash$ x : Nat}
+      \BinaryInfC{(x : Nat) $\vdash$ Snd @ x : ProductNat}
+      \end{prooftree}
+**** Binary Coproduct
+     #+begin_example
+     data Coproduct<A,B> : Set where
+        Left : A -> Coproduct
+        Right : B -> Coproduct
+     #+end_example
+**** Pi Type
+     #+begin_example
+     codata Pi : Set where
+        Apply : (x: A) -> Pi -> B
+     lambda x g = (corec Pi_A_B to Unit where
+                             Apply x _ = g) @ ()
+     apply t x = Apply @ x @ t
+     #+end_example
+***** identity function
+       The identity function on nats is defined like this
+       #+begin_example
+       id = lambda x x
+       #+end_example
 
-*** replicate function
-    The following function gets a number $n$ and returns an vector of units
-    with length $n$
-    #+begin_example
-    length = rec VectorUnit to Nat where
-               NilUnit _ = zero
-               ConsUnit k _ = Succ @ k
-    replicate = lambda_Nat_VectorUnit n ((rec Nat to VectorUnit where
-                                            Zero _ = NilUnit @ ()
-                                            Suc   m = ConsUnit @ (length @ m) @ m) @ n)
-    #+end_example
-    The following shows the steps for evaluating /replicate/ on 1.  We omit
-    the steps for /length/ and the inner /rec/, because we want to see how
-    /corec/ evaluation works.  We will call the /rec/ part in the definition of
-    /replicate/ /rep/.
+       Evaluation on 1 goes as follows
 
-    \begin{lstlisting}
-    apply (lambda n (rep @ n)) 1
-    = Apply @ 1 @ (lampda n (rep @ n))
-    = Apply @ 1 @ ((corec Pi to Unit where
-                     Apply n _ = rep @ n)@())
-    $\succ$ $\widehat{\text{VecUnit}}(\underbrace{\text{corec Pi to Unit where \{ Apply n \_ = rep @ n \} @ x}}_t)$[rep@n/x][1,()]
-    = (rec VecUnit to VecUnit where
-         VecNil x = VecNil @ $\widehat{()}$(t,x)
-         VecCons n x = VecCons @ n @ $\widehat{(y).Y}$(t,x))@n@x[rep@n/x][1,()]
-    = (rec VecUnit to VecUnit where
-         VecNil x = VecNil @ $\widehat{()}$(t,x)
-         VecCons n x = VecCons @ n @ $\widehat{Y}$(t,x))@n@x[rep@n/x][1,()]
-    = (rec VecUnit to VecUnit
-         VecNil x = VecNil@()
-         VecCons n x = VecCons'@n@x)@n@x[rep@n/x][1,()]
-    = (rec VecUnit to VecUnit
-         VecNil x = VecNil@x
-         VecCons n x = VecCons@n@y)@n@(rep@n)[1,()]
-    = (rec VecUnit to VecUnit
-         VecNil x = VecNil@x
-         VecCons n x = VecCons@n@x)@1@(rep@1)
-    = ConsUnit @ (NilUnit @ ())
-    \end{lstlisting}
+      \begin{lstlisting}
+      apply (lambda n n)) 1
+      = Apply @ 1 @ (lampda n n)
+      = Apply @ 1 @ ((corec Pi to Unit where
+                         Apply n _ = n ) @ ())
+      $\succ \widehat{\text{Nat}}$ ($\underbrace{\text{(corec Pi to Unit where Apply' n \_ = n)@x}}_t$)[n/x][1,()]
+      = (rec Nat to Nat where
+           Zero x = Zero @ ($\widehat{()}$(t,x))
+           Succ x = Suc @ ($\widehat{Y}$(t,x)))@x[n/x][1,()]
+      = (rec Nat to Nat where
+           Zero x = Zero @ ($\widehat{()}$(t))
+           Succ x = Suc @ x)@x[n/x][1,()]
+      = (rec Nat to Nat where
+           Zero x = Zero @ ($\widehat{()}$())
+           Succ x = Suc @ x)@x[n/x][1,()]
+      = (rec Nat to Nat where
+           Zero x = Zero @ x
+           Succ x = Suc @ x)@x[n/x][1,()]
+      = (rec Nat to Nat where
+           Zero x = Zero @ x
+           Succ x = Suc @ x)@n[1,()]
+      = (rec Nat to Nat where
+           Zero x = Zero @ x
+           Succ x = Suc @ x)@1
+      = 1
+      \end{lstlisting}
 
-** Sigma Type
-   #+begin_example
-   data Sigma A B : Set where
-      Exists : (x:A) -> B -> Sigma
-   #+end_example
-** Vectors
-   #+begin_example
-   data VectorA : (n:Nat) -> Set where
-     NilA' : Unit -> Vector 0
-     ConsA : (k:Nat) -> ProductA A (VectorA k) -> VectorA (Suc k)
-   nilA = NilA' @ ()
-   #+end_example
-   Here $A$ has to be a concrete type, because  our language doesn't have type
-   parameters.
-*** Tail Function
-    We use a function, which extends a vector of units to the front of a
-    vector, to show how evaluation on a vector works.
-    This tail function returns the empty vector for the empty vector,
-    because every function has to be total in our language.  To keep
-    things simple we use Unit for $A$. We also simplify "Product Unit
-    (VectorUnit k)" to just "VectorUnit k"
-    #+begin_example
-    extend = rec VecUnit to ((x).Vec @ (Suc x) where
-               NilUnit' _ = ConsUnit @ 0 @ (NilUnit' @ ())
-               ConsA k v = ConsUnit @ (Suc @ k) @ v
-    #+end_example
-    The type checking of this function goes as follows
-    \begin{scprooftree}{0.8}
-    \AxiomC{$\vdash$ (x).(VecUnit @ (Suc @ x)) : (k: Nat)}
-    \noLine
-    \UnaryInfC{(\_ : Unit) $\vdash$ ConsUnit @ 0 @ (NilUnit' @ ()) : (x).(VecUnit @ (Suc @ x)) @ 0}
-    \noLine
-    \UnaryInfC{(k : Nat, v : (x).(Vec @ (Suc @ x)) @ k) $\vdash$ ConsUnit @ (Suc @ k) @ v : (x).(Vec @ (Suc @ x)) @ (Suc @ k)}
-    \UnaryInfC{$\vdash$ app : (k:Nat,y : (x).Vec (Suc x)) $\rat$ (x).(Vec @ (Suc x)) @ k}
-    \end{scprooftree}
-    As an example we evaluate a vector of length 1 with this function.  We choose length one
-    to see all rec cases.
-    \begin{align*}
-      &\text{extend}@ 1 @ (\text{ConsUnit} @ 0 @ (\text{NilUnit'} @ ()))\\
-      &= \text{extend}@(\text{Suc} @ k \bullet 0) @ (\text{ConsUnit} @ 0 @ (\text{NilUnit'} @ ()))\\
-      &\succ \text{ConsUnit} @ (\text{Suc} @ k) @ v \left[ \hat{X}(\text{extend} @ n @ x)/v \right][0,\text{NilUnit'} @ ()]\\
-      &= \text{ConsUnit} @ (\text{Suc} @ k) @ v \left[ \text{extend} @ n @ x/v \right][0, \text{NilUnit'} @ ()]\\
-      &= \text{ConsUnit} @ (\text{Suc} @ 0) @ (\text{extend} @ n @ x) [0,\text{NilUnit'} @ ()]\\
-      &= \text{ConsUnit} @ (\text{Suc} @ 0) @ (\text{extend} @ 0 @ (\text{NilUnit'} @ ()))\\
-      &= \text{ConsUnit} @ 1 @ (\text{extend} @ (0 \bullet 0) @ (\text{NilUnit'} @ ()))\\
-      &\succ \text{ConsUnit} @ 1 @ (\text{ConsUnit} @ 0 @ (\text{NilUnit'} @ ()))\left[ \hat{()}(\text{extend} @ k @ x) / \_  \right][()]\\
-      &= \text{ConsUnit} @ 1 @ (\text{ConsUnit} @ 0 @ (\text{NilUnit'} @ ()))[()]\\
-      &= \text{ConsUnit} @ 1 @ (\text{ConsUnit} @ 0 @ (\text{NilUnit'} @ ()))
-    \end{align*}
-** Extended Naturals
-   #+begin_example
-   codata ExNat : Set where
-      Prec : ExNat -> Coproduct<Unit,ExNat>
-   succE = corec ExNat where
-             Prec x -> Right x
-   #+end_example
-** Streams
-   #+begin_example
-   codata PStr<A>: (n: ExNat) -> Set where
-      hd : (k : ExNat) -> PStr A (succE k) -> A
-      tl : (k : ExNat) -> PStr A (succE k) -> PStr A k
-   #+end_example
-** List
-   ListA descripes a list of type elements with type A.  It is defined
-   as follows
+***** replicate function
+      The following function gets a number $n$ and returns an vector of units
+      with length $n$
+      #+begin_example
+      length = rec VectorUnit to Nat where
+                 NilUnit _ = zero
+                 ConsUnit k _ = Succ @ k
+      replicate = lambda_Nat_VectorUnit n ((rec Nat to VectorUnit where
+                                              Zero _ = NilUnit @ ()
+                                              Suc   m = ConsUnit @ (length @ m) @ m) @ n)
+      #+end_example
+      The following shows the steps for evaluating /replicate/ on 1.  We omit
+      the steps for /length/ and the inner /rec/, because we want to see how
+      /corec/ evaluation works.  We will call the /rec/ part in the definition of
+      /replicate/ /rep/.
 
-   \begin{equation*}
-   ListA =  \mu(X:*;\epsilon_2;(\textbf{1},A\times X))
-   \end{equation*}
-   where $\Gamma_1=\emptyset$ and $\Gamma_2\vdash A:*$
+      \begin{lstlisting}
+      apply (lambda n (rep @ n)) 1
+      = Apply @ 1 @ (lampda n (rep @ n))
+      = Apply @ 1 @ ((corec Pi to Unit where
+                       Apply n _ = rep @ n)@())
+      $\succ$ $\widehat{\text{VecUnit}}(\underbrace{\text{corec Pi to Unit where \{ Apply n \_ = rep @ n \} @ x}}_t)$[rep@n/x][1,()]
+      = (rec VecUnit to VecUnit where
+           VecNil x = VecNil @ $\widehat{()}$(t,x)
+           VecCons n x = VecCons @ n @ $\widehat{(y).Y}$(t,x))@n@x[rep@n/x][1,()]
+      = (rec VecUnit to VecUnit where
+           VecNil x = VecNil @ $\widehat{()}$(t,x)
+           VecCons n x = VecCons @ n @ $\widehat{Y}$(t,x))@n@x[rep@n/x][1,()]
+      = (rec VecUnit to VecUnit
+           VecNil x = VecNil@()
+           VecCons n x = VecCons'@n@x)@n@x[rep@n/x][1,()]
+      = (rec VecUnit to VecUnit
+           VecNil x = VecNil@x
+           VecCons n x = VecCons@n@y)@n@(rep@n)[1,()]
+      = (rec VecUnit to VecUnit
+           VecNil x = VecNil@x
+           VecCons n x = VecCons@n@x)@1@(rep@1)
+      = ConsUnit @ (NilUnit @ ())
+      \end{lstlisting}
 
-   In the implemented syntax is written like this
-   #+begin_example
-   data A : ...
-   data ProductAListA : Set where
-     Fst : Product -> A
-     Snd : Product -> ListA
-   data ListA : Set where
-      NilA : Terminal -> ListA
-      ConsA : ProductAListA -> ListA
-   nilA = NilA @ ()
-   #+end_example
+**** Sigma Type
+     #+begin_example
+     data Sigma A B : Set where
+        Exists : (x:A) -> B -> Sigma
+     #+end_example
+**** Vectors
+     #+begin_example
+     data VectorA : (n:Nat) -> Set where
+       NilA' : Unit -> Vector 0
+       ConsA : (k:Nat) -> ProductA A (VectorA k) -> VectorA (Suc k)
+     nilA = NilA' @ ()
+     #+end_example
+     Here $A$ has to be a concrete type, because  our language doesn't have type
+     parameters.
+***** Tail Function
+      We use a function, which extends a vector of units to the front of a
+      vector, to show how evaluation on a vector works.
+      This tail function returns the empty vector for the empty vector,
+      because every function has to be total in our language.  To keep
+      things simple we use Unit for $A$. We also simplify "Product Unit
+      (VectorUnit k)" to just "VectorUnit k"
+      #+begin_example
+      extend = rec VecUnit to ((x).Vec @ (Suc x) where
+                 NilUnit' _ = ConsUnit @ 0 @ (NilUnit' @ ())
+                 ConsA k v = ConsUnit @ (Suc @ k) @ v
+      #+end_example
+      The type checking of this function goes as follows
+      \begin{scprooftree}{0.8}
+      \AxiomC{$\vdash$ (x).(VecUnit @ (Suc @ x)) : (k: Nat)}
+      \noLine
+      \UnaryInfC{(\_ : Unit) $\vdash$ ConsUnit @ 0 @ (NilUnit' @ ()) : (x).(VecUnit @ (Suc @ x)) @ 0}
+      \noLine
+      \UnaryInfC{(k : Nat, v : (x).(Vec @ (Suc @ x)) @ k) $\vdash$ ConsUnit @ (Suc @ k) @ v : (x).(Vec @ (Suc @ x)) @ (Suc @ k)}
+      \UnaryInfC{$\vdash$ app : (k:Nat,y : (x).Vec (Suc x)) $\rat$ (x).(Vec @ (Suc x)) @ k}
+      \end{scprooftree}
+      As an example we evaluate a vector of length 1 with this function.  We choose length one
+      to see all rec cases.
+      \begin{align*}
+        &\text{extend}@ 1 @ (\text{ConsUnit} @ 0 @ (\text{NilUnit'} @ ()))\\
+        &= \text{extend}@(\text{Suc} @ k \bullet 0) @ (\text{ConsUnit} @ 0 @ (\text{NilUnit'} @ ()))\\
+        &\succ \text{ConsUnit} @ (\text{Suc} @ k) @ v \left[ \hat{X}(\text{extend} @ n @ x)/v \right][0,\text{NilUnit'} @ ()]\\
+        &= \text{ConsUnit} @ (\text{Suc} @ k) @ v \left[ \text{extend} @ n @ x/v \right][0, \text{NilUnit'} @ ()]\\
+        &= \text{ConsUnit} @ (\text{Suc} @ 0) @ (\text{extend} @ n @ x) [0,\text{NilUnit'} @ ()]\\
+        &= \text{ConsUnit} @ (\text{Suc} @ 0) @ (\text{extend} @ 0 @ (\text{NilUnit'} @ ()))\\
+        &= \text{ConsUnit} @ 1 @ (\text{extend} @ (0 \bullet 0) @ (\text{NilUnit'} @ ()))\\
+        &\succ \text{ConsUnit} @ 1 @ (\text{ConsUnit} @ 0 @ (\text{NilUnit'} @ ()))\left[ \hat{()}(\text{extend} @ k @ x) / \_  \right][()]\\
+        &= \text{ConsUnit} @ 1 @ (\text{ConsUnit} @ 0 @ (\text{NilUnit'} @ ()))[()]\\
+        &= \text{ConsUnit} @ 1 @ (\text{ConsUnit} @ 0 @ (\text{NilUnit'} @ ()))
+      \end{align*}
+**** Extended Naturals
+     #+begin_example
+     codata ExNat : Set where
+        Prec : ExNat -> Coproduct<Unit,ExNat>
+     succE = corec ExNat where
+               Prec x -> Right x
+     #+end_example
+**** Streams
+     #+begin_example
+     codata PStr<A>: (n: ExNat) -> Set where
+        hd : (k : ExNat) -> PStr A (succE k) -> A
+        tl : (k : ExNat) -> PStr A (succE k) -> PStr A k
+     #+end_example
+**** List
+     ListA descripes a list of type elements with type A.  It is defined
+     as follows
 
-** Length function on lists of Units
-   \begin{align*}
-   \text{length} = \text{rec} &((y_k:\top).\alpha_1^\textbf{N}@\langle\rangle\\
-                &,(x:\top,y_k:\mu(X:*;\epsilon_2(\mathbf{1},X)))).\alpha_2^\textbf{N} @ y_k\\
-   \end{align*}
-*** Type checking
+     \begin{equation*}
+     ListA =  \mu(X:*;\epsilon_2;(\textbf{1},A\times X))
+     \end{equation*}
+     where $\Gamma_1=\emptyset$ and $\Gamma_2\vdash A:*$
 
-    \begin{scprooftree}{0.6}
-    \AxiomC{$\vdash\textbf{N}:*$}
-    \AxiomC{$\vdash\alpha_1^\textbf{N}: (x:\textbf{1})\rightarrow\textbf{N}$}
-    \RightLabel{\textbf{(Term-Weak)}}
-    \UnaryInfC{$y_k:\textbf{1}\vdash\alpha_1^\textbf{N}: (x:\textbf{1})\rightarrow\textbf{N}$}
-    \AxiomC{$\vdash\langle\rangle':\textbf{1}$}
-    \RightLabel{\textbf{(Term-Weak)}}
-    \UnaryInfC{$y_k:\textbf{1}\vdash\langle\rangle':\textbf{1}$}
-    \RightLabel{\textbf{(Inst)}}
-    \BinaryInfC{$y_k:\textbf{1}\vdash \alpha_1^\textbf{N}@\langle\rangle':\textbf{N}$}
-    \AxiomC{$\vdash\alpha_2^\textbf{N}: (x:\textbf{N})\rightarrow\textbf{N}$}
-    \RightLabel{\textbf{(Term-Weak)}}
-    \UnaryInfC{$y_k:\textbf{N}\vdash\alpha_2^\textbf{N}: (x:\textbf{N})\rightarrow\textbf{N}$}
-    \AxiomC{$\textbf{N}:*$}
-    \RightLabel{\textbf{(Proj)}}
-    \UnaryInfC{$y_k:\textbf{N}\vdash y_k:\textbf{N}$}
-    \RightLabel{\textbf{(Inst)}}
-    \BinaryInfC{$y_k:\textbf{N}\vdash \alpha_2^\textbf{N}@y_k:\textbf{N}$}
-    \RightLabel{\textbf{(Ind-E)}}
-    \TrinaryInfC{$\vdash \text{rec}((y_k).\alpha_1^\textbf{N}@\langle\rangle'
-                    ,(y_k).\alpha_2^\textbf{N} @ y_k):(y:\text{List }\textbf{1})\rightarrow\textbf{N}$}
-    \end{scprooftree}
+     In the implemented syntax is written like this
+     #+begin_example
+     data A : ...
+     data ProductAListA : Set where
+       Fst : Product -> A
+       Snd : Product -> ListA
+     data ListA : Set where
+        NilA : Terminal -> ListA
+        ConsA : ProductAListA -> ListA
+     nilA = NilA @ ()
+     #+end_example
+
+**** Length function on lists of Units
+     \begin{align*}
+     \text{length} = \text{rec} &((y_k:\top).\alpha_1^\textbf{N}@\langle\rangle\\
+                  &,(x:\top,y_k:\mu(X:*;\epsilon_2(\mathbf{1},X)))).\alpha_2^\textbf{N} @ y_k\\
+     \end{align*}
+***** Type checking
+
+      \begin{scprooftree}{0.6}
+      \AxiomC{$\vdash\textbf{N}:*$}
+      \AxiomC{$\vdash\alpha_1^\textbf{N}: (x:\textbf{1})\rightarrow\textbf{N}$}
+      \RightLabel{\textbf{(Term-Weak)}}
+      \UnaryInfC{$y_k:\textbf{1}\vdash\alpha_1^\textbf{N}: (x:\textbf{1})\rightarrow\textbf{N}$}
+      \AxiomC{$\vdash\langle\rangle':\textbf{1}$}
+      \RightLabel{\textbf{(Term-Weak)}}
+      \UnaryInfC{$y_k:\textbf{1}\vdash\langle\rangle':\textbf{1}$}
+      \RightLabel{\textbf{(Inst)}}
+      \BinaryInfC{$y_k:\textbf{1}\vdash \alpha_1^\textbf{N}@\langle\rangle':\textbf{N}$}
+      \AxiomC{$\vdash\alpha_2^\textbf{N}: (x:\textbf{N})\rightarrow\textbf{N}$}
+      \RightLabel{\textbf{(Term-Weak)}}
+      \UnaryInfC{$y_k:\textbf{N}\vdash\alpha_2^\textbf{N}: (x:\textbf{N})\rightarrow\textbf{N}$}
+      \AxiomC{$\textbf{N}:*$}
+      \RightLabel{\textbf{(Proj)}}
+      \UnaryInfC{$y_k:\textbf{N}\vdash y_k:\textbf{N}$}
+      \RightLabel{\textbf{(Inst)}}
+      \BinaryInfC{$y_k:\textbf{N}\vdash \alpha_2^\textbf{N}@y_k:\textbf{N}$}
+      \RightLabel{\textbf{(Ind-E)}}
+      \TrinaryInfC{$\vdash \text{rec}((y_k).\alpha_1^\textbf{N}@\langle\rangle'
+                      ,(y_k).\alpha_2^\textbf{N} @ y_k):(y:\text{List }\textbf{1})\rightarrow\textbf{N}$}
+      \end{scprooftree}
 
 
-** Rose Tree
-   Rose Tree A = $\nu(X:*;\epsilon_2;(\textbf{1},List X)$
+**** Rose Tree
+     Rose Tree A = $\nu(X:*;\epsilon_2;(\textbf{1},List X)$
 
-   #+begin_example
-   data RoseTree<A> : Set where
-      Leaf : Terminal -> RoseTree
-      Branch : List<RoseTree> -> RoseTree
-   leaf A = Leaf<A> @ ()
-   #+end_example
+     #+begin_example
+     data RoseTree<A> : Set where
+        Leaf : Terminal -> RoseTree
+        Branch : List<RoseTree> -> RoseTree
+     leaf A = Leaf<A> @ ()
+     #+end_example
 
-* Typing rules
-  We have to rewrite the typing rules of the paper, to get rules which are
-  syntax directed. Here are the rules which have to be rewritten.
-  + *(Ty-Inst)*
-  + *(Param-Abstr)*
-  This rules contain variables in the premises where their type isn't in the
-  conclusion. So if we want to type-check something which is the conclusion of
-  such a rule we have no way of knowing what this variables are.
+** Typing rules
+   We have to rewrite the typing rules of the paper, to get rules which are
+   syntax directed. Here are the rules which have to be rewritten.
+   + *(Ty-Inst)*
+   + *(Param-Abstr)*
+   This rules contain variables in the premises where their type isn't in the
+   conclusion. So if we want to type-check something which is the conclusion of
+   such a rule we have no way of knowing what this variables are.
 
-  We don't need the weaking rules because we can lookup a variable in a
-  context.
+   We don't need the weaking rules because we can lookup a variable in a
+   context.
 
-  So the following rules get removed.
-  + *(TyVar-Weak)*
-  + *(Ty-Weak)*
-  The order in *TyCtx* isn't relevant so we use a Map for it.  The order
-  of *Ctx* is relevant because types of later variables can refer to
-  former variables and application instantiate the first varibale in
-  *Ctx*
+   So the following rules get removed.
+   + *(TyVar-Weak)*
+   + *(Ty-Weak)*
+   The order in *TyCtx* isn't relevant so we use a Map for it.  The order
+   of *Ctx* is relevant because types of later variables can refer to
+   former variables and application instantiate the first varibale in
+   *Ctx*
 
-  We also rewrite the rules which are already syntax-directed to rules
-  which work on our syntax
+   We also rewrite the rules which are already syntax-directed to rules
+   which work on our syntax
 
-  We add a new Ctx for data types
+   We add a new Ctx for data types
 
-  We will mark semantic differences in the rewritten rules gray.
-** Context rules
-   The rules for valid contexts are already syntax directed so we take
-   just them
-   \begin{center}
-   \AxiomC{}
-   \UnaryInfC{$\vdash\emptyset$ \textbf{TyCtx}}
-   \DisplayProof
-   \hskip 1.5em
-   \AxiomC{$\vdash\Theta$ \textbf{TyCtx}}
-   \AxiomC{$\vdash\Gamma$ \textbf{Ctx}}
-   \BinaryInfC{$\vdash\Theta,X:\Gamma\rat*$ \textbf{TyCtx}}
-   \DisplayProof
-   \vskip 0.5em
-   \AxiomC{}
-   \UnaryInfC{$\vdash\emptyset$ \textbf{Ctx}}
-   \DisplayProof
-   \hskip 1.5em
-   \AxiomC{$\emptyset|\Gamma\vdash A:*$}
-   \UnaryInfC{$\vdash\Gamma,x:A$ \textbf{Ctx}}
-   \DisplayProof
-   \end{center}
+   We will mark semantic differences in the rewritten rules gray.
+*** Context rules
+    The rules for valid contexts are already syntax directed so we take
+    just them
+    \begin{center}
+    \AxiomC{}
+    \UnaryInfC{$\vdash\emptyset$ \textbf{TyCtx}}
+    \DisplayProof
+    \hskip 1.5em
+    \AxiomC{$\vdash\Theta$ \textbf{TyCtx}}
+    \AxiomC{$\vdash\Gamma$ \textbf{Ctx}}
+    \BinaryInfC{$\vdash\Theta,X:\Gamma\rat*$ \textbf{TyCtx}}
+    \DisplayProof
+    \vskip 0.5em
+    \AxiomC{}
+    \UnaryInfC{$\vdash\emptyset$ \textbf{Ctx}}
+    \DisplayProof
+    \hskip 1.5em
+    \AxiomC{$\emptyset|\Gamma\vdash A:*$}
+    \UnaryInfC{$\vdash\Gamma,x:A$ \textbf{Ctx}}
+    \DisplayProof
+    \end{center}
 
-   We use the notation $\Theta(X)\rightsquigarrow\Gamma\rat*$ for
-   looking up the type-variable $X$ in type-context $\Theta$ yields type
-   $\Gamma\rat*$. We add 2 rules for looking up something in a
-   type-context.  They are:
-   \begin{center}
-     \AxiomC{$\vdash \Theta$ \textbf{TyCtx}}
-     \AxiomC{$\vdash \Gamma$ \textbf{Ctx}}
-     \BinaryInfC{$\Theta,X:\Gamma\rat*(X)\rightsquigarrow\Gamma\rat*$}
-     \DisplayProof
-     \hskip 1.5em
-     \AxiomC{$\vdash \Gamma_1$ \textbf{Ctx}}
-     \AxiomC{$\Theta(X) \rightsquigarrow\Gamma_2\rat*$}
-     \BinaryInfC{$\Theta,Y:\Gamma_1\rat*(X)\rightsquigarrow\Gamma_2\rat*$}
-     \DisplayProof
-   \end{center}
-   Here $Y$ and $X$ are different variables
+    We use the notation $\Theta(X)\rightsquigarrow\Gamma\rat*$ for
+    looking up the type-variable $X$ in type-context $\Theta$ yields type
+    $\Gamma\rat*$. We add 2 rules for looking up something in a
+    type-context.  They are:
+    \begin{center}
+      \AxiomC{$\vdash \Theta$ \textbf{TyCtx}}
+      \AxiomC{$\vdash \Gamma$ \textbf{Ctx}}
+      \BinaryInfC{$\Theta,X:\Gamma\rat*(X)\rightsquigarrow\Gamma\rat*$}
+      \DisplayProof
+      \hskip 1.5em
+      \AxiomC{$\vdash \Gamma_1$ \textbf{Ctx}}
+      \AxiomC{$\Theta(X) \rightsquigarrow\Gamma_2\rat*$}
+      \BinaryInfC{$\Theta,Y:\Gamma_1\rat*(X)\rightsquigarrow\Gamma_2\rat*$}
+      \DisplayProof
+    \end{center}
+    Here $Y$ and $X$ are different variables
 
-   Respectively the notation $\Gamma(x)\rightsquigarrow A$ means looking
-   up the termvariable $x$ in term-context $\Gamma$ yields type $A$. The
-   rules for term-contexts are:
-   \begin{center}
-     \AxiomC{$\vdash \Gamma$ \textbf{Ctx}}
-     \AxiomC{$\Gamma\vdash A:*$}
-     \BinaryInfC{$\Gamma,x:A(x)\rightsquigarrow A$}
-     \DisplayProof
-     \hskip 1.5em
-     \AxiomC{$\Gamma(x) \rightsquigarrow A$}
-     \AxiomC{$\Gamma\vdash B:*$}
-     \BinaryInfC{$\Gamma,y:B(x)\rightsquigarrow A$}
-     \DisplayProof
-   \end{center}
+    Respectively the notation $\Gamma(x)\rightsquigarrow A$ means looking
+    up the termvariable $x$ in term-context $\Gamma$ yields type $A$. The
+    rules for term-contexts are:
+    \begin{center}
+      \AxiomC{$\vdash \Gamma$ \textbf{Ctx}}
+      \AxiomC{$\Gamma\vdash A:*$}
+      \BinaryInfC{$\Gamma,x:A(x)\rightsquigarrow A$}
+      \DisplayProof
+      \hskip 1.5em
+      \AxiomC{$\Gamma(x) \rightsquigarrow A$}
+      \AxiomC{$\Gamma\vdash B:*$}
+      \BinaryInfC{$\Gamma,y:B(x)\rightsquigarrow A$}
+      \DisplayProof
+    \end{center}
 
-** Full evaluation
-   We write $A \longrightarrow_T^* B$ for evaluating $A$ as long as it
-   is possible yields $B$.
+*** Full evaluation
+    We write $A \longrightarrow_T^* B$ for evaluating $A$ as long as it
+    is possible yields $B$.
 
-   The rules are
-   \begin{center}
-   \AxiomC{$\neg\exists B : A \longrightarrow_T B$}
-   \UnaryInfC{$A \longrightarrow_T^* A$}
-   \DisplayProof
-   \hskip 1.5em
-   \AxiomC{$A \longrightarrow_T B$}
-   \AxiomC{$B \longrightarrow_T^* C$}
-   \BinaryInfC{$A \longrightarrow_T^* C$}
-   \DisplayProof
-   \end{center}
-** Beta-equivalence
-   We introduce a new rule for beta-equivalence.
-   \begin{center}
-   \AxiomC{$A\longrightarrow_T^* A'$}
-   \AxiomC{$B\longrightarrow_T^* B'$}
-   \AxiomC{$A'\equiv_\alpha B'$}
-   \TrinaryInfC{$A\equiv_\beta B$}
-   \DisplayProof
-   \end{center}
-   In the implementation $\equiv_\alpha$ is trivial, because we use /de
-   Bruijn indices/.
+    The rules are
+    \begin{center}
+    \AxiomC{$\neg\exists B : A \longrightarrow_T B$}
+    \UnaryInfC{$A \longrightarrow_T^* A$}
+    \DisplayProof
+    \hskip 1.5em
+    \AxiomC{$A \longrightarrow_T B$}
+    \AxiomC{$B \longrightarrow_T^* C$}
+    \BinaryInfC{$A \longrightarrow_T^* C$}
+    \DisplayProof
+    \end{center}
+*** Beta-equivalence
+    We introduce a new rule for beta-equivalence.
+    \begin{center}
+    \AxiomC{$A\longrightarrow_T^* A'$}
+    \AxiomC{$B\longrightarrow_T^* B'$}
+    \AxiomC{$A'\equiv_\alpha B'$}
+    \TrinaryInfC{$A\equiv_\beta B$}
+    \DisplayProof
+    \end{center}
+    In the implementation $\equiv_\alpha$ is trivial, because we use /de
+    Bruijn indices/.
 
-   We also add some rule to check if two contexts are the same.
-   \begin{center}
-   \AxiomC{}
-   \UnaryInfC{$\emptyset\equiv_\beta\emptyset$}
-   \DisplayProof
-   \hskip 1.5em
-   \AxiomC{$\Gamma_1\equiv_\beta \Gamma_2$}
-   \AxiomC{$A[\Gamma_1]\equiv_\beta B[\Gamma_2]$}
-   \BinaryInfC{$\Gamma_1,x:A\equiv_\beta\Gamma_2,y:B$}
-   \DisplayProof
-%   \vskip 0.5em
-%   \AxiomC{$\Theta_1\equiv_\beta \Theta_2$}
-%   \AxiomC{$\Gamma_1\equiv_\beta \Gamma_2$}
-%   \BinaryInfC{$\Theta_1,X:\Gamma_1\rat*\equiv_\beta\Theta_2,X:\Gamma_2\rat*$}
-%   \DisplayProof
-   \end{center}
+    We also add some rule to check if two contexts are the same.
+    \begin{center}
+    \AxiomC{}
+    \UnaryInfC{$\emptyset\equiv_\beta\emptyset$}
+    \DisplayProof
+    \hskip 1.5em
+    \AxiomC{$\Gamma_1\equiv_\beta \Gamma_2$}
+    \AxiomC{$A[\Gamma_1]\equiv_\beta B[\Gamma_2]$}
+    \BinaryInfC{$\Gamma_1,x:A\equiv_\beta\Gamma_2,y:B$}
+    \DisplayProof
+ %   \vskip 0.5em
+ %   \AxiomC{$\Theta_1\equiv_\beta \Theta_2$}
+ %   \AxiomC{$\Gamma_1\equiv_\beta \Gamma_2$}
+ %   \BinaryInfC{$\Theta_1,X:\Gamma_1\rat*\equiv_\beta\Theta_2,X:\Gamma_2\rat*$}
+ %   \DisplayProof
+    \end{center}
 
-** Unit type introduction
-   The rule
-   \begin{prooftree}
-     \AxiomC{}
-     \RightLabel{\textbf{($\top$-I)}}
-     \UnaryInfC{$\vdash\top:*$}
-   \end{prooftree}
-   gets rewritten to
-    \begin{prooftree}
-     \AxiomC{}
-     \RightLabel{\textbf{(Unit-I)}}
-     \UnaryInfC{\colorbox{gray}{$\Theta|\Gamma$}$\vdash$Unit:$*$}
-   \end{prooftree}
-   We change the syntax "$\top$" to "Unit" and add *Ctx* and *TyCtx*.
-   We will do this for every rule which has empty contexts to subsume
-   the rules with *TyVar-Weak*, *Ty-Weak* and *Term-Weak*.
-
-** Type Variable introduction
-
+*** Unit type introduction
     The rule
     \begin{prooftree}
-     \AxiomC{$\vdash \Theta$ \textbf{TyCtx}}
-     \AxiomC{$\vdash \Gamma$ \textbf{Ctx}}
-     \RightLabel{\textbf{(TyVar-I)}}
-     \BinaryInfC{$\Theta,X:\Gamma\rat*|\emptyset\vdash X : \Gamma \rat *$}
-   \end{prooftree}
-   gets rewritten to
+      \AxiomC{}
+      \RightLabel{\textbf{($\top$-I)}}
+      \UnaryInfC{$\vdash\top:*$}
+    \end{prooftree}
+    gets rewritten to
+     \begin{prooftree}
+      \AxiomC{}
+      \RightLabel{\textbf{(Unit-I)}}
+      \UnaryInfC{\colorbox{gray}{$\Theta|\Gamma$}$\vdash$Unit:$*$}
+    \end{prooftree}
+    We change the syntax "$\top$" to "Unit" and add *Ctx* and *TyCtx*.
+    We will do this for every rule which has empty contexts to subsume
+    the rules with *TyVar-Weak*, *Ty-Weak* and *Term-Weak*.
 
+*** Type Variable introduction
+
+     The rule
+     \begin{prooftree}
+      \AxiomC{$\vdash \Theta$ \textbf{TyCtx}}
+      \AxiomC{$\vdash \Gamma$ \textbf{Ctx}}
+      \RightLabel{\textbf{(TyVar-I)}}
+      \BinaryInfC{$\Theta,X:\Gamma\rat*|\emptyset\vdash X : \Gamma \rat *$}
+    \end{prooftree}
+    gets rewritten to
+
+     \begin{prooftree}
+      \AxiomC{\colorbox{gray}{$\Theta(X)\rightsquigarrow\Gamma'\rat*$}}
+      \AxiomC{\colorbox{gray}{$\vdash \Gamma_1$ \textbf{Ctx}}}
+      \AxiomC{\colorbox{gray}{$\Gamma'\equiv_\beta\Gamma$}}
+      \RightLabel{\textbf{(TyVar-I)}}
+      \TrinaryInfC{$\Theta|$\colorbox{gray}{$\Gamma_1$}$\vdash X : \Gamma \rat *$}
+    \end{prooftree}
+
+*** Type instantiation
+    The rule
     \begin{prooftree}
-     \AxiomC{\colorbox{gray}{$\Theta(X)\rightsquigarrow\Gamma'\rat*$}}
-     \AxiomC{\colorbox{gray}{$\vdash \Gamma_1$ \textbf{Ctx}}}
-     \AxiomC{\colorbox{gray}{$\Gamma'\equiv_\beta\Gamma$}}
-     \RightLabel{\textbf{(TyVar-I)}}
-     \TrinaryInfC{$\Theta|$\colorbox{gray}{$\Gamma_1$}$\vdash X : \Gamma \rat *$}
-   \end{prooftree}
-
-** Type instantiation
-   The rule
-   \begin{prooftree}
-     \AxiomC{$\Theta|\Gamma_1\vdash A:(x:B,\Gamma_2)\rat*$}
-     \AxiomC{$\Gamma_1\vdash t:B$}
-     \BinaryInfC{$\Theta|\Gamma_1\vdash A@t:\Gamma_2[t/x]\rat*$}
-   \end{prooftree}
-   gets rewritten to
-    \begin{prooftree}
-     \AxiomC{$\Theta|\Gamma_1\vdash A:(x:B,\Gamma_2)\rat*$}
-     \AxiomC{$\Gamma_1\vdash t:$\colorbox{gray}{$B'$}}
-     \AxiomC{\colorbox{gray}{$B\equiv_\beta B'$}}
-     \TrinaryInfC{$\Theta|\Gamma_1\vdash A@t:\Gamma_2[t/x]\rat*$}
-   \end{prooftree}
-
-
-** Parameter abstraction
-   The rule
-   \begin{center}
-     \AxiomC{$\Theta|\Gamma_1,x:A\vdash B:\Gamma_2\rat*$}
-     \RightLabel{\textbf{(Param-Abstr)}}
-     \UnaryInfC{$\Theta|\Gamma_1\vdash(x).B:(x:A,\Gamma_2)\rat*$}
-     \DisplayProof
-   \end{center}
-   gets rewritten to
-   \begin{center}
-     \AxiomC{$\Theta|\Gamma_1,x:A\vdash B:\Gamma_2\rat*$}
-     \RightLabel{\textbf{(Param-Abstr)}}
-     \UnaryInfC{$\Theta|\Gamma_1\vdash(x$\colorbox{gray}{$:A$}$).B:(x:A,\Gamma_2)\rat*$}
-     \DisplayProof
-   \end{center}
-
-** (co)data definition
-   The rule
-   \begin{prooftree}
-   \AxiomC{$\sigma_k:\Gamma_k\triangleright\Gamma$}
-   \AxiomC{$\Theta,X:\Gamma\rat*|\Gamma_k\vdash A_k:*$}
-   \RightLabel{(\textbf{FP-Ty})}
-   \BinaryInfC{$\Theta | \emptyset \vdash \rho(X : \Gamma \rat *;\vv{\sigma};\vv{A}):\Gamma\rat *$}
-   \end{prooftree}
-   gets rewritten to
-   \begin{prooftree}
-   \AxiomC{$\sigma_k:\Gamma_k\triangleright\Gamma$}
-   \AxiomC{$\Theta,X:\Gamma\rat*|\Gamma_k\vdash A_k:*$}
-   \RightLabel{(\textbf{FP-Ty})}
-   \BinaryInfC{$\Theta | $\colorbox{gray}{$\Gamma_1$} $\vdash$ data X $\Gamma$ -> Set where; $\vv{Constr_k : \Gamma_k\text{ -> }A_k\text{ -> }X \sigma_k}$}
-   \end{prooftree}
-   and
-   \begin{prooftree}
-   \AxiomC{$\sigma_k:\Gamma_k\triangleright\Gamma$}
-   \AxiomC{$\Theta,X:\Gamma\rat*|\Gamma_k\vdash A_k:*$}
-   \RightLabel{(\textbf{FP-Ty})}
-   \BinaryInfC{$\Theta |$\colorbox{gray}{$\Gamma_1$} $ \vdash$ codata X $\Gamma$ -> Set where; $\vv{Destr_k : \Gamma_k \text{ -> } X \sigma_k \text{ -> } A_k}$}
-   \end{prooftree}
-
-** Unit expression introduction
-   The rule
-   \begin{center}
-     \AxiomC{}
-     \RightLabel{\textbf{(}$\top$\textbf{-I)}}
-     \UnaryInfC{$\lozenge:\top$}
-     \DisplayProof
-   \end{center}
-   get rewritten to
-   \begin{center}
-     \AxiomC{}
-     \RightLabel{\textbf{(}$\top$\textbf{-I)}}
-     \UnaryInfC{():Unit}
-     \DisplayProof
-   \end{center}
-
-** Expression Instantiation
-   The rule
-   \begin{center}
-     \AxiomC{$\Gamma_1\vdash t:(x:A,\Gamma_2)\rat B$}
-     \AxiomC{$\Gamma_1\vdash s:A$}
-     \RightLabel{\textbf{(Inst)}}
-     \BinaryInfC{$\Gamma_1\vdash t@s:\Gamma_2[s/x]\rat B[s/x]$}
-     \DisplayProof
-   \end{center}
-   gets rewritten to
-   \begin{center}
-     \AxiomC{$\Gamma_1\vdash t:(x:A,\Gamma_2)\rat B$}
-     \AxiomC{$\Gamma_1\vdash s:$\colorbox{gray}{$A'$}}
-     \AxiomC{\colorbox{gray}{$A\equiv_\beta A'$}}
-     \RightLabel{\textbf{(Inst)}}
-     \TrinaryInfC{$\Gamma_1\vdash t@s:\Gamma_2[s/x]\rat B[s/x]$}
-     \DisplayProof
-   \end{center}
-
-** Expression variable introduction
-   The rule
-   \begin{center}
-     \AxiomC{$\Gamma\vdash A:*$}
-     \RightLabel{\textbf{(Proj)}}
-     \UnaryInfC{$\Gamma,x:A\vdash x:A$}
-     \DisplayProof
-   \end{center}
-   gets rewritten to
-   \begin{center}
-     \AxiomC{\colorbox{gray}{$\Gamma(x)\rightsquigarrow A$}}
-     \RightLabel{\textbf{(Proj)}}
-     \UnaryInfC{$\Sigma|\Theta|\Gamma\vdash x:A$}
-     \DisplayProof
-   \end{center}
-
-
-** Constructor
-   The rule
-   \begin{center}
-     \AxiomC{$\mu(X:\Gamma\rat*;\vv{\sigma};\vv{A}):\Gamma\rat*$}
-     \AxiomC{$1\leq k\leq|\vv{A}|$}
-     \RightLabel{\textbf{(Ind-I)}}
-     \BinaryInfC{$\vdash\alpha_k^{\mu(X:\Gamma\rat*;\vv{\sigma};\vv{A})}:(\Gamma_k,y:A_k[\mu/X])\rat\mu@\sigma_k$}
-     \DisplayProof
-   \end{center}
-   gets rewritten to
-   \begin{center}
-     \AxiomC{\colorbox{gray}{$\Sigma$(Constr)$\rightsquigarrow(\Gamma_k,y:A_k[\mu/X])\rat\mu@\sigma_k$}}
-     \RightLabel{\textbf{(Ind-I)}}
-     \UnaryInfC{\colorbox{gray}{$\Sigma|\Theta|\Gamma$}$\vdash$Constr$:(\Gamma_k,y:A_k[\mu/X])\rat\mu@\sigma_k$}
-     \DisplayProof
-   \end{center}
-
-
-** Destructor
-   The rule
-   \begin{center}
-     \AxiomC{$\nu(X:\Gamma\rat*;\vv{\sigma};\vv{A}):\Gamma\rat*$}
-     \AxiomC{$1\leq k\leq|\vv{A}|$}
-     \RightLabel{\textbf{(Coind-E)}}
-     \BinaryInfC{$\vdash\xi_k^{\nu(X;\Gamma\rat*;\vv{\sigma};\vv{A})}:(\Gamma_k,y:\nu@\sigma_k)\rat
-       A_k[\nu/X]$}
-     \DisplayProof
-   \end{center}
-   gets rewritten to
-   \begin{center}
-     \AxiomC{\colorbox{gray}{$\Sigma$(Destr)$\rightsquigarrow(\Gamma_k,y:\nu@\sigma_k)\rightarrow
-       A_k[\nu/X]$}}
-     \RightLabel{\textbf{(Ind-I)}}
-     \UnaryInfC{\colorbox{gray}{$\Sigma|\Theta|\Gamma$}$\vdash$Destr$:(\Gamma_k,y:\nu@\sigma_k)\rat
-       A_k[\nu/X]$}
-     \DisplayProof
-   \end{center}
-
-
-** Recursion
-   \begin{center}
-     \AxiomC{$\vdash C:\Gamma\rat*$}
-     \AxiomC{$\Delta,\Gamma_k,y_k:A_k[C/X]\vdash g_k:(C@\sigma_k)$}
-     \AxiomC{$\forall k=1,\dots,n$}
-     \RightLabel{\textbf{(Ind-E)}}
-     \TrinaryInfC{$\Delta\vdash$ rec
-       $\vv{(\Gamma_k,y_k).g_k}:(\Gamma,y:\mu@id_\Gamma)\rat C@id_\Gamma$}
-     \DisplayProof
-   \end{center}
-
-   \begin{prooftree}
-     \AxiomC{$\vdash C:\Gamma\rat*$}
-     \AxiomC{\colorbox{gray}{$\vv{\vdash B_k\equiv_\beta(C@\sigma_k)}$}}
-     \AxiomC{\colorbox{gray}{$\vv{\Sigma \vdash\text{Constr}_k:(\Gamma_k,y:A_k[\mu/X])\rat\mu@\sigma_k}$}}
-     \noLine
-     \UnaryInfC{$\vv{\Delta,\Gamma_k,y_k:A_k[C/X]\vdash g_k:\text{\colorbox{gray}{$B_k$}}}$}
-     \RightLabel{\textbf{(Ind-E)}}
-     \TrinaryInfC{\colorbox{gray}{$\Sigma|\Theta|$}$\Delta\vdash$ rec \colorbox{gray}{$\mu$ to C};
-       $\vv{\text{Constr}_k\vv{x_k}\text{ } y_k = g_k}:(\Gamma,y:\mu@id_\Gamma)\rat C@id_\Gamma$}
+      \AxiomC{$\Theta|\Gamma_1\vdash A:(x:B,\Gamma_2)\rat*$}
+      \AxiomC{$\Gamma_1\vdash t:B$}
+      \BinaryInfC{$\Theta|\Gamma_1\vdash A@t:\Gamma_2[t/x]\rat*$}
+    \end{prooftree}
+    gets rewritten to
+     \begin{prooftree}
+      \AxiomC{$\Theta|\Gamma_1\vdash A:(x:B,\Gamma_2)\rat*$}
+      \AxiomC{$\Gamma_1\vdash t:$\colorbox{gray}{$B'$}}
+      \AxiomC{\colorbox{gray}{$B\equiv_\beta B'$}}
+      \TrinaryInfC{$\Theta|\Gamma_1\vdash A@t:\Gamma_2[t/x]\rat*$}
     \end{prooftree}
 
 
-** Corecursion
-   \begin{center}
-     \AxiomC{$\vdash C:\Gamma\rat*$}
-     \AxiomC{$\Delta,\Gamma_k,y_k:(C@\sigma_k)\vdash g_k:A_k[C/X]$}
-     \AxiomC{$\forall k=1,\dots,n$}
-     \RightLabel{\textbf{(Coind-I)}}
-     \TrinaryInfC{$\Delta\vdash$ corec
-       $\vv{(\Gamma_k,y_k).g_k}:(\Gamma,y:C@id_\Gamma)\rat \nu@id_\Gamma$}
-     \DisplayProof
-   \end{center}
+*** Parameter abstraction
+    The rule
+    \begin{center}
+      \AxiomC{$\Theta|\Gamma_1,x:A\vdash B:\Gamma_2\rat*$}
+      \RightLabel{\textbf{(Param-Abstr)}}
+      \UnaryInfC{$\Theta|\Gamma_1\vdash(x).B:(x:A,\Gamma_2)\rat*$}
+      \DisplayProof
+    \end{center}
+    gets rewritten to
+    \begin{center}
+      \AxiomC{$\Theta|\Gamma_1,x:A\vdash B:\Gamma_2\rat*$}
+      \RightLabel{\textbf{(Param-Abstr)}}
+      \UnaryInfC{$\Theta|\Gamma_1\vdash(x$\colorbox{gray}{$:A$}$).B:(x:A,\Gamma_2)\rat*$}
+      \DisplayProof
+    \end{center}
 
-   \begin{prooftree}
-     \AxiomC{$\vdash C:\Gamma\rat*$}
-     \AxiomC{\colorbox{gray}{$\vv{\vdash B_k\equiv_\beta A_k[C/X]}$}}
-     \AxiomC{\colorbox{gray}{$\vv{\Sigma \vdash\text{Destr}_k:(\Gamma_k,y:\nu@\sigma_k)\rat
-       A_k[\nu/X]}$}}
-     \noLine
-     \UnaryInfC{$\vv{\Delta,\Gamma_k,y_k:(\Gamma_k,y:(C@\sigma_k))\vdash g_k:\text{\colorbox{gray}{$B_k$}}}$}
-     \RightLabel{\textbf{(Coind-I)}}
-     \TrinaryInfC{\colorbox{gray}{$\Sigma|\Theta|$}$\Delta\vdash$ rec \colorbox{gray}{C to $\nu$};
-       $\vv{\text{Destr}_k\vv{x_k}\text{ } y_k = g_k}:(\Gamma,y:C@id_\Gamma)\rat \nu@id_\Gamma$}
+*** (co)data definition
+    The rule
+    \begin{prooftree}
+    \AxiomC{$\sigma_k:\Gamma_k\triangleright\Gamma$}
+    \AxiomC{$\Theta,X:\Gamma\rat*|\Gamma_k\vdash A_k:*$}
+    \RightLabel{(\textbf{FP-Ty})}
+    \BinaryInfC{$\Theta | \emptyset \vdash \rho(X : \Gamma \rat *;\vv{\sigma};\vv{A}):\Gamma\rat *$}
+    \end{prooftree}
+    gets rewritten to
+    \begin{prooftree}
+    \AxiomC{$\sigma_k:\Gamma_k\triangleright\Gamma$}
+    \AxiomC{$\Theta,X:\Gamma\rat*|\Gamma_k\vdash A_k:*$}
+    \RightLabel{(\textbf{FP-Ty})}
+    \BinaryInfC{$\Theta | $\colorbox{gray}{$\Gamma_1$} $\vdash$ data X $\Gamma$ -> Set where; $\vv{Constr_k : \Gamma_k\text{ -> }A_k\text{ -> }X \sigma_k}$}
+    \end{prooftree}
+    and
+    \begin{prooftree}
+    \AxiomC{$\sigma_k:\Gamma_k\triangleright\Gamma$}
+    \AxiomC{$\Theta,X:\Gamma\rat*|\Gamma_k\vdash A_k:*$}
+    \RightLabel{(\textbf{FP-Ty})}
+    \BinaryInfC{$\Theta |$\colorbox{gray}{$\Gamma_1$} $ \vdash$ codata X $\Gamma$ -> Set where; $\vv{Destr_k : \Gamma_k \text{ -> } X \sigma_k \text{ -> } A_k}$}
     \end{prooftree}
 
-* Type Actions
-  \begin{definition}
-    Let $n \in \mathbb{N}$ and $1 \leq i \leq n$.
-    Let:
-    \begin{align*}
-      X_1 : \Gamma_1 \rat \ast,\ldots,X_n : \Gamma_n \rat \ast\ |\ \Gamma' \vdash C : \Gamma \rat \ast \\
-      \Gamma_i \vdash A_i : \ast \\
-      \Gamma_i \vdash B_i : \ast \\
-      \Gamma_i, x : \square \vdash t_i : \square \\
-      \Gamma_i, x : A_i \vdash t_i : B_i
-    \end{align*}
-    Then we define the type action on terms inductively over $C$
-    \begin{align*}
-      \begin{array}{ll}
-        \widehat{C}(\vv{t},t_{n+1}) = \widehat{C}(\vv{t})
-        &\text{for \textbf{(TyVarWeak)}}\\
-        \widehat{X_i}(\vv{t})=t_i\\
-        \widehat{C'@s}(\vv{t})=\widehat{C'}(\vv{t})[s/y],
-        &\text{for }\Theta\mid\Gamma'\vdash C':(y,\Gamma)\rat*\\
-        \widehat{(y).C'}(\vv{t})=\widehat{C'}(\vv{t}),
-        &\text{for }\Theta\mid(\Gamma',y)\vdash C':\Gamma\rat*\\
-        \widehat{\mu(Y:\Gamma\rat*;\vv{\sigma};\vv{D}} =\text{rec}^{R_A}\vv{(\Delta_k,x).g_k}@\id{\Gamma}@x
-        &\text{for } \Theta,Y:\Gamma\rat*\mid\Delta_k\vdash D_k:*\\
-        \quad\text{with } g_k = \alpha_k^{R_B}@\id{\Delta_k}@\left(\widehat{D_k}(\vv{t},x)\right)\\
-        \quad\text{and } R_A=\mu(Y:\Gamma\rat*;\vv{\sigma};\vv{D}[\vv{(\Gamma_i).A}/\vv{X}])\\
-        \quad\text{and } R_B=\mu(Y:\Gamma\rat*;\vv{\sigma};\vv{D}[\vv{(\Gamma_i).B}/\vv{X}])\\
-        \widehat{\nu(Y:\Gamma\rat*;\vv{\sigma};\vv{D}} =\text{corec}^{R_B}\vv{(\Delta_k,x).g_k}@\id{\Gamma}@x
-        &\text{for } \Theta,Y:\Gamma\rat*\mid\Delta_k\vdash D_k:*\\
-        \quad\text{with } g_k = \widehat{D_k}(\vv{t},x)[(\xi_k^{R_A}@\id{\Delta_k}@x)/x]\\
-        \quad\text{and } R_A=\mu(Y:\Gamma\rat*;\vv{\sigma};\vv{D}[\vv{(\Gamma_i).A}/\vv{X}])\\
-        \quad\text{and } R_B=\mu(Y:\Gamma\rat*;\vv{\sigma};\vv{D}[\vv{(\Gamma_i).B}/\vv{X}])\\
-      \end{array}
-    \end{align*}
-  \end{definition}
-  #+NAME: abstrid
-  #+begin_theorem
-   $(\Gamma).A@\id{\Gamma}\leftrightarrow_T A$
-  #+end_theorem
-  #+begin_proof
-    We show this by induction on the length of $\Gamma$
-    + $\Gamma=\epsilon$:
-      \begin{equation*}
-         A \longleftrightarrow_T A
-      \end{equation*}
-    + $\Gamma=x:B,\Gamma'$:
-      \begin{equation*}
-        (x:B,\Gamma').A@x@\id{\Gamma'}
-        \longrightarrow_p(\Gamma').A@\id{\Gamma'}[x/x]
-        = (\Gamma').A@\id{\Gamma'} \overset{IdH.}{\longleftrightarrow_T}A
-      \end{equation*}
-  #+end_proof
-  #+NAME: ctxconv
-  #+begin_theorem
-   The following rule holds
-   \begin{prooftree}
-   \AxiomC{$x:A\vdash t:B$}
-   \AxiomC{$A\longleftrightarrow_TA'$}
-   \BinaryInfC{$x:A'\vdash t:B$}
-   \end{prooftree}
-  #+end_theorem
-  #+begin_proof
-    We show this by induction on t
-  #+end_proof
-  #+begin_theorem
-  The typeing rule (5) in the paper holds
-  \begin{prooftree}
-    \AxiomC{$X:\Gamma_1\rat*\mid\Gamma_2'\vdash C:\Gamma_2\rat*$}
-    \AxiomC{$\Gamma_1,x:A\vdash t:B$}
-    \BinaryInfC{$\Gamma_2',\Gamma_2,x:\widehat{C}(A)\vdash\widehat{C}(t):\widehat{C}(B) $}
-  \end{prooftree}
-  #+end_theorem
-  #+begin_proof
-  First we will generalize the rule to
-  \begin{prooftree}
-    \AxiomC{$X_1:\Gamma_1\rat*,\dots,X_n:\Gamma_n\rat*\mid\Gamma_2'\vdash C:\Gamma_2\rat*$}
-    \AxiomC{$\Gamma_i,x:A_i\vdash t_i:B_i$}
-    \BinaryInfC{$\Gamma_2',\Gamma_2,x:\widehat{C}(\vv{A})\vdash\widehat{C}(\vv{t}):\widehat{C}(\vv{B}) $}
-  \end{prooftree}
-  Then we gonna show it by Induction on $C$
-  + $C=\top:$
+*** Unit expression introduction
+    The rule
+    \begin{center}
+      \AxiomC{}
+      \RightLabel{\textbf{(}$\top$\textbf{-I)}}
+      \UnaryInfC{$\lozenge:\top$}
+      \DisplayProof
+    \end{center}
+    get rewritten to
+    \begin{center}
+      \AxiomC{}
+      \RightLabel{\textbf{(}$\top$\textbf{-I)}}
+      \UnaryInfC{():Unit}
+      \DisplayProof
+    \end{center}
 
-    Then the type actions got calculated as follows
-    \begin{align*}
-      &\widehat{\top}(A) = \top[(\Gamma_1).A/X] = \top\\
-      &\widehat{\top}(t) = \widehat{\top}() = x\\
-      &\widehat{\top}(B) = \top[(\Gamma_1).B/X] = \top
-    \end{align*}
-    We than got the following prooftree
-    \begin{prooftree}
-      \AxiomC{$X:\Gamma_1\rat* \mid \Gamma_2'\vdash\top:*$}
-      \RightLabel{\textbf{(TyVarWeak)}}
-      \UnaryInfC{$\Gamma_2'\vdash\top:*$}
+*** Expression Instantiation
+    The rule
+    \begin{center}
+      \AxiomC{$\Gamma_1\vdash t:(x:A,\Gamma_2)\rat B$}
+      \AxiomC{$\Gamma_1\vdash s:A$}
+      \RightLabel{\textbf{(Inst)}}
+      \BinaryInfC{$\Gamma_1\vdash t@s:\Gamma_2[s/x]\rat B[s/x]$}
+      \DisplayProof
+    \end{center}
+    gets rewritten to
+    \begin{center}
+      \AxiomC{$\Gamma_1\vdash t:(x:A,\Gamma_2)\rat B$}
+      \AxiomC{$\Gamma_1\vdash s:$\colorbox{gray}{$A'$}}
+      \AxiomC{\colorbox{gray}{$A\equiv_\beta A'$}}
+      \RightLabel{\textbf{(Inst)}}
+      \TrinaryInfC{$\Gamma_1\vdash t@s:\Gamma_2[s/x]\rat B[s/x]$}
+      \DisplayProof
+    \end{center}
+
+*** Expression variable introduction
+    The rule
+    \begin{center}
+      \AxiomC{$\Gamma\vdash A:*$}
       \RightLabel{\textbf{(Proj)}}
-      \UnaryInfC{$\Gamma_2',x:\top\vdash x:\top$}
-    \end{prooftree}
-  + $C=X_i$:
+      \UnaryInfC{$\Gamma,x:A\vdash x:A$}
+      \DisplayProof
+    \end{center}
+    gets rewritten to
+    \begin{center}
+      \AxiomC{\colorbox{gray}{$\Gamma(x)\rightsquigarrow A$}}
+      \RightLabel{\textbf{(Proj)}}
+      \UnaryInfC{$\Sigma|\Theta|\Gamma\vdash x:A$}
+      \DisplayProof
+    \end{center}
 
-    Again we calculate the type actions
-    \begin{align*}
-      &\widehat{X_i}(A_i) = \top[(\Gamma_1).A_i/X] = (\Gamma_i).A_i@\id{\Gamma_1}\\
-      &\widehat{X_i}(\vv{t}) = t_i\\
-      &\widehat{X_i}(B_i) = \top[(\Gamma_1).B/X] = (\Gamma_i).B_i@\id{\Gamma_1}
-    \end{align*}
-    We know from the first premise that $\Gamma_1=\Gamma_2$
 
-    Here we got the prooftree
+*** Constructor
+    The rule
+    \begin{center}
+      \AxiomC{$\mu(X:\Gamma\rat*;\vv{\sigma};\vv{A}):\Gamma\rat*$}
+      \AxiomC{$1\leq k\leq|\vv{A}|$}
+      \RightLabel{\textbf{(Ind-I)}}
+      \BinaryInfC{$\vdash\alpha_k^{\mu(X:\Gamma\rat*;\vv{\sigma};\vv{A})}:(\Gamma_k,y:A_k[\mu/X])\rat\mu@\sigma_k$}
+      \DisplayProof
+    \end{center}
+    gets rewritten to
+    \begin{center}
+      \AxiomC{\colorbox{gray}{$\Sigma$(Constr)$\rightsquigarrow(\Gamma_k,y:A_k[\mu/X])\rat\mu@\sigma_k$}}
+      \RightLabel{\textbf{(Ind-I)}}
+      \UnaryInfC{\colorbox{gray}{$\Sigma|\Theta|\Gamma$}$\vdash$Constr$:(\Gamma_k,y:A_k[\mu/X])\rat\mu@\sigma_k$}
+      \DisplayProof
+    \end{center}
+
+
+*** Destructor
+    The rule
+    \begin{center}
+      \AxiomC{$\nu(X:\Gamma\rat*;\vv{\sigma};\vv{A}):\Gamma\rat*$}
+      \AxiomC{$1\leq k\leq|\vv{A}|$}
+      \RightLabel{\textbf{(Coind-E)}}
+      \BinaryInfC{$\vdash\xi_k^{\nu(X;\Gamma\rat*;\vv{\sigma};\vv{A})}:(\Gamma_k,y:\nu@\sigma_k)\rat
+        A_k[\nu/X]$}
+      \DisplayProof
+    \end{center}
+    gets rewritten to
+    \begin{center}
+      \AxiomC{\colorbox{gray}{$\Sigma$(Destr)$\rightsquigarrow(\Gamma_k,y:\nu@\sigma_k)\rightarrow
+        A_k[\nu/X]$}}
+      \RightLabel{\textbf{(Ind-I)}}
+      \UnaryInfC{\colorbox{gray}{$\Sigma|\Theta|\Gamma$}$\vdash$Destr$:(\Gamma_k,y:\nu@\sigma_k)\rat
+        A_k[\nu/X]$}
+      \DisplayProof
+    \end{center}
+
+
+*** Recursion
+    \begin{center}
+      \AxiomC{$\vdash C:\Gamma\rat*$}
+      \AxiomC{$\Delta,\Gamma_k,y_k:A_k[C/X]\vdash g_k:(C@\sigma_k)$}
+      \AxiomC{$\forall k=1,\dots,n$}
+      \RightLabel{\textbf{(Ind-E)}}
+      \TrinaryInfC{$\Delta\vdash$ rec
+        $\vv{(\Gamma_k,y_k).g_k}:(\Gamma,y:\mu@id_\Gamma)\rat C@id_\Gamma$}
+      \DisplayProof
+    \end{center}
+
     \begin{prooftree}
-    \AxiomC{$\Gamma_2,x:A\vdash t:B$}
-    \UnaryInfC{$\Gamma_2',\Gamma_2,x:A\vdash t:B$}
-    \AxiomC{}
-    \RightLabel{Thrm. \ref{abstrid}}
-    \UnaryInfC{$A\longleftrightarrow_T(\Gamma_1).A@\id{\Gamma_1}$}
-    \RightLabel{Thrm. \ref{ctxconv}}
-    \BinaryInfC{$\Gamma_2',\Gamma_2,x:(\Gamma_1).A@\id{\Gamma_1}\vdash t:B$}
-    \AxiomC{}
-    \RightLabel{Thrm. \ref{abstrid}}
-    \UnaryInfC{$B\longleftrightarrow_T(\Gamma_1).B@\id{\Gamma_1}$}
-    \RightLabel{Conv}
-    \BinaryInfC{$\Gamma_2',\Gamma_2,x:(\Gamma_1).A@\id{\Gamma_1}\vdash t:(\Gamma_1).B@\id{\Gamma_1}$}
-    \end{prooftree}
-  + $C=Y$ with $Y\neq X$:
+      \AxiomC{$\vdash C:\Gamma\rat*$}
+      \AxiomC{\colorbox{gray}{$\vv{\vdash B_k\equiv_\beta(C@\sigma_k)}$}}
+      \AxiomC{\colorbox{gray}{$\vv{\Sigma \vdash\text{Constr}_k:(\Gamma_k,y:A_k[\mu/X])\rat\mu@\sigma_k}$}}
+      \noLine
+      \UnaryInfC{$\vv{\Delta,\Gamma_k,y_k:A_k[C/X]\vdash g_k:\text{\colorbox{gray}{$B_k$}}}$}
+      \RightLabel{\textbf{(Ind-E)}}
+      \TrinaryInfC{\colorbox{gray}{$\Sigma|\Theta|$}$\Delta\vdash$ rec \colorbox{gray}{$\mu$ to C};
+        $\vv{\text{Constr}_k\vv{x_k}\text{ } y_k = g_k}:(\Gamma,y:\mu@id_\Gamma)\rat C@id_\Gamma$}
+     \end{prooftree}
 
-    The first premise doesn't hold
-  + $C=C'@s$:
 
-    $C'$ has to be of type $(y:D,\Gamma_2)\rat *$ for some $y$ and $D$
-    where $s:D$
+*** Corecursion
+    \begin{center}
+      \AxiomC{$\vdash C:\Gamma\rat*$}
+      \AxiomC{$\Delta,\Gamma_k,y_k:(C@\sigma_k)\vdash g_k:A_k[C/X]$}
+      \AxiomC{$\forall k=1,\dots,n$}
+      \RightLabel{\textbf{(Coind-I)}}
+      \TrinaryInfC{$\Delta\vdash$ corec
+        $\vv{(\Gamma_k,y_k).g_k}:(\Gamma,y:C@id_\Gamma)\rat \nu@id_\Gamma$}
+      \DisplayProof
+    \end{center}
 
-    Then we got the following induction hypothesis
     \begin{prooftree}
-      \AxiomC{$X_1:\Gamma_1\rat*,\dots,X_n:\Gamma_n\rat*\mid\Gamma_2'\vdash C':(y:D,\Gamma_2)\rat*$}
-      \AxiomC{$\Gamma_i,x:A_i\vdash t_i:B_i$}
-      \BinaryInfC{$\Gamma_2',y:D,\Gamma_2,x:\widehat{C'}(\vv{A})\vdash\widehat{C'}(\vv{t}):\widehat{C'}(\vv{B}) $}
-    \end{prooftree}
+      \AxiomC{$\vdash C:\Gamma\rat*$}
+      \AxiomC{\colorbox{gray}{$\vv{\vdash B_k\equiv_\beta A_k[C/X]}$}}
+      \AxiomC{\colorbox{gray}{$\vv{\Sigma \vdash\text{Destr}_k:(\Gamma_k,y:\nu@\sigma_k)\rat
+        A_k[\nu/X]}$}}
+      \noLine
+      \UnaryInfC{$\vv{\Delta,\Gamma_k,y_k:(\Gamma_k,y:(C@\sigma_k))\vdash g_k:\text{\colorbox{gray}{$B_k$}}}$}
+      \RightLabel{\textbf{(Coind-I)}}
+      \TrinaryInfC{\colorbox{gray}{$\Sigma|\Theta|$}$\Delta\vdash$ rec \colorbox{gray}{C to $\nu$};
+        $\vv{\text{Destr}_k\vv{x_k}\text{ } y_k = g_k}:(\Gamma,y:C@id_\Gamma)\rat \nu@id_\Gamma$}
+     \end{prooftree}
 
-    Calculated type actions:
-    \begin{align*}
-      &\widehat{C'@s}(\vv{A})=C'@s[\vv{(\Gamma_i).A}/\vv{X}]@\id{\Gamma_2}=C'[\vv{(\Gamma_i).A}/\vv{X}]@s@\id{\Gamma_2}
-      =\widehat{C'}(\vv{A})[s/y]\\
-      &\widehat{C'@s}(\vv{t})=\widehat{C'}(\vv{t})[s/y]\\
-      &\widehat{C'@s}(\vv{B})=C'@s[\vv{(\Gamma_i).B}/\vv{X}]@\id{\Gamma_2}=C'[\vv{(\Gamma_i).B}/\vv{X}]@s@\id{\Gamma_2}
-      =\widehat{C'}(\vv{B})[s/y]\\
-    \end{align*}
-
-    We then got the following prooftree
+** Type Actions
+   \begin{definition}
+     Let $n \in \mathbb{N}$ and $1 \leq i \leq n$.
+     Let:
+     \begin{align*}
+       X_1 : \Gamma_1 \rat \ast,\ldots,X_n : \Gamma_n \rat \ast\ |\ \Gamma' \vdash C : \Gamma \rat \ast \\
+       \Gamma_i \vdash A_i : \ast \\
+       \Gamma_i \vdash B_i : \ast \\
+       \Gamma_i, x : \square \vdash t_i : \square \\
+       \Gamma_i, x : A_i \vdash t_i : B_i
+     \end{align*}
+     Then we define the type action on terms inductively over $C$
+     \begin{align*}
+       \begin{array}{ll}
+         \widehat{C}(\vv{t},t_{n+1}) = \widehat{C}(\vv{t})
+         &\text{for \textbf{(TyVarWeak)}}\\
+         \widehat{X_i}(\vv{t})=t_i\\
+         \widehat{C'@s}(\vv{t})=\widehat{C'}(\vv{t})[s/y],
+         &\text{for }\Theta\mid\Gamma'\vdash C':(y,\Gamma)\rat*\\
+         \widehat{(y).C'}(\vv{t})=\widehat{C'}(\vv{t}),
+         &\text{for }\Theta\mid(\Gamma',y)\vdash C':\Gamma\rat*\\
+         \widehat{\mu(Y:\Gamma\rat*;\vv{\sigma};\vv{D}} =\text{rec}^{R_A}\vv{(\Delta_k,x).g_k}@\id{\Gamma}@x
+         &\text{for } \Theta,Y:\Gamma\rat*\mid\Delta_k\vdash D_k:*\\
+         \quad\text{with } g_k = \alpha_k^{R_B}@\id{\Delta_k}@\left(\widehat{D_k}(\vv{t},x)\right)\\
+         \quad\text{and } R_A=\mu(Y:\Gamma\rat*;\vv{\sigma};\vv{D}[\vv{(\Gamma_i).A}/\vv{X}])\\
+         \quad\text{and } R_B=\mu(Y:\Gamma\rat*;\vv{\sigma};\vv{D}[\vv{(\Gamma_i).B}/\vv{X}])\\
+         \widehat{\nu(Y:\Gamma\rat*;\vv{\sigma};\vv{D}} =\text{corec}^{R_B}\vv{(\Delta_k,x).g_k}@\id{\Gamma}@x
+         &\text{for } \Theta,Y:\Gamma\rat*\mid\Delta_k\vdash D_k:*\\
+         \quad\text{with } g_k = \widehat{D_k}(\vv{t},x)[(\xi_k^{R_A}@\id{\Delta_k}@x)/x]\\
+         \quad\text{and } R_A=\mu(Y:\Gamma\rat*;\vv{\sigma};\vv{D}[\vv{(\Gamma_i).A}/\vv{X}])\\
+         \quad\text{and } R_B=\mu(Y:\Gamma\rat*;\vv{\sigma};\vv{D}[\vv{(\Gamma_i).B}/\vv{X}])\\
+       \end{array}
+     \end{align*}
+   \end{definition}
+   #+NAME: abstrid
+   #+begin_theorem
+    $(\Gamma).A@\id{\Gamma}\leftrightarrow_T A$
+   #+end_theorem
+   #+begin_proof
+     We show this by induction on the length of $\Gamma$
+     + $\Gamma=\epsilon$:
+       \begin{equation*}
+          A \longleftrightarrow_T A
+       \end{equation*}
+     + $\Gamma=x:B,\Gamma'$:
+       \begin{equation*}
+         (x:B,\Gamma').A@x@\id{\Gamma'}
+         \longrightarrow_p(\Gamma').A@\id{\Gamma'}[x/x]
+         = (\Gamma').A@\id{\Gamma'} \overset{IdH.}{\longleftrightarrow_T}A
+       \end{equation*}
+   #+end_proof
+   #+NAME: ctxconv
+   #+begin_theorem
+    The following rule holds
     \begin{prooftree}
-      \AxiomC{$X_1:\Gamma_1\rat*,\dots,X_n\rat*\mid\Gamma_2'\vdash C'@s:\Gamma_2[s/y]\rat*$}
-      \RightLabel{(*)}
-      \UnaryInfC{$X_1:\Gamma_1\rat*,\dots,X_n:\Gamma_n\rat*\mid\Gamma_2'\vdash C':(y:D,\Gamma_2)\rat*$}
-      \AxiomC{$\Gamma_i,x:A_i\vdash t_i:B_i$}
-      \RightLabel{IdH.}
-      \BinaryInfC{$\Gamma_2',y:D,\Gamma_2,x:\widehat{C'}(\vv{A})\vdash\widehat{C'}(\vv{t}):\widehat{C'}(\vv{B}) $}
-      \UnaryInfC{$\Gamma_2',\Gamma_2[s/y],x:\widehat{C'}(\vv{A})[s/y]\vdash\widehat{C'}(\vv{t})[s/y]:\widehat{C'}(\vv{B})[s/y] $}
+    \AxiomC{$x:A\vdash t:B$}
+    \AxiomC{$A\longleftrightarrow_TA'$}
+    \BinaryInfC{$x:A'\vdash t:B$}
     \end{prooftree}
-    (=*=) This is the reverse of *(Ty-Inst)*.  We can do this because without the Conclusion as premise
-    we can't infer the premise
-
-  + $C=(y).C'$:
-
-    Calculated type actions:
-    \begin{align*}
-      \widehat{(y).C'}(\vv{A})&=(y).C'[\vv{(\Gamma_i.A)}/\vv{X}]@\id{\Gamma_2}\\
-                         &=(y).(C'[\vv{(\Gamma_i.A)}/\vv{X}])@y@\id{\Gamma_2}\\
-                         &\longleftrightarrow_T(C'[\vv{(\Gamma_i.A)}/\vv{X}])@\id{\Gamma_2}\\
-                         &=\widehat{C'}(\vv{A})\\
-      \widehat{(y).C'}(\vv{t})&=\widehat{C'}(\vv{t})\\
-      \widehat{(y).C'}(\vv{B})&=(y).C'[\vv{(\Gamma_i.B)}/\vv{X}]@\id{\Gamma_2}\\
-                         &=(y).(C'[\vv{(\Gamma_i.B)}/\vv{X}])@y@\id{\Gamma_2}\\
-                         &\longleftrightarrow_T(C'[\vv{(\Gamma_i.B)}/\vv{X}])@\id{\Gamma_2}\\
-                         &=\widehat{C'}(\vv{B})\\
-    \end{align*}
-
-    We have to prove the following
-    \begin{prooftree}
-      \AxiomC{$X_1:\Gamma_1\rat*,\dots,X_n:\Gamma_n\rat*\mid\Gamma_2'\vdash (y).C':(y:D,\Gamma_2)\rat*$}
-      \RightLabel{(*)}
-      \UnaryInfC{$X_1:\Gamma_1\rat*,\dots,X_n:\Gamma_n\rat*\mid\Gamma_2'\vdash C':\Gamma_2\rat*$}
-      \AxiomC{$\Gamma_i,x:A_i\vdash t_i:B_i$}
-      \RightLabel{IdH.}
-      \BinaryInfC{$\Gamma_2',\Gamma_2,x:\widehat{C'}(\vv{A})\vdash\widehat{C'}(\vv{t}):\widehat{C'}(\vv{B})$}
-    \end{prooftree}
-    (=*=) This is the reverse of *(Abstr)*.  We can do this because without the Conclusion as premise
-    we can't infer the premise
-
-  + $C=\mu(Y:\Gamma_2\rat*;\vv{\sigma};\vv{D})$:
-
-    Calculated type actions:
-    \begin{align*}
-      &\widehat{\mu(Y:\Gamma_2\rat*;\vv{\sigma};\vv{D})}(\vv{A})\\
-      &=\mu(Y:\Gamma_2\rat*;\vv{\sigma};\vv{D})[\vv{(\Gamma_1).A}/\vv{X}]@\id{\Gamma_2}\\
-      &=\mu(Y:\Gamma_2\rat*;\vv{\sigma};\vv{D}[\vv{(\Gamma_1).A}/\vv{X}])@\id{\Gamma_2}\\
-      &\widehat{\mu(Y:\Gamma_2\rat*;\vv{\sigma};\vv{D})}(\vv{t})\\
-      &=\text{rec}^{\mu(Y:\Gamma_2\rat*;\vv{\sigma};\vv{D}[(\Gamma_1).A/X])}\vv{(\Delta_k,x).\alpha_k@\id{\Delta_k}@\widehat{D_k}(\vv{t},x)}@\id{\Gamma_2}@x\\
-      &\widehat{\mu(Y:\Gamma_2\rat*;\vv{\sigma};\vv{D})}(\vv{B})\\
-      &=\mu(Y:\Gamma_2\rat*;\vv{\sigma};\vv{D})[\vv{(\Gamma_1).B}/\vv{X}]@\id{\Gamma_2}\\
-      &=\mu(Y:\Gamma_2\rat*;\vv{\sigma};\vv{D}[\vv{(\Gamma_1).B}/\vv{X}])@\id{\Gamma_2}
-    \end{align*}
-
-   From the assumptions
-    \begin{align*}
-    &X_1:\Gamma_1\rat*,\dots,X_n:\Gamma_n\rat*\mid\Gamma_2'\vdash \mu(Y:\Gamma_2\rat*;\vv{\sigma};\vv{D}):\Gamma_2\rat*\\
-    &\Gamma_i,x:A_i\vdash t_i:B_i
-    \end{align*}
-   We have to proof that in *Ctx*
-   \begin{equation*}
-    \Gamma_2',\Gamma_2,x:\mu(Y:\Gamma_2\rat*;\vv{\sigma};\vv{D}[(\Gamma_1).A/X])@\id{\Gamma_2}
-   \end{equation*}
-   the expression
-   \begin{equation*}
-    \text{rec}^{\mu(Y:\Gamma_2\rat*;\vv{\sigma};\vv{D}[\vv{(\Gamma_i).A}/\vv{X}])}\vv{(\Delta_k,y).\alpha_k@\id{\Delta_k}@\widehat{D_k}(t,y)}@\id{\Gamma_2}@x
-   \end{equation*}
-   has type
-   \begin{equation*}
-   \mu(Y:\Gamma_2\rat*;\vv{\sigma};\vv{D}[\vv{(\Gamma_i).B}/\vv{X}])@\id{\Gamma_2}
-   \end{equation*}
-   We can use the induction hypothesis
+   #+end_theorem
+   #+begin_proof
+     We show this by induction on t
+   #+end_proof
+   #+begin_theorem
+   The typeing rule (5) in the paper holds
    \begin{prooftree}
-     \AxiomC{$X_1:\Gamma_1\rat*,\dots,X_n:\Gamma_n\rat*,Y:\Gamma_{n+1}\rat*\mid\Delta_k\vdash D_k:*$}
+     \AxiomC{$X:\Gamma_1\rat*\mid\Gamma_2'\vdash C:\Gamma_2\rat*$}
+     \AxiomC{$\Gamma_1,x:A\vdash t:B$}
+     \BinaryInfC{$\Gamma_2',\Gamma_2,x:\widehat{C}(A)\vdash\widehat{C}(t):\widehat{C}(B) $}
+   \end{prooftree}
+   #+end_theorem
+   #+begin_proof
+   First we will generalize the rule to
+   \begin{prooftree}
+     \AxiomC{$X_1:\Gamma_1\rat*,\dots,X_n:\Gamma_n\rat*\mid\Gamma_2'\vdash C:\Gamma_2\rat*$}
      \AxiomC{$\Gamma_i,x:A_i\vdash t_i:B_i$}
-     \BinaryInfC{$\Delta_k,x:\widehat{D_k}(\vv{A},A_{n+1})\vdash\widehat{D_k}(\vv{t},y):\widehat{D_k}(\vv{B},B_{n+1}) $}
+     \BinaryInfC{$\Gamma_2',\Gamma_2,x:\widehat{C}(\vv{A})\vdash\widehat{C}(\vv{t}):\widehat{C}(\vv{B}) $}
    \end{prooftree}
-   We than got the following proof
-   \begin{prooftree}
-    \AxiomC{$\Gamma_2',\Gamma_2,x:\widehat{C}(\vv{A}),\Delta_k,y_k:D_k[\mu/X]\vdash\widehat{D_k}(\vv{t},y):D_k[\vv{(\Gamma_i).B}/\vv{X}][(\Gamma_{n+1}).B_{n+1}/Y]$}
-    \UnaryInfC{$\Gamma_2',\Gamma_2,x:\widehat{C}(\vv{A}),\Delta_k,y_k:D_k[\mu/X]\vdash\alpha_k@\id{\Delta_k}@\widehat{D_k}(\vv{t},y):\mu@\sigma_k$}
-    \UnaryInfC{$\Gamma_2',\Gamma_2,x:\widehat{C}(\vv{A})\vdash\widehat{C}(t):\widehat{C}(\vv{B})$}
-   \end{prooftree}
+   Then we gonna show it by Induction on $C$
+   + $C=\top:$
 
-  + $C=\nu(Y:\Gamma\rat*;\vv{\sigma};\vv{D})$:
+     Then the type actions got calculated as follows
+     \begin{align*}
+       &\widehat{\top}(A) = \top[(\Gamma_1).A/X] = \top\\
+       &\widehat{\top}(t) = \widehat{\top}() = x\\
+       &\widehat{\top}(B) = \top[(\Gamma_1).B/X] = \top
+     \end{align*}
+     We than got the following prooftree
+     \begin{prooftree}
+       \AxiomC{$X:\Gamma_1\rat* \mid \Gamma_2'\vdash\top:*$}
+       \RightLabel{\textbf{(TyVarWeak)}}
+       \UnaryInfC{$\Gamma_2'\vdash\top:*$}
+       \RightLabel{\textbf{(Proj)}}
+       \UnaryInfC{$\Gamma_2',x:\top\vdash x:\top$}
+     \end{prooftree}
+   + $C=X_i$:
 
-    Calculated type actions:
-    \begin{align*}
-      &\widehat{\nu(Y:\Gamma_2\rat*;\vv{\sigma};\vv{D})}(\vv{A})\\
-      &=\nu(Y:\Gamma_2\rat*;\vv{\sigma};\vv{D})[\vv{(\Gamma_i).A}/\vv{X}]@\id{\Gamma_2}\\
-      &=\nu(Y:\Gamma_2\rat*;\vv{\sigma};\vv{D}[\vv{(\Gamma_i).A}/\vv{X}])@\id{\Gamma_2}\\
-      &\widehat{\nu(Y:\Gamma_2\rat*;\vv{\sigma};\vv{D})}(\vv{t})\\
-      &=\text{corec}^{\nu(Y:\Gamma_2\rat*;\vv{\sigma};\vv{D}[(\vv{\Gamma_i).B}/\vv{X}])}\vv{(\Delta_k,x)\widehat{D_k}(\vv{t},x)[(\xi_k@\id{\Delta_k}@x)/x]}@\id{\Gamma_2}@x\\
-      &\widehat{\nu(Y:\Gamma_2\rat*;\vv{\sigma};\vv{D})}(\vv{B})\\
-      &=\nu(Y:\Gamma_2\rat*;\vv{\sigma};\vv{D})[\vv{(\Gamma_i).B}/\vv{X}]@\id{\Gamma_2}\\
-      &=\nu(Y:\Gamma_2\rat*;\vv{\sigma};\vv{D}[\vv{(\Gamma_i).B}/\vv{X}])@\id{\Gamma_2}
-    \end{align*}
+     Again we calculate the type actions
+     \begin{align*}
+       &\widehat{X_i}(A_i) = \top[(\Gamma_1).A_i/X] = (\Gamma_i).A_i@\id{\Gamma_1}\\
+       &\widehat{X_i}(\vv{t}) = t_i\\
+       &\widehat{X_i}(B_i) = \top[(\Gamma_1).B/X] = (\Gamma_i).B_i@\id{\Gamma_1}
+     \end{align*}
+     We know from the first premise that $\Gamma_1=\Gamma_2$
 
-   From the assumptions
-    \begin{align*}
-    &X_1:\Gamma_1\rat*,\dots,X_n:\Gamma_n\rat*\mid\Gamma_2'\vdash \nu(Y:\Gamma_2\rat*;\vv{\sigma};\vv{D}):\Gamma_2\rat*\\
-    &\Gamma_i,x:A_i\vdash t_i:B_i
-    \end{align*}
-   We have to proof that in *Ctx*
-   \begin{equation*}
-    \Gamma_2',\Gamma_2,x:\nu(Y:\Gamma_2\rat*;\vv{\sigma};\vv{D}[(\Gamma_1).A/X])@\id{\Gamma_2}
-   \end{equation*}
-   the expression
-   \begin{equation*}
-    \text{corec}^{\nu(Y:\Gamma_2\rat*;\vv{\sigma};\vv{D}[(\vv{\Gamma_i).B}/\vv{X}])}\vv{(\Delta_k,x)\widehat{D_k}(\vv{t},x)[(\xi_k@\id{\Delta_k}@x)/x]}@\id{\Gamma_2}@x\\
-   \end{equation*}
-   has type
-   \begin{equation*}
-   \nu(Y:\Gamma_2\rat*;\vv{\sigma};\vv{D}[\vv{(\Gamma_i).B}/\vv{X}])@\id{\Gamma_2}
-   \end{equation*}
-   We can use the induction hypothesis
-   \begin{prooftree}
-     \AxiomC{$X_1:\Gamma_1\rat*,\dots,X_n:\Gamma_n\rat*,Y:\Gamma_{n+1}\rat*\mid\Delta_k\vdash D_k:*$}
-     \AxiomC{$\Gamma_i,y_k:A_i\vdash t_i:B_i$}
-     \BinaryInfC{$\Delta_k,y_k:\widehat{D_k}(\vv{A},A_{n+1})\vdash\widehat{D_k}(\vv{t},y):\widehat{D_k}(\vv{B},B_{n+1}) $}
-   \end{prooftree}
-   We than got the following proof
-   \begin{prooftree}
-    \AxiomC{$\Gamma_2',\Gamma_2,x:\widehat{C}(\vv{A}),\Delta_k,y_k:\nu@\sigma_k\vdash\widehat{D_k}(\vv{t},x)[(\xi_k@\id{\Delta_k}@x)/x]:D_k[\vv{(\Gamma_i).A}/\vv{X}][\nu/X]$}
-    \UnaryInfC{$\Gamma_2',\Gamma_2,x:\widehat{C}(\vv{A})\vdash\widehat{C}(t):\widehat{C}(\vv{B})$}
-   \end{prooftree}
+     Here we got the prooftree
+     \begin{prooftree}
+     \AxiomC{$\Gamma_2,x:A\vdash t:B$}
+     \UnaryInfC{$\Gamma_2',\Gamma_2,x:A\vdash t:B$}
+     \AxiomC{}
+     \RightLabel{Thrm. \ref{abstrid}}
+     \UnaryInfC{$A\longleftrightarrow_T(\Gamma_1).A@\id{\Gamma_1}$}
+     \RightLabel{Thrm. \ref{ctxconv}}
+     \BinaryInfC{$\Gamma_2',\Gamma_2,x:(\Gamma_1).A@\id{\Gamma_1}\vdash t:B$}
+     \AxiomC{}
+     \RightLabel{Thrm. \ref{abstrid}}
+     \UnaryInfC{$B\longleftrightarrow_T(\Gamma_1).B@\id{\Gamma_1}$}
+     \RightLabel{Conv}
+     \BinaryInfC{$\Gamma_2',\Gamma_2,x:(\Gamma_1).A@\id{\Gamma_1}\vdash t:(\Gamma_1).B@\id{\Gamma_1}$}
+     \end{prooftree}
+   + $C=Y$ with $Y\neq X$:
 
-  #+end_proof
+     The first premise doesn't hold
+   + $C=C'@s$:
 
-\printbibliography
+     $C'$ has to be of type $(y:D,\Gamma_2)\rat *$ for some $y$ and $D$
+     where $s:D$
+
+     Then we got the following induction hypothesis
+     \begin{prooftree}
+       \AxiomC{$X_1:\Gamma_1\rat*,\dots,X_n:\Gamma_n\rat*\mid\Gamma_2'\vdash C':(y:D,\Gamma_2)\rat*$}
+       \AxiomC{$\Gamma_i,x:A_i\vdash t_i:B_i$}
+       \BinaryInfC{$\Gamma_2',y:D,\Gamma_2,x:\widehat{C'}(\vv{A})\vdash\widehat{C'}(\vv{t}):\widehat{C'}(\vv{B}) $}
+     \end{prooftree}
+
+     Calculated type actions:
+     \begin{align*}
+       &\widehat{C'@s}(\vv{A})=C'@s[\vv{(\Gamma_i).A}/\vv{X}]@\id{\Gamma_2}=C'[\vv{(\Gamma_i).A}/\vv{X}]@s@\id{\Gamma_2}
+       =\widehat{C'}(\vv{A})[s/y]\\
+       &\widehat{C'@s}(\vv{t})=\widehat{C'}(\vv{t})[s/y]\\
+       &\widehat{C'@s}(\vv{B})=C'@s[\vv{(\Gamma_i).B}/\vv{X}]@\id{\Gamma_2}=C'[\vv{(\Gamma_i).B}/\vv{X}]@s@\id{\Gamma_2}
+       =\widehat{C'}(\vv{B})[s/y]\\
+     \end{align*}
+
+     We then got the following prooftree
+     \begin{prooftree}
+       \AxiomC{$X_1:\Gamma_1\rat*,\dots,X_n\rat*\mid\Gamma_2'\vdash C'@s:\Gamma_2[s/y]\rat*$}
+       \RightLabel{(*)}
+       \UnaryInfC{$X_1:\Gamma_1\rat*,\dots,X_n:\Gamma_n\rat*\mid\Gamma_2'\vdash C':(y:D,\Gamma_2)\rat*$}
+       \AxiomC{$\Gamma_i,x:A_i\vdash t_i:B_i$}
+       \RightLabel{IdH.}
+       \BinaryInfC{$\Gamma_2',y:D,\Gamma_2,x:\widehat{C'}(\vv{A})\vdash\widehat{C'}(\vv{t}):\widehat{C'}(\vv{B}) $}
+       \UnaryInfC{$\Gamma_2',\Gamma_2[s/y],x:\widehat{C'}(\vv{A})[s/y]\vdash\widehat{C'}(\vv{t})[s/y]:\widehat{C'}(\vv{B})[s/y] $}
+     \end{prooftree}
+     (=*=) This is the reverse of *(Ty-Inst)*.  We can do this because without the Conclusion as premise
+     we can't infer the premise
+
+   + $C=(y).C'$:
+
+     Calculated type actions:
+     \begin{align*}
+       \widehat{(y).C'}(\vv{A})&=(y).C'[\vv{(\Gamma_i.A)}/\vv{X}]@\id{\Gamma_2}\\
+                          &=(y).(C'[\vv{(\Gamma_i.A)}/\vv{X}])@y@\id{\Gamma_2}\\
+                          &\longleftrightarrow_T(C'[\vv{(\Gamma_i.A)}/\vv{X}])@\id{\Gamma_2}\\
+                          &=\widehat{C'}(\vv{A})\\
+       \widehat{(y).C'}(\vv{t})&=\widehat{C'}(\vv{t})\\
+       \widehat{(y).C'}(\vv{B})&=(y).C'[\vv{(\Gamma_i.B)}/\vv{X}]@\id{\Gamma_2}\\
+                          &=(y).(C'[\vv{(\Gamma_i.B)}/\vv{X}])@y@\id{\Gamma_2}\\
+                          &\longleftrightarrow_T(C'[\vv{(\Gamma_i.B)}/\vv{X}])@\id{\Gamma_2}\\
+                          &=\widehat{C'}(\vv{B})\\
+     \end{align*}
+
+     We have to prove the following
+     \begin{prooftree}
+       \AxiomC{$X_1:\Gamma_1\rat*,\dots,X_n:\Gamma_n\rat*\mid\Gamma_2'\vdash (y).C':(y:D,\Gamma_2)\rat*$}
+       \RightLabel{(*)}
+       \UnaryInfC{$X_1:\Gamma_1\rat*,\dots,X_n:\Gamma_n\rat*\mid\Gamma_2'\vdash C':\Gamma_2\rat*$}
+       \AxiomC{$\Gamma_i,x:A_i\vdash t_i:B_i$}
+       \RightLabel{IdH.}
+       \BinaryInfC{$\Gamma_2',\Gamma_2,x:\widehat{C'}(\vv{A})\vdash\widehat{C'}(\vv{t}):\widehat{C'}(\vv{B})$}
+     \end{prooftree}
+     (=*=) This is the reverse of *(Abstr)*.  We can do this because without the Conclusion as premise
+     we can't infer the premise
+
+   + $C=\mu(Y:\Gamma_2\rat*;\vv{\sigma};\vv{D})$:
+
+     Calculated type actions:
+     \begin{align*}
+       &\widehat{\mu(Y:\Gamma_2\rat*;\vv{\sigma};\vv{D})}(\vv{A})\\
+       &=\mu(Y:\Gamma_2\rat*;\vv{\sigma};\vv{D})[\vv{(\Gamma_1).A}/\vv{X}]@\id{\Gamma_2}\\
+       &=\mu(Y:\Gamma_2\rat*;\vv{\sigma};\vv{D}[\vv{(\Gamma_1).A}/\vv{X}])@\id{\Gamma_2}\\
+       &\widehat{\mu(Y:\Gamma_2\rat*;\vv{\sigma};\vv{D})}(\vv{t})\\
+       &=\text{rec}^{\mu(Y:\Gamma_2\rat*;\vv{\sigma};\vv{D}[(\Gamma_1).A/X])}\vv{(\Delta_k,x).\alpha_k@\id{\Delta_k}@\widehat{D_k}(\vv{t},x)}@\id{\Gamma_2}@x\\
+       &\widehat{\mu(Y:\Gamma_2\rat*;\vv{\sigma};\vv{D})}(\vv{B})\\
+       &=\mu(Y:\Gamma_2\rat*;\vv{\sigma};\vv{D})[\vv{(\Gamma_1).B}/\vv{X}]@\id{\Gamma_2}\\
+       &=\mu(Y:\Gamma_2\rat*;\vv{\sigma};\vv{D}[\vv{(\Gamma_1).B}/\vv{X}])@\id{\Gamma_2}
+     \end{align*}
+
+    From the assumptions
+     \begin{align*}
+     &X_1:\Gamma_1\rat*,\dots,X_n:\Gamma_n\rat*\mid\Gamma_2'\vdash \mu(Y:\Gamma_2\rat*;\vv{\sigma};\vv{D}):\Gamma_2\rat*\\
+     &\Gamma_i,x:A_i\vdash t_i:B_i
+     \end{align*}
+    We have to proof that in *Ctx*
+    \begin{equation*}
+     \Gamma_2',\Gamma_2,x:\mu(Y:\Gamma_2\rat*;\vv{\sigma};\vv{D}[(\Gamma_1).A/X])@\id{\Gamma_2}
+    \end{equation*}
+    the expression
+    \begin{equation*}
+     \text{rec}^{\mu(Y:\Gamma_2\rat*;\vv{\sigma};\vv{D}[\vv{(\Gamma_i).A}/\vv{X}])}\vv{(\Delta_k,y).\alpha_k@\id{\Delta_k}@\widehat{D_k}(t,y)}@\id{\Gamma_2}@x
+    \end{equation*}
+    has type
+    \begin{equation*}
+    \mu(Y:\Gamma_2\rat*;\vv{\sigma};\vv{D}[\vv{(\Gamma_i).B}/\vv{X}])@\id{\Gamma_2}
+    \end{equation*}
+    We can use the induction hypothesis
+    \begin{prooftree}
+      \AxiomC{$X_1:\Gamma_1\rat*,\dots,X_n:\Gamma_n\rat*,Y:\Gamma_{n+1}\rat*\mid\Delta_k\vdash D_k:*$}
+      \AxiomC{$\Gamma_i,x:A_i\vdash t_i:B_i$}
+      \BinaryInfC{$\Delta_k,x:\widehat{D_k}(\vv{A},A_{n+1})\vdash\widehat{D_k}(\vv{t},y):\widehat{D_k}(\vv{B},B_{n+1}) $}
+    \end{prooftree}
+    We than got the following proof
+    \begin{prooftree}
+     \AxiomC{$\Gamma_2',\Gamma_2,x:\widehat{C}(\vv{A}),\Delta_k,y_k:D_k[\mu/X]\vdash\widehat{D_k}(\vv{t},y):D_k[\vv{(\Gamma_i).B}/\vv{X}][(\Gamma_{n+1}).B_{n+1}/Y]$}
+     \UnaryInfC{$\Gamma_2',\Gamma_2,x:\widehat{C}(\vv{A}),\Delta_k,y_k:D_k[\mu/X]\vdash\alpha_k@\id{\Delta_k}@\widehat{D_k}(\vv{t},y):\mu@\sigma_k$}
+     \UnaryInfC{$\Gamma_2',\Gamma_2,x:\widehat{C}(\vv{A})\vdash\widehat{C}(t):\widehat{C}(\vv{B})$}
+    \end{prooftree}
+
+   + $C=\nu(Y:\Gamma\rat*;\vv{\sigma};\vv{D})$:
+
+     Calculated type actions:
+     \begin{align*}
+       &\widehat{\nu(Y:\Gamma_2\rat*;\vv{\sigma};\vv{D})}(\vv{A})\\
+       &=\nu(Y:\Gamma_2\rat*;\vv{\sigma};\vv{D})[\vv{(\Gamma_i).A}/\vv{X}]@\id{\Gamma_2}\\
+       &=\nu(Y:\Gamma_2\rat*;\vv{\sigma};\vv{D}[\vv{(\Gamma_i).A}/\vv{X}])@\id{\Gamma_2}\\
+       &\widehat{\nu(Y:\Gamma_2\rat*;\vv{\sigma};\vv{D})}(\vv{t})\\
+       &=\text{corec}^{\nu(Y:\Gamma_2\rat*;\vv{\sigma};\vv{D}[(\vv{\Gamma_i).B}/\vv{X}])}\vv{(\Delta_k,x)\widehat{D_k}(\vv{t},x)[(\xi_k@\id{\Delta_k}@x)/x]}@\id{\Gamma_2}@x\\
+       &\widehat{\nu(Y:\Gamma_2\rat*;\vv{\sigma};\vv{D})}(\vv{B})\\
+       &=\nu(Y:\Gamma_2\rat*;\vv{\sigma};\vv{D})[\vv{(\Gamma_i).B}/\vv{X}]@\id{\Gamma_2}\\
+       &=\nu(Y:\Gamma_2\rat*;\vv{\sigma};\vv{D}[\vv{(\Gamma_i).B}/\vv{X}])@\id{\Gamma_2}
+     \end{align*}
+
+    From the assumptions
+     \begin{align*}
+     &X_1:\Gamma_1\rat*,\dots,X_n:\Gamma_n\rat*\mid\Gamma_2'\vdash \nu(Y:\Gamma_2\rat*;\vv{\sigma};\vv{D}):\Gamma_2\rat*\\
+     &\Gamma_i,x:A_i\vdash t_i:B_i
+     \end{align*}
+    We have to proof that in *Ctx*
+    \begin{equation*}
+     \Gamma_2',\Gamma_2,x:\nu(Y:\Gamma_2\rat*;\vv{\sigma};\vv{D}[(\Gamma_1).A/X])@\id{\Gamma_2}
+    \end{equation*}
+    the expression
+    \begin{equation*}
+     \text{corec}^{\nu(Y:\Gamma_2\rat*;\vv{\sigma};\vv{D}[(\vv{\Gamma_i).B}/\vv{X}])}\vv{(\Delta_k,x)\widehat{D_k}(\vv{t},x)[(\xi_k@\id{\Delta_k}@x)/x]}@\id{\Gamma_2}@x\\
+    \end{equation*}
+    has type
+    \begin{equation*}
+    \nu(Y:\Gamma_2\rat*;\vv{\sigma};\vv{D}[\vv{(\Gamma_i).B}/\vv{X}])@\id{\Gamma_2}
+    \end{equation*}
+    We can use the induction hypothesis
+    \begin{prooftree}
+      \AxiomC{$X_1:\Gamma_1\rat*,\dots,X_n:\Gamma_n\rat*,Y:\Gamma_{n+1}\rat*\mid\Delta_k\vdash D_k:*$}
+      \AxiomC{$\Gamma_i,y_k:A_i\vdash t_i:B_i$}
+      \BinaryInfC{$\Delta_k,y_k:\widehat{D_k}(\vv{A},A_{n+1})\vdash\widehat{D_k}(\vv{t},y):\widehat{D_k}(\vv{B},B_{n+1}) $}
+    \end{prooftree}
+    We than got the following proof
+    \begin{prooftree}
+     \AxiomC{$\Gamma_2',\Gamma_2,x:\widehat{C}(\vv{A}),\Delta_k,y_k:\nu@\sigma_k\vdash\widehat{D_k}(\vv{t},x)[(\xi_k@\id{\Delta_k}@x)/x]:D_k[\vv{(\Gamma_i).A}/\vv{X}][\nu/X]$}
+     \UnaryInfC{$\Gamma_2',\Gamma_2,x:\widehat{C}(\vv{A})\vdash\widehat{C}(t):\widehat{C}(\vv{B})$}
+    \end{prooftree}
+
+   #+end_proof
+
+ \printbibliography
