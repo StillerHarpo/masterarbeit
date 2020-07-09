@@ -135,17 +135,23 @@
   use currying.  So first apply is the sole observer of type ~Stream A -> A~
   and the second of type ~Nat -> (Stream A -> A)~.
 
-
 * Coniductive Types in dependent languages
-  In this section i will look how coinductive types are implemented in dependently
+  In this section we will look how coinductive types are implemented in dependently
   typed language.  In dependently typed languages types can depend on values.  This
   makes it necessary to ensure that function terminate to make type checking decidable.
+  For coinductive types this means that functions which produce them should be
+  productive.  If a function is productive it produces in each step a new part
+  of the infinitely large coinductive type.  To ensure that the guard condition
+  is used.  The guard condition will be explained below on code examples in coq.
   In section [[Coinductive Types in Coq]] we will look at the implementation in coq.
   There are two ways to define them.  The older way uses positive couinductive
   types.  This is known to violate subject reduction.  Therefore it is highly
   discouraged to use them.  To fix this the new way uses negative coinductive
   types the new way uses negative coinductive types.
   In section [[Coinductive Types in Agda]] we look at the implementation in agda.
+  Agda also has the two ways of defining such types.  On special thing about it,
+  is that it implements copattern matching.  To help agda with termination
+  checking we can use sized types.
 ** Coinductive Types in Coq
    Coidnuductive types in coq are defnined over constructors in coq.  The keyword
    CoInducvive is used to indicate that we about to define a coinductive type.  For example
