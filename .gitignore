@@ -1,5 +1,6 @@
 resources/
 **/dist-newstyle/
+**/_minted-masterarbeit/
 **/*.pdf
 **/*.tex
 **/*.local
@@ -7,6 +8,10 @@ resources/
 **/*.bbl
 **/*.blg
 **/*.rej
+**/*.aux
+**/*.fdb_latexmk
+**/*.fls
+**/*.log
 **/auto/
 **/ltximg/
 TAGS
