@@ -87,15 +87,15 @@
   #+end_example
 
   The A in the definition should be a concrete type. The type system in the
-  paper don't has dependent types.  What differentiate this from regular record
+  paper don't has dependent types. What differentiate this from regular record
   types (for example in haskell), is the recursive field tail. So they call it a
-  recursive record. In haskell we could never instantiate such a type, because
-  too do this we already need something of type ~Stream A~ to fill in the field
-  ~tail~. To remedy this the paper defines copattern matching. With the help of
-  copattern matching we can define function which outputs expressions of type
-  ~Stream A~. As an example we look at the definition of repeat. This function
-  takes in an a of type Nat and generates an stream which just infinitely repeats
-  it.
+  recursive record. In a strict language without inductive types we could never
+  instantiate such a type, because to do this we already need something of type
+  ~Stream A~ to fill in the field ~tail~. To remedy this the paper defines
+  copattern matching. With the help of copattern matching we can define function
+  which outputs expressions of type ~Stream A~. As an example we look at the
+  definition of repeat. This function takes in an a of type Nat and generates an
+  stream which just infinitely repeats it.
 
   #+begin_example
   repeat : Nat -> Stream Nat
@@ -103,14 +103,15 @@
   tail (repeat x) = repeat x
   #+end_example
 
-  As you can see copattern matching works via observations i.e. we define
-  what should be the output of the fields applied to the function.  This fields
-  are also called observers, because we observe parts of the type.  Because
-  inhabitants of ~Stream~ are infinitely long we can't print out a stream.  So
-  we always have to use observers to show parts of it.  For example we can look
-  at the third value of ~repeat 2~ via ~head (tail (tail (repeat 2)))~ which
-  should evaluate to 2.  We can also implement a function which looks at the
-  nth. value.  Here it is.
+  As you can see copattern matching works via observations i.e. we define what
+  should be the output of the fields applied to the function. This fields are
+  also called observers, because we observe parts of the type. Because
+  inhabitants of ~Stream~ are infinitely long we can't print out a stream.
+  Because of this we also consider each expression with a coinductive type as a
+  value. To get a subpart of this value we have to use observers . For example
+  we can look at the third value of ~repeat 2~ via ~head (tail (tail (repeat
+  2)))~ which should evaluate to 2. We can also implement a function which looks
+  at the nth. value. Here it is.
 
   #+begin_example
   nth : Nat -> Stream A -> A
