@@ -118,11 +118,13 @@ module NewCodata where
   ...               | nothing = pred∞ m
   ...               | just n' = just (plus∞ n' m)
 
-  record PStr (A : Set) : (n : ℕ∞) → Set where
+  {-
+  record PStr (A : Set) (n : ℕ∞) : Set where
     coinductive
     field
       phd : (k : ℕ∞) → PStr A (suc∞ k) → A
       ptl : (k : ℕ∞) → PStr A (suc∞ k) → PStr A k
+  -}
 
 module OldCodata where
   open import Codata.Musical.Notation
