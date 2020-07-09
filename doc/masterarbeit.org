@@ -2,7 +2,12 @@
 #+LATEX_HEADER: \usepackage{bussproofs}
 #+LATEX_HEADER: \usepackage{stmaryrd}
 #+LATEX_HEADER: \usepackage{xcolor}
+#+LATEX_HEADER: \usepackage{wasysym}
 #+LATEX_HEADER: \usepackage{amsthm}
+#+LATEX_HEADER: \usepackage{newfloat}
+#+LATEX_HEADER: \usepackage{minted}
+#+LATEX_HEADER: \usepackage[T1]{fontenc}
+#+LATEX_HEADER: \usepackage[utf8]{inputenc}
 #+latex_header: \usepackage[citestyle=authoryear-icomp,bibstyle=authoryear, hyperref=true,backref=true,maxcitenames=3,url=true,backend=biber,natbib=true] {biblatex}
 #+latex_header: \addbibresource{~/Dokumente/bibliography/references.bib}
 #+LATEX_HEADER: \lstset{
@@ -10,16 +15,33 @@
 #+LATEX_HEADER:   mathescape
 #+LATEX_HEADER: }
 #+LATEX_HEADER: \usepackage{graphicx}
-#+LATEX_HEADER:\newenvironment{scprooftree}[1]%
+#+LATEX_HEADER: \usepackage{fontspec}
+#+LATEX_HEADER: \setmonofont{DejaVu Sans Mono}
+#+LATEX_HEADER: \newenvironment{scprooftree}[1]%
 #+LATEX_HEADER:  {\gdef\scalefactor{#1}\begin{center}\proofSkipAmount \leavevmode}%
 #+LATEX_HEADER:  {\scalebox{\scalefactor}{\DisplayProof}\proofSkipAmount \end{center} }
 #+LATEX_HEADER: \usepackage{esvect}
-#+LATEX_HEADER: \newcommand{\id}[1]{\text{id}_{#1}}
+#+LATEX_HEADER:\usepackage{geometry}
+#+LATEX_HEADER: \geometry{
+#+LATEX_HEADER: a4paper,
+#+LATEX_HEADER:   total={170mm,257mm},
+#+LATEX_HEADER:   left=20mm,
+#+LATEX_HEADER:   top=20mm,
+#+LATEX_HEADER: }
+ #+LATEX_HEADER: \newcommand{\id}[1]{\text{id}_{#1}}
 #+LATEX_HEADER: \newcommand{\rat}{\rightarrowtriangle}
 #+LATEX_HEADER: \newtheorem{theorem}{Theorem}
 #+LATEX_HEADER: \newtheorem{definition}{Definition}
 #+TITLE: Implementation of Type Theory based on dependent Inductive and Coinductive Types
 #+AUTHOR: Florian Engel
+
+#+begin_src elisp :exports none
+  (setq org-latex-listings 'minted)
+#+end_src
+
+#+RESULTS:
+: minted
+
 #+begin_abstract
   Dependent types are a useful tool to restrict possible type even further then
   types of strongly typed languages like Haksell. This gives us further type
@@ -116,9 +138,13 @@
 * Coniductive Types in dependent languages
   In this section i will look how coinductive types are implemented in dependently
   typed language.  In dependently typed languages types can depend on values.  This
-  makes it neccessary to ensure that function terminate to make type checking decidable.
+  makes it necessary to ensure that function terminate to make type checking decidable.
   In section [[Coinductive Types in Coq]] we will look at the implementation in coq.
-  In section [[Coinductive Types in Agda]] we look at the implementation in agda
+  There are two ways to define them.  The older way uses positive couinductive
+  types.  This is known to violate subject reduction.  Therefore it is highly
+  discouraged to use them.  To fix this the new way uses negative coinductive
+  types the new way uses negative coinductive types.
+  In section [[Coinductive Types in Agda]] we look at the implementation in agda.
 ** Coinductive Types in Coq
    Coidnuductive types in coq are defnined over constructors in coq.  The keyword
    CoInducvive is used to indicate that we about to define a coinductive type.  For example
