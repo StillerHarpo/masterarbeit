@@ -12,6 +12,7 @@ resources/
 **/*.fdb_latexmk
 **/*.fls
 **/*.log
+**/*.agdai
 **/auto/
 **/ltximg/
 TAGS
