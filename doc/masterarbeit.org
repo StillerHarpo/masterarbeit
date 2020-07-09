@@ -71,7 +71,7 @@
   coinductive types its the other way around. For more on this see cite:binder2019decomposition
 
   In section [[Coinductive Types]] we will see how coinductive can be defined type
-  are defined In section [[Abstract Syntax]] I will develop the abstract syntax of
+  are defined. In section [[Abstract Syntax]] we will develop the abstract syntax of
   our language from the rare syntax in the paper. In the following section
   [[Examples]] we will see how the examples from the paper look in our syntax.
 
