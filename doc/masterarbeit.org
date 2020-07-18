@@ -43,13 +43,18 @@
 
 #+begin_abstract
   Dependent types are a useful tool to restrict possible type even further then
-  types of strongly typed languages like Haksell. This gives us further type
-  safty. With them we can also proof theorems. Coinductive types allow us to
+  types of strongly typed languages like Haskell. This gives us further type
+  safety. With them we can also proof theorems. Coinductive types allow us to
   define types by their observations rather then by their constructors. This is
-  useful for infinite types like streams. In this work I will implement the type
-  theory from cite:basold2016type.  This type theory has both dependent types and coinductive types.
-  In this type theory the dependent function space becomes definable.  This leads
-  to a more symmetrical approach of coinduction in dependently typed languages.
+  useful for infinite types like streams. In many common dependently typed
+  languages , like coq and agda, we can define inductive types which depend on
+  values and coinductive types but not coinductive types, which depend on values
+
+  In this work I will first give a survey of coinductive types in this languages
+  and then implement the type theory from cite:basold2016type. This type theory
+  has both dependent inductive types and dependent coinductive types. In this
+  type theory the dependent function space becomes definable. This leads to a
+  more symmetrical approach of coinduction in dependently typed languages.
 #+end_abstract
 
 * Introduction
