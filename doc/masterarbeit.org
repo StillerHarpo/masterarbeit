@@ -91,7 +91,7 @@
 
   The A in the definition should be a concrete type. The type system in the
   paper don't has dependent types. What differentiate this from regular record
-  types (for example in haskell), is the recursive field tail. So they call it a
+  types (for example in Haskell), is the recursive field tail. So they call it a
   recursive record. In a strict language without inductive types we could never
   instantiate such a type, because to do this we already need something of type
   ~Stream A~ to fill in the field ~tail~. To remedy this the paper defines
@@ -119,7 +119,7 @@
   #+begin_example
   nth : Nat -> Stream A -> A
   nth 0     x = head x
-  nth (S n) x = nth n x
+  nth (S n) x = nth n (tail x)
   #+end_example
 
   As you can see we use ordinary pattern matching on the left hand side and
@@ -128,15 +128,8 @@
   following.
 
   #+begin_example
-  record A -> B = { apply : (A -> B) -> A -> B }
+  record A -> B = { apply : A ~> B }
   #+end_example
-
-  In the paper ~f x~ means ~apply f x~.  We will also use this convention in
-  the following.  In fact we already used in the definitions of the functions
-  ~repeat~ and ~nth~.  ~nth 0 x~ is just a nested copattern.  We can also
-  write it with `apply` like so: ~apply (apply nth 0) x = head x~.  Here we
-  use currying.  So first apply is the sole observer of type ~Stream A -> A~
-  and the second of type ~Nat -> (Stream A -> A)~.
 
 * Coniductive Types in dependent languages
   In this section we will look how coinductive types are implemented in dependently
@@ -146,6 +139,16 @@
   productive.  If a function is productive it produces in each step a new part
   of the infinitely large coinductive type.  To ensure that the guard condition
   is used.  The guard condition will be explained below on code examples in coq.
+  Here we differentiate between our defined function ~A -> B~ and ~~>~ in the
+  destructor. Constructor application or, as is the case here, destructor
+  application is not the same as function application, like in Haskell. In the
+  paper ~f x~ means ~apply f x~. We will also use this convention in the
+  following. In fact we already used in the definitions of the functions
+  ~repeat~ and ~nth~. ~nth 0 x~ is just a nested copattern. We can also write it
+  with `apply` like so: ~apply (apply nth 0) x = head x~. Here we use currying.
+  So first apply is the sole observer of type ~Stream A -> A~ and the second of
+  type ~Nat -> (Stream A -> A)~.
+
   In section [[Coinductive Types in Coq]] we will look at the implementation in coq.
   There are two ways to define them.  The older way uses positive couinductive
   types.  This is known to violate subject reduction.  Therefore it is highly
