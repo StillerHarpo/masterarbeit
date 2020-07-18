@@ -7,7 +7,6 @@
 #+LATEX_HEADER: \usepackage{newfloat}
 #+LATEX_HEADER: \usepackage{minted}
 #+LATEX_HEADER: \usepackage[T1]{fontenc}
-#+LATEX_HEADER: \usepackage[utf8]{inputenc}
 #+latex_header: \usepackage[citestyle=authoryear-icomp,bibstyle=authoryear, hyperref=true,backref=true,maxcitenames=3,url=true,backend=biber,natbib=true] {biblatex}
 #+latex_header: \addbibresource{~/Dokumente/bibliography/references.bib}
 #+LATEX_HEADER: \lstset{
