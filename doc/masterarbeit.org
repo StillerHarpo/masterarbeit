@@ -700,21 +700,21 @@
 
     We will also need a extra context which relates constructors to their types
 
+    #+caption: Abstract Syntax Tree for Statements
+    #+NAME: Abstract Syntax Tree for Statements
+    #+begin_src haskell
+      data Statement = ExprDef { name :: Text
+                               , expr :: Expr
+                               , ty :: Maybe Type
+                               }
+                     | TypeDef { name :: Text
+                               , parameterCtx :: TyCtx
+                               , typeExpr :: TypeExpr
+                               , kind :: Maybe Kind
+                               }
+                     | Expression Expr
+    #+end_src
 *** Expressions
-    \begin{lstlisting}
-    expr =
-      rec $\mu$ to C where
-        $Constr_1$ $x_{1_1}$ $\dots$ $x_{n_1}$ $y_1$    = $g_1$
-                $\vdots$          $\vdots$
-        $Constr_m$ $x_{1_m}$ $\dots$ $x_{n_m}$ $y_m$ = $g_m$
-    | corec C to $\nu$ where
-        $Destr_1$ $x_{1_1}$ $\dots$ $x_{n_1}$ $y_1$   = $g_1$
-                $\vdots$         $\vdots$
-        $Destr_m$  $x_{1_m}$ $\dots$ $x_{n_m}$ $y_m$ = $g_m$
-    | expr @ expr | () | Unit | Constr expr* | Destr expr*
-    \end{lstlisting}
-
-    $g_1,\dots,g_k$ are /expr/
 
     $x_{1_1},\dots, x_{n_m}$ are termvariables
 
