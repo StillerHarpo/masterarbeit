@@ -131,14 +131,6 @@
   record A -> B = { apply : A ~> B }
   #+end_example
 
-* Coniductive Types in dependent languages
-  In this section we will look how coinductive types are implemented in dependently
-  typed language.  In dependently typed languages types can depend on values.  This
-  makes it necessary to ensure that function terminate to make type checking decidable.
-  For coinductive types this means that functions which produce them should be
-  productive.  If a function is productive it produces in each step a new part
-  of the infinitely large coinductive type.  To ensure that the guard condition
-  is used.  The guard condition will be explained below on code examples in coq.
   Here we differentiate between our defined function ~A -> B~ and ~~>~ in the
   destructor. Constructor application or, as is the case here, destructor
   application is not the same as function application, like in Haskell. In the
@@ -149,26 +141,75 @@
   So first apply is the sole observer of type ~Stream A -> A~ and the second of
   type ~Nat -> (Stream A -> A)~.
 
+* Coinductive Types in dependent languages
+  In this section we will look how coinductive types are implemented in
+  dependently typed language. In dependently typed languages types can depend on
+  values. The classical example for such a type is the vector. Vectors are like
+  list, except their length is contained in their type. For example a vector of
+  natural numbers of length 2 has type ~Vec Nat 2~. This type depends on two
+  things. Namely the type ~Nat~ and the value ~2~, which is itself of type ~Nat~.
+  We can define vectors in coq like follows.
+  #+begin_src coq
+  Inductive Vec (A : Set) : nat -> Set :=
+  | Nil : Vec A 0
+  | Cons : forall {k : nat}, A -> Vec A k -> Vec A (S k).
+  #+end_src
+  A Vector has two constructors.  One for the empty vector called ~Nil~ and one to append a
+  element at the front of a vector called ~Cons~.  The difference to list is the second argument
+  to the type constructor ~Vec~. It is 0 for ~Nil~.  And ~Cons~ gets an ~A~ and a vector of length ~k~.  It
+  returns a vector of length ~S k~ (~S~ is just the successor of k).
+  They can also be defined in agda like follows.
+  #+begin_src agda
+  data Vec (A : Set) : ℕ → Set where
+    Nil : Vec A 0
+    Cons : {k : ℕ} → A → Vec A k → Vec A (suc k)
+  #+end_src
+  One advantage over of vectors over list is that we can define a total function
+  (a function which is defined for every input) which takes the head of a
+  vector. This function can't be total for lists, because we can't know if the
+  input list is empty. A empty list has no head. For vectors we can enforce in
+  coq like follow.
+  #+begin_src coq
+  Definition hd {A : Set} {k : nat} (v : Vec A (S k)) : A :=
+    match v with
+    | Cons _ x _ => x
+    end.
+  #+end_src
+  We just pattern match on ~v~.  The only patter is for the ~Cons~ constructor.  The ~Nil~ constructor
+  is a vector of length 0.  But ~v~ has type ~Vec A (S k)~.  So it can't be a vector of length 0.
+  In agda the function looks like follow.
+  #+begin_src agda
+  hd : {A : Set} {k : ℕ} → Vec A (suc k) → A
+  hd (cons x _) = x
+  #+end_src
+  That terms can occur in types makes it necessary to ensure that function
+  terminate. Otherwise type checking wouldn't be decidable. If we have a
+  function ~f : Nat -> Nat~ and we want to check a value ~a~ against a type ~Vec
+  (f 1)~ we have to know what ~f 1~ evaluates to. So ~f~ has to terminate. For
+  coinductive types termination means that functions which produce them should
+  be productive. If a function is productive it produces in each step a new part
+  of the infinitely large coinductive type. To ensure that the guard condition
+  is used. The guard condition will be explained below on code examples in coq.
   In section [[Coinductive Types in Coq]] we will look at the implementation in coq.
-  There are two ways to define them.  The older way uses positive couinductive
-  types.  This is known to violate subject reduction.  Therefore it is highly
-  discouraged to use them.  To fix this the new way uses negative coinductive
-  types the new way uses negative coinductive types.
-  In section [[Coinductive Types in Agda]] we look at the implementation in agda.
-  Agda also has the two ways of defining such types.  On special thing about it,
-  is that it implements copattern matching.  To help agda with termination
-  checking we can use sized types.
+  There are two ways to define them. The older way uses positive coinductive
+  types. This is known to violate subject reduction. Therefore it is highly
+  discouraged to use them. To fix this the new way uses negative coinductive
+  types the new way uses negative coinductive types. In section [[Coinductive
+  Types in Agda]] we look at the implementation in agda. Agda also has the two
+  ways of defining such types. On special thing about it, is that it implements
+  copattern matching. To help agda with termination checking we can use sized
+  types.
 ** Coinductive Types in Coq
-   There are two approaches to define coinductive types in coq.  The older one is
-   described in [[Postive Coinductive Types]].  It works over constructors.
-   Therefore they are called postive types.  The newer and recommended one is
-   described in section [[Negative Coinductive Types]]. They are defined
-   over primitive records (a relatively new feature of coq).  Therefore they are
-   called negative Types.
+   There are two approaches to define coinductive types in coq. The older one is
+   described in [[Postive Coinductive Types]]. It works over constructors. Therefore
+   they are called positive coinductive types. The newer and recommended one is
+   described in section [[Negative Coinductive Types]]. They are defined over
+   primitive records (a relatively new feature of coq). Therefore they are
+   called negative coinductive Types.
 
 *** Postive Coinductive Types
-   Positve coinductive types are defnined over constructors in coq.  The keyword
-   CoInducvive is used to indicate that we about to define a coinductive type.
+   Positive coinductive types are defined over constructors in coq.  The keyword
+   ~CoInductive~ is used to indicate that we about to define a coinductive type.
    This is the only syntactical difference from the definition of inductive
    types. For example streams are defined like the following.
 
@@ -333,7 +374,7 @@
     occurrences must be guarded by a record field.  We can see that the
     corecursive call ~repeat~ is a direct argument to the field ~tl~ of the
     corecursive type ~Stream A~.  This means coq accepts the above definition.
-    If we want to access parts of a stream we use the destructrors ~hd~ and
+    If we want to access parts of a stream we use the destructors ~hd~ and
     ~tl~.  With them we can define nth again for the negative stream.
 
     #+begin_src coq
@@ -375,7 +416,10 @@
 
     The Pi type is defined over its destructor ~Apply~.  If we evaluate ~Apply~
     on a value of Pi (which is a function) and an argument, we get the result
-    i.e. we apply the value to the function.  To define a function we use
+    i.e. we apply the value to the function.  It looks like the Pi type becomes definable
+    in coq.  But we are cheating.  The type of ~Apply~ is already a Pi type.  This is because
+    we identify constructors and destructors with functions.  We will see that the theory of
+    the paper avoids this identification. To define a function we use
     ~CoFixpoint~.  As a simple non recursive, non dependent example we use the
     function ~plus2~.
 
@@ -406,17 +450,36 @@
     But coq doesn't accept this definition.  The guard condition is violated.
     ~plus n'~ is not a direct argument of the field ~Apply~.  The definition
     should terminate because we are decreasing ~n~ and the case for ~0~ is
-    accepted.  In this case, there is no recursive call.
+    accepted.  In the case for ~0~, there is no recursive call.
+
+    We can also define a dependent function.  We define append2Units like
+    follows
+    #+begin_src coq
+    CoFixpoint append2Units : Pi nat (fun n => Pi (Vec unit n) (fun _ => Vec unit (S (S n)))) :=
+      {| Apply n := {| Apply v := Cons _ tt (Cons _ tt v) |} |}.
+    #+end_src
+    This just appends 2 units at a vector of length ~n~.
 
 ** Coinductive Types in Agda
    In agda coinductive types where first also introduced as positive types.
    In the section [[Positive Coinductive Types in Agda]] we will look at them in
    detail.  In section [[Negative Coinductive Types in Agda]] we describe the
-   correct way to implement coinductive types in agda.  There are function which
-   terminate but are rejected by the type checker.  In fact there have to be
-   such function because of the halting problem.  To allow more functions we can
-   use a unique feature of agda, sized types.  They are described in section
-   [[Termination Checking with Sized Types]].
+   correct way to implement coinductive types in agda. There are function which
+   terminate but are rejected by the type checker. In fact in any total language
+   there have to be such functions. We can show that by trying to list all
+   total functions. The following table lists functions per row. The columns say
+   what the output of the functions to the given input is
+   |          |        1 |        2 |        3 |        4 | $\dots$  |
+   |----------+----------+----------+----------+----------+----------|
+   | $f_1$    |        2 |        7 |        8 |        6 | $\dots$  |
+   | $f_2$    |        4 |        4 |        6 |       19 | $\dots$  |
+   | $f_3$    |        6 |      257 |        1 |        2 | $\dots$  |
+   | $f_4$    |        7 |      121 |    23188 |     2313 | $\dots$  |
+   | $\vdots$ | $\vdots$ | $\vdots$ | $\vdots$ | $\vdots$ | $\ddots$ |
+   We can now define a function $g(n)=f_n(n)+1$ this function is total and not
+   in the list, because it is different to any function in the list for at least
+   on input To allow more functions we can use a unique feature of agda, sized
+   types. They are described in section[[Termination Checking with Sized Types]].
 
 *** Positive Coinductive Types in Agda
    Agda doesn't has a special keyword to define coinductive types like coq.  It
@@ -501,11 +564,11 @@
 
     We have to copattern match on every field of ~Stream~, namely ~hd~ and ~tl~.
     Because agda is total it won't accept non-exhaustive (co)pattern matches
-    like haskell.  First we define what the head of ~repeat x~ is.  We just
-    repeat ~x~ infinitly ofen.  So every element of the steam is ~x~, including
+    like Haskell.  First we define what the head of ~repeat x~ is.  We just
+    repeat ~x~ infinitely often.  So every element of the steam is ~x~, including
     the head.  Therefor we just write ~x~.  In the second and last copattern we
     define what the tail of the stream is.  The tail is just ~repeat x~.
-    Infinitly often repated ~x~ is the same as x and then infinitly repeated
+    Infinitely often repeated ~x~ is the same as x and then infinitely repeated
     ~x~.  We can use normal pattern matchings and the destructors for functions
     which consume streams.  We define ~nth~ like the following.
 
@@ -515,31 +578,99 @@
      nth (suc n) s = nth n (tl s)
    #+end_src
 
-   Here we just pattern macht on the first argument (exluding the implicit
+   Here we just pattern match on the first argument (excluding the implicit
    argument of the type).  If it is zero the result is just the head of the
    stream.  If it is $n+1$ the result is the recursive call of ~nth~ on ~n~ and
    ~tl s~.  Agda accepts this code, because it is structural decreasing on the
    first (or second if we count the implicit) argument.
 
+   We can also define the Pi type.  We use ~_$_~ as the apply operator.  This
+   operator is taken from Haskell.
+
+   #+begin_src agda
+   record Pi (A : Set) (B : A → Set) : Set where
+     field _$_ : (x : A) → B x
+     infixl 20 _$_
+   open Pi
+   #+end_src
+
+   like in coq we are using the first-class pi type to define the pi type. We
+   can also define a function which adds 2 to a number ~plus2~ in agda.
+
+   #+begin_src agda
+    plus2 : ℕ →' ℕ
+    plus2 $ x = suc (suc x)
+   #+end_src
+
+   We just use copattern matching to define it. If we apply an ~x~ to ~plus2~ we
+   get ~suc (suc x)~. ~_→'_~ is just the non-dependent function it is defined
+   using our pi type. Here it is
+
+   #+begin_src agda
+     _→'_ : Set → Set → Set
+     A →' B = Pi A (λ _ → B)
+     infixr 20 _→'_
+   #+end_src
+
+   In agda it becomes possible to define plus. We just use nested copattern
+   matching.
+
+   #+begin_src agda
+    plus : ℕ →' ℕ →' ℕ
+    plus $ 0       $ m = m
+    plus $ (suc n) $ m = suc (plus $ n $ m)
+   #+end_src
+
+   If we change ~→'~ to ~→~ and remove ~$~ we get the standard definition for
+   plus in agda.  We can also define a dependent function ~repeatUnit~ like follow
+   #+begin_src agda
+   repeatUnit : Pi ℕ (λ n → Vec ⊤ n)
+   repeatUnit $ 0     = nil
+   repeatUnit $ suc n = tt :: (repeatUnit $ n)
+   #+end_src
+   This function gives back a vector with the length of the input, where every element
+   is unit.
 
 *** Termination Checking with Sized Types
    Termination Checking with sized types: https://agda.readthedocs.io/en/latest/language/sized-types.html
 
 * Coinductive Types in other languages
 * Type Theory base of dependent Inductive and Coinductive Types
+  In the paper cite:basold2016type a type theory, where inductive types and
+  coinductive types can depend on values, is developed.  For example we can, in
+  contrast to the coinductive types of coq and agda, define streams which
+  depend on their defintion length.  The theory differentiates types from terms.
+  We don't have infinite universes, where a term in universe $n$ has a type
+  in universe $n+1$(This is how it is done in coq cite:sozeau2014universe  and
+  agda cite:agdadocuniverselevels).  Therefor types can only depend on values,
+  not on other types.  We only have funcitions on the type level.  We will see
+  that functions are definable on
 * Implementation
+  In this section we look at the implementation details
+
+  In section [[Abstract Syntax]] we will develop the abstract syntax of our language
+  from the rare syntax in the paper.  Then we rewrite the typing rules in [[*Typing rules]]
+  At last we look at the implementation of the type action in [[*Type Actions]]
 ** Abstract Syntax
-   In the following I will scratch out the abstract syntax. I will give every
-   inductive and coinductive type a name. They will be defined via statements. We
-   will also be able to bind expressions to names. This will be described in
+   In the following we will scratch out the abstract syntax. We will give every
+   inductive and coinductive type a name. They will be defined via statements.
+   We will also be able to bind expressions to names. This will be described in
    section [[Statements]] . In section [[Expressions]] we will define the syntax of
-   expressions. This will mostly be in 1 to 1 correspondence to the syntax of the
-   paper. Note however that we use the names of the constructors in the matches.
+   expressions. This will mostly be in 1 to 1 correspondence to the syntax of
+   the paper. Note however that we use the names of the constructors in the
+   matches. In the following section [[Examples]] we will see how the examples from
+   the paper look in our syntax.
 *** Statements
-    With the keywords data and codata we define  inductive and coinductive
-    types respectively.  After that we will write the name.  We will also
-    give names to every constructor and destructor.  If we write a name
-    before a equal sign we can bind the following expression to the name
+    With the keywords data and codata we define inductive and coinductive types
+    respectively. After that we will write the name. A (co)inductive Type can
+    have a context, which is written before an arrow. ~Set~ stands for type
+    (or * in the paper). If a type don't has a context we omit the arrow. We
+    will also give names to every constructor and destructor. Constuctors and
+    destructors also have context. Additionaly they have one argument which can
+    has a recursive occurence of the type we are defining. A constructor gives
+    back a value of the type, where its context is instatiated. This are the
+    sigmas. If we write a name before a equal sign we can bind the following
+    expression to the name
     \begin{lstlisting}
     statement =
       data Name : $(x_1 : B_1,\dots,x_n : B_n)$ -> Set where
