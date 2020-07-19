@@ -317,7 +317,7 @@
    #+end_src
 
    This generates an infinite succession of ~In~.  We use the function ~force~
-   to force the stream to evaluate one step i.e. stream ~s~ becomes ~Cons x xs~
+   to force ~U~ to evaluate one step i.e. ~x~ becomes ~In y~
 
    #+begin_src coq
      Definition force (x: U) : U :=
@@ -327,7 +327,7 @@
    #+end_src
 
    The same trick will be used to define ~eq~ which sates that ~x~ is
-   definitonal equal to ~force x~
+   definitional equal to ~force x~
 
    #+begin_src coq
      Definition eq (x : U) : x = force x :=
@@ -535,7 +535,7 @@
 
 *** Negative Coinductive Types in Agda
     In agda we can also define negative coinductive types.  This is the
-    recommended way.  Agda implements the previously mentioned copattern matchings.
+    recommended way.  Agda implements the previously mentioned copattern matching.
     We can define a record with the keyword ~record~.  We use the keyword ~coinductive~
     to make it possible to define recursive fields.  Stream is defined like the
     following.
