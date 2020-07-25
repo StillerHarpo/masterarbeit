@@ -359,6 +359,42 @@ main = hspec $ do
       evalExpr (idNat :@: one)
       `shouldCheck`
       one
+    -- packed units
+    let ducPacked x = Ductive { gamma = []
+                              , sigmas = [[]]
+                              , as = [x]
+                              , gamma1s = [[]]
+                              , nameDuc = Nothing
+                              }
+        ducPackedUnit = ducPacked UnitType
+        packedUnit = In ducPackedUnit
+        unpack x = Rec { fromRec = ducPacked x
+                       , toRec = x
+                       , matches = [LocalExprVar 0 Nothing]}
+        unpackUnit = unpack UnitType
+        pu = Constructor ducPackedUnit 0 Nothing :@: UnitExpr
+        ducPPUnit = ducPacked packedUnit
+        ppUnit = In ducPPUnit
+        unppUnit =  Rec { fromRec = ducPPUnit
+                        , toRec = UnitType
+                        , matches = [unpackUnit :@: LocalExprVar 0 Nothing]}
+        ppu = Constructor ducPPUnit 0 Nothing :@: pu
+    it "type checks unpackUnit function on pu to the unit expression" $
+      inferTerm (unpackUnit :@: pu)
+      `shouldCheck`
+      ([],UnitType)
+    it "evaluates the unpackUnit function on pu to the unit expression" $
+      evalExpr (unpackUnit :@: pu)
+      `shouldCheck`
+      UnitExpr
+    it "type checks unppUnit function on ppu to the unit expression" $
+      inferTerm (unppUnit :@: ppu)
+      `shouldCheck`
+      ([],UnitType)
+    it "evaluates the unppUnit function on ppu to the unit expression" $
+      evalExpr (unppUnit :@: ppu)
+      `shouldCheck`
+      UnitExpr
     -- vector without pair typ, just save the element in gamma2
     let suc = Constructor natDuc 1 (Just "S")
         vec2Duc = Ductive { gamma = [ nat ]

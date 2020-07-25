@@ -353,8 +353,8 @@ typeAction i (In d) terms gammas as' bs =
                                                (gamma d:gammas)
                                                (a:as')
                                                (b:bs)) -- g_k in paper
-                              idDeltas (as d) (as fromRec) (as toRecDuctive) [1..]
   in applyExprArgs (Rec {..}  ,idCtx (gamma d)) :@: LocalExprVar i Nothing
+                              idDeltas (as d) (as fromRec) (as toRecDuctive) [0..]
 typeAction i (Coin d) terms gammas as' bs =
   let idDeltas = map idCtx (gamma1s d)
       fromCorecDuctive = d { as = map (substTypes 0 (zipWith abstrArgs as' gammas)) (as d)
