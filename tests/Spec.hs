@@ -486,6 +486,51 @@ main = hspec $ do
       evalExpr (idpNat :@: pOne)
       `shouldCheck`
       pOne
+
+ -- copacked units
+    let copackedUnit = Coin ducPackedUnit
+        counpack x = Destructor (ducPacked x) 0 Nothing
+        copack x vx = Corec { fromCorec = UnitType
+                            , toCorec = ducPacked x
+                            , matches = [vx]} :@: UnitExpr
+        counpackUnit = counpack UnitType
+        cpu = copack UnitType UnitExpr
+        coducPPUnit = ducPacked copackedUnit
+        coppUnit = Coin coducPPUnit
+        counppUnit x = counpackUnit :@: (counpack (Coin ducPackedUnit) :@: x)
+        cppu = copack copackedUnit cpu
+    it "type checks counpackUnit function" $
+      inferTerm counpackUnit
+      `shouldCheck`
+      ([copackedUnit], UnitType)
+    it "type checks counpackUnit function on cpu to the unit expression" $
+      inferTerm (counpackUnit :@: cpu)
+      `shouldCheck`
+      ([],UnitType)
+    it "evaluates the counpackUnit function on pu to the unit expression" $
+      evalExpr (counpackUnit :@: cpu)
+      `shouldCheck`
+      UnitExpr
+    it "type check counpack (Coin ducPackedUnit)" $
+      inferTerm (counpack (Coin ducPackedUnit))
+      `shouldCheck`
+      ([Coin $ ducPacked copackedUnit], copackedUnit)
+    it "type check cppu" $
+      inferTerm cppu
+      `shouldCheck`
+      ([], Coin $ ducPacked copackedUnit)
+    it "type check counpack (Coin ducPackedUnit) @ cppu" $
+      inferTerm (counpack (Coin ducPackedUnit) :@: cppu)
+      `shouldCheck`
+      ([], copackedUnit)
+    it "type checks counppUnit function on cppu to the unit type" $
+      inferTerm (counppUnit cppu)
+      `shouldCheck`
+      ([],UnitType)
+    it "evaluates the counppUnit function on cppu to the unit expression" $
+      evalExpr (counppUnit cppu)
+      `shouldCheck`
+      UnitExpr
     -- vector without pair typ, just save the element in gamma2
     let suc = Constructor natDuc 1 (Just "S")
         vec2Duc = Ductive { gamma = [ nat ]
