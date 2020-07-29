@@ -118,8 +118,8 @@ inferTerm (Constructor d@Ductive{..} i _) =
           , applyTypeExprArgs (In d, sigmas !! i))
 inferTerm (Destructor d@Ductive{..} i _) =
   inferTypeDuctive d
-  >> pure (gamma1s !! i ++ [substType 0 (Coin d) (as !! i)]
-          , applyTypeExprArgs (Coin d, sigmas !! i))
+  >> pure ( gamma1s !! i ++ [applyTypeExprArgs (Coin d, sigmas !! i)]
+          , substType 0 (Coin d) (as !! i) )
 inferTerm Rec{..} = do
   valTo <- evalTypeExpr toRec
   valFrom <- evalDuctive fromRec
