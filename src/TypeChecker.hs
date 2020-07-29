@@ -489,3 +489,10 @@ shiftFreeVarsExpr k j c@Corec{..} =
                                              (gamma1s toCorec))
                        matches }
 shiftFreeVarsExpr _ _ e = e
+
+data InOrCoin = IsIn | IsCoin
+
+-- | apply the context of a ductive to it
+applyDuctiveCtx :: InOrCoin -> Ductive -> TypeExpr
+applyDuctiveCtx IsIn   d@Ductive{..} = applyTypeExprArgs (In d, idCtx gamma)
+applyDuctiveCtx IsCoin d@Ductive{..} = applyTypeExprArgs (Coin d, idCtx gamma)
