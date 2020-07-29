@@ -372,13 +372,14 @@ main = hspec $ do
                        , toRec = x
                        , matches = [LocalExprVar 0 Nothing]}
         unpackUnit = unpack UnitType
-        pu = Constructor ducPackedUnit 0 Nothing :@: UnitExpr
+        pack x = Constructor (ducPacked x) 0 Nothing
+        pu = pack UnitType :@: UnitExpr
         ducPPUnit = ducPacked packedUnit
         ppUnit = In ducPPUnit
         unppUnit =  Rec { fromRec = ducPPUnit
                         , toRec = UnitType
                         , matches = [unpackUnit :@: LocalExprVar 0 Nothing]}
-        ppu = Constructor ducPPUnit 0 Nothing :@: pu
+        ppu = pack packedUnit :@: pu
     it "type checks unpackUnit function on pu to the unit expression" $
       inferTerm (unpackUnit :@: pu)
       `shouldCheck`
@@ -395,6 +396,96 @@ main = hspec $ do
       evalExpr (unppUnit :@: ppu)
       `shouldCheck`
       UnitExpr
+    -- packed nats
+    let pNatDuc = Ductive { gamma = []
+                          , sigmas = [[],[]]
+                          , as = [UnitType, In $ ducPacked $ LocalTypeVar 1 (Just "X")]
+                          , gamma1s = [[],[]]
+                          , nameDuc = Just "pNat"}
+        pNat = In pNatDuc
+        idpNat = Rec { fromRec = pNatDuc
+                     , toRec = pNat
+                     , matches = [ Constructor pNatDuc 0 (Just "Z")
+                                  :@: LocalExprVar 0 (Just "y1")
+                                , Constructor pNatDuc 1 (Just "S")
+                                  :@: LocalExprVar 0 (Just "y2")]
+                    }
+        unpackIdpNat = Rec { fromRec = ducPacked pNat
+                           , toRec = In $ ducPacked pNat
+                           , matches = [ pack pNat :@: (idpNat :@: LocalExprVar 0 Nothing)]}
+        pZero = Constructor pNatDuc 0 (Just "Z"):@: UnitExpr
+        pOne = Constructor pNatDuc 1 (Just "S") :@: (pack pNat :@: pZero)
+        pTwo = Constructor pNatDuc 1 (Just "S") :@: (pack pNat :@: pOne)
+        pThree = Constructor pNatDuc 1 (Just "S") :@: (pack pNat :@: pTwo)
+    it "evaluates the pNat identity function to the pNat identity function" $
+      evalExpr idpNat
+      `shouldCheck`
+      idpNat
+    it "evaluates the pZero to the pZero" $
+      evalExpr pZero
+      `shouldCheck`
+      pZero
+    it "typeaction works" $
+      typeAction UnitType
+                 [idpNat :@: LocalExprVar 0 Nothing]
+                 [[]] [UnitType] [pNat]
+      `shouldBe`
+      LocalExprVar 0 Nothing
+    it "evaluates the identity function on pZero to pZero" $
+      evalExpr (idpNat :@: pZero)
+      `shouldCheck`
+      pZero
+    it "evaluates the pOne to the pOne" $
+      evalExpr pOne
+      `shouldCheck`
+      pOne
+    it "infer type of expr pZero yields Nat" $
+      inferTerm pZero
+      `shouldCheck`
+      ([], pNat)
+    it "infers type for succ constructor of pNat" $
+      inferTerm (Constructor pNatDuc 1 (Just "S"))
+      `shouldCheck`
+      ([In $ ducPacked pNat], pNat)
+    it "infer type of expr pOne yields pNat" $
+      inferTerm pOne
+      `shouldCheck`
+      ([], pNat)
+    it "pNat: typeaction works on typeVar" $
+      typeAction (LocalTypeVar 0 Nothing)
+                 [idpNat :@: LocalExprVar 0 Nothing]
+                 [[]] [pNat] [pNat]
+      `shouldBe`
+      idpNat :@: LocalExprVar 0 Nothing
+    it "pNat: substExpr works" $
+      substExpr 0 (idpNat :@: LocalExprVar 0 Nothing)
+                  (Constructor pNatDuc 1 (Just "S")
+                   :@: LocalExprVar 0 Nothing)
+      `shouldBe`
+      Constructor pNatDuc 1 (Just "S")
+      :@: (idpNat :@: LocalExprVar 0 Nothing)
+    it "substExprs works" $
+      substExprs 0 [pZero] (Constructor pNatDuc 1 (Just "S")
+                           :@: (idpNat :@: LocalExprVar 0 Nothing))
+      `shouldBe`
+      (Constructor pNatDuc 1 (Just "S") :@: (idpNat :@: pZero))
+    it "evaluates the identity function on pZero to pZero" $
+      evalExpr (idpNat :@: pZero)
+      `shouldCheck`
+      pZero
+    it "evaluates the identity function on pZero to pZero" $
+      evalExpr (idpNat :@: pZero)
+      `shouldCheck`
+      pZero
+    it "????" $
+      evalExpr (unpackIdpNat :@: (pack pNat :@: pZero))
+      `shouldCheck`
+      (pack pNat :@: pZero)
+    -- TODO fails in first typeAction case on second call
+    it "evaluates the identity function on pOne to pOne" $
+      evalExpr (idpNat :@: pOne)
+      `shouldCheck`
+      pOne
     -- vector without pair typ, just save the element in gamma2
     let suc = Constructor natDuc 1 (Just "S")
         vec2Duc = Ductive { gamma = [ nat ]
