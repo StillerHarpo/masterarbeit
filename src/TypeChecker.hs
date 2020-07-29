@@ -389,7 +389,9 @@ abstrArgs :: TypeExpr -> [TypeExpr] -> TypeExpr
 abstrArgs = foldr Abstr
 
 idCtx :: Ctx -> [Expr]
-idCtx ctx = take (length ctx) $ map (flip LocalExprVar Nothing) [0..]
+idCtx [] = []
+idCtx [_] = [LocalExprVar 0 Nothing]
+idCtx ctx = map (flip LocalExprVar Nothing) [length ctx - 1, length ctx - 2 .. 0]
 
 -- | splits up a chain of left associative applications to a type into a
 -- list of  arguments
