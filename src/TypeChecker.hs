@@ -256,12 +256,12 @@ substExpr i r v@(LocalExprVar j _)
 substExpr i r (GlobalExprVar var) = undefined
 substExpr i r (e1 :@: e2) = substExpr i r e1 :@: substExpr i r e2
 substExpr i r re@Rec{..} = let Ductive{..} = fromRec
-                               newMatches  = zipWith (\i m -> substExpr i r m)
+                               newMatches  = zipWith (\i m -> substExpr i (shiftFreeVarsExpr i 0 r) m)
                                                      (map ((+1) . (+i) . length) gamma1s)
                                                      matches
                            in re { matches = newMatches}
 substExpr i r c@Corec{..} = let Ductive{..} = toCorec
-                                newMatches  = zipWith (\i m -> substExpr i r m)
+                                newMatches  = zipWith (\i m -> substExpr i (shiftFreeVarsExpr i 0 r) m)
                                                       (map ((+1) . (+i) . length) gamma1s)
                                                       matches
                             in c { matches = newMatches }
