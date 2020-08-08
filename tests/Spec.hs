@@ -732,6 +732,89 @@ main = hspec $ do
       inferTerm (just nat :@: one)
       `shouldCheck`
       ([], maybe nat)
+    -- copairs
+    let copairDuc x y = Ductive { gamma = []
+                                , sigmas = [ [] , []]
+                                , as = [ x , y ]
+                                , gamma1s = [[],[]]
+                                , nameDuc = Just $ pShow x <> " x " <> pShow y }
+        copair x y = Coin $ copairDuc x y
+        mkCopair tyX tyY x y= Corec { fromCorec = UnitType
+                                    , toCorec = copairDuc tyX tyY
+                                    , matches = [x,y]} :@: UnitExpr
+        cofst x y = Destructor (copairDuc x y) 0 (Just "fst")
+        cosnd x y = Destructor (copairDuc x y) 1 (Just "snd")
+    it "infer copair of units for copair of unit expression " $
+      inferTerm (mkCopair UnitType UnitType UnitExpr UnitExpr)
+      `shouldCheck`
+      ([],copair UnitType UnitType)
+    it "infer copair of nats for copair of one and two" $
+      inferTerm (mkCopair nat nat one two)
+      `shouldCheck`
+      ([],copair nat nat)
+    it "infer nat for fst of copair of one and two" $
+      inferTerm (cofst nat nat :@: mkCopair nat nat one two)
+      `shouldCheck`
+      ([],nat)
+    it "evals fst on copair of one and two to one" $
+      evalExpr (cofst nat nat :@: mkCopair nat nat one two)
+      `shouldCheck`
+       one
+    it "infer nat for snd of copair of one and two" $
+      inferTerm (cosnd nat nat :@: mkCopair nat nat one two)
+      `shouldCheck`
+      ([],nat)
+    it "evals snd on copair of one and two to two" $
+      evalExpr (cosnd nat nat :@: mkCopair nat nat one two)
+      `shouldCheck`
+       two
+
+    -- pair and copair are isomporph
+    let pairToCopair x y = Rec { fromRec = ducPair x y
+                               , toRec = copair x y
+                               , matches = [mkCopair x y (LocalExprVar 0 Nothing)
+                                                         (LocalExprVar 1 Nothing)]}
+        copairToPair x y = Rec { fromRec = ducPacked (copair x y)
+                               , toRec = pair x y
+                               , matches = [mkPair x y
+                                            :@: (cofst x y
+                                                 :@: LocalExprVar 0 Nothing)
+                                            :@: (cosnd x y
+                                                 :@: LocalExprVar 0 Nothing)]}
+    it "typechecks pairToCopair Unit Unit" $
+      inferTerm (pairToCopair UnitType UnitType)
+      `shouldCheck`
+      ([pair UnitType UnitType], copair UnitType UnitType)
+    it "typechecks pairToCopair Unit nat" $
+      inferTerm (pairToCopair UnitType nat)
+      `shouldCheck`
+      ([pair UnitType nat], copair UnitType nat)
+    it "evaluates fst pairToCopair Unit nat on unit and one" $
+      evalExpr (cofst UnitType nat
+                :@: (pairToCopair UnitType nat
+                     :@: (mkPair UnitType UnitType :@: UnitExpr :@: one)))
+      `shouldCheck`
+      UnitExpr
+    it "evaluates snd pairToCopair Unit nat on unit and one" $
+      evalExpr (cosnd UnitType nat
+                :@: (pairToCopair UnitType nat
+                     :@: (mkPair UnitType UnitType :@: UnitExpr :@: one)))
+      `shouldCheck`
+      one
+    it "type checks copairToPair Unit Unit" $
+      inferTerm (copairToPair UnitType UnitType)
+      `shouldCheck`
+      ([packed (copair UnitType UnitType)], pair UnitType UnitType)
+    it "type checks copairToPair Unit nat" $
+      inferTerm (copairToPair UnitType nat)
+      `shouldCheck`
+      ([packed (copair UnitType nat)], pair UnitType nat)
+    it "type checks copairToPair Unit nat" $
+      evalExpr (copairToPair UnitType nat
+                :@: (pack (copair UnitType nat)
+                     :@: mkCopair UnitType nat UnitExpr one  ))
+      `shouldCheck`
+      (mkPair UnitType nat :@: UnitExpr :@: one)
     -- vector without pair typ, just save the element in gamma2
     let suc = Constructor natDuc 1 (Just "S")
         vec2Duc = Ductive { gamma = [ nat ]
