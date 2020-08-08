@@ -370,6 +370,62 @@ main = hspec $ do
       evalExpr (idNat :@: one)
       `shouldCheck`
       one
+
+    -- inductive pairs
+    let ducPair x y = Ductive { gamma = []
+                              , sigmas = [[]]
+                              , as = [y]
+                              , gamma1s = [[x]]
+                              , nameDuc = Just $ pShow x <> " x " <> pShow y
+                              }
+        pair x y = In $ ducPair x y
+        mkPair x y = Constructor (ducPair x y) 0 (Just "mkPair")
+        fst x y = Rec { fromRec = ducPair x y
+                      , toRec = x
+                      , matches = [LocalExprVar 1 Nothing]}
+        snd x y = Rec { fromRec = ducPair x y
+                      , toRec = y
+                      , matches = [LocalExprVar 0 Nothing]}
+    it "type checks fst on nat and unit tor (nat x unit) -> nat" $
+      inferTerm (fst nat UnitType)
+      `shouldCheck`
+      ([pair nat UnitType],nat)
+    it "type checks fst on pair of one and two to nat" $
+      inferTerm (fst nat nat :@: (mkPair nat nat :@: one :@: two))
+      `shouldCheck`
+      ([],nat)
+    it "evals fst on pair of unit and unit to unit" $
+      evalExpr (fst UnitType UnitType :@: (mkPair UnitType UnitType :@: UnitExpr :@: UnitExpr))
+      `shouldCheck`
+      UnitExpr
+    it "type checks fst on pair of unit and two to unit" $
+      inferTerm (fst UnitType nat :@: (mkPair UnitType nat :@: UnitExpr :@: two))
+      `shouldCheck`
+      ([],UnitType)
+    it "evals fst on pair of unit and two to unit" $
+      evalExpr (fst UnitType nat :@: (mkPair UnitType nat :@: UnitExpr :@: two))
+      `shouldCheck`
+      UnitExpr
+    it "evals fst on pair of zero and one to zero" $
+      evalExpr (fst nat nat :@: (mkPair nat nat :@: zero :@: one))
+      `shouldCheck`
+      zero
+    it "evals fst on pair of one and one to one" $
+      evalExpr (fst nat nat :@: (mkPair nat nat :@: one :@: one))
+      `shouldCheck`
+      one
+    it "evals fst on pair of one and two to one" $
+      evalExpr (fst nat nat :@: (mkPair nat nat :@: one :@: two))
+      `shouldCheck`
+      one
+    it "type checks snd on pair of one and two to nat" $
+      inferTerm (snd nat nat :@: (mkPair nat nat :@: one :@: two))
+      `shouldCheck`
+      ([],nat)
+    it "evals snd on pair of one and two to two" $
+      evalExpr (snd nat nat :@: (mkPair nat nat :@: one :@: two))
+      `shouldCheck`
+      two
     -- packed units
     let ducPacked x = Ductive { gamma = []
                               , sigmas = [[]]
