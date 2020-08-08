@@ -143,7 +143,7 @@ inferTerm Corec{..} = do
   betaeqCtx gamma' gamma
   sequence_ $ zipWith4 (\ gamma1 sigma a match ->
                           local (over ctx (++gamma1++[applyTypeExprArgs (valFrom,sigma)]))
-                                (checkTerm match ([],substType 0 valFrom a)))
+                                (checkTerm match ([], shiftFreeVarsTypeExpr 1 0 $ substType 0 valFrom a)))
                        gamma1s sigmas as matches
   pure ( gamma ++ [applyTypeExprArgs (valFrom, idCtx gamma)]
        , applyTypeExprArgs (Coin valTo
@@ -491,11 +491,11 @@ shiftFreeVarsExpr k j v@(LocalExprVar i n)
 shiftFreeVarsExpr k j (e1 :@: e2) = shiftFreeVarsExpr k j e1
                                     :@: shiftFreeVarsExpr k j e2
 shiftFreeVarsExpr k j r@Rec{..} =
-  r {matches = zipWith (shiftFreeVarsExpr k) (map ((j+). length)
+  r {matches = zipWith (shiftFreeVarsExpr k) (map ( (1+) . (j+) . length)
                                              (gamma1s fromRec))
                        matches }
 shiftFreeVarsExpr k j c@Corec{..} =
-  c {matches = zipWith (shiftFreeVarsExpr k) (map ((j+). length)
+  c {matches = zipWith (shiftFreeVarsExpr k) (map ( (1+) . (j+). length)
                                              (gamma1s toCorec))
                        matches }
 shiftFreeVarsExpr _ _ e = e
