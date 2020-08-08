@@ -468,10 +468,11 @@ main = hspec $ do
                               , sigmas = [[]]
                               , as = [x]
                               , gamma1s = [[]]
-                              , nameDuc = Nothing
+                              , nameDuc = Just $ "packed " <> pShow x
                               }
+        packed x = In $ ducPacked x
         ducPackedUnit = ducPacked UnitType
-        packedUnit = In ducPackedUnit
+        packedUnit = packed UnitType
         unpack x = Rec { fromRec = ducPacked x
                        , toRec = x
                        , matches = [LocalExprVar 0 Nothing]}
@@ -500,6 +501,7 @@ main = hspec $ do
       evalExpr (unppUnit :@: ppu)
       `shouldCheck`
       UnitExpr
+
     -- packed nats
     let pNatDuc = Ductive { gamma = []
                           , sigmas = [[],[]]
@@ -635,6 +637,66 @@ main = hspec $ do
       evalExpr (counppUnit cppu)
       `shouldCheck`
       UnitExpr
+
+    -- copacked nats
+    let cpNatDuc = Ductive { gamma = []
+                           , sigmas = [[],[]]
+                           , as = [UnitType, Coin $ ducPacked $ LocalTypeVar 1 (Just "X")]
+                           , gamma1s = [[],[]]
+                           , nameDuc = Just "cpNat"}
+        cpNat = In cpNatDuc
+        idcpNat = Rec { fromRec = cpNatDuc
+                      , toRec = cpNat
+                      , matches = [ Constructor cpNatDuc 0 (Just "Z")
+                                   :@: LocalExprVar 0 (Just "y1")
+                                 , Constructor cpNatDuc 1 (Just "S")
+                                   :@: LocalExprVar 0 (Just "y2")]
+                      }
+        {-
+        unpackIdcpNat = Rec { fromRec = ducPacked pNat
+                            , toRec = In $ ducPacked pNat
+                            , matches = [ pack pNat :@: (idpNat :@: LocalExprVar 0 Nothing)]}
+        -}
+        cpZero = Constructor cpNatDuc 0 (Just "Z") :@: UnitExpr
+        cpOne = Constructor cpNatDuc 1 (Just "S") :@: copack cpNat cpZero
+        cpTwo = Constructor cpNatDuc 1 (Just "S") :@: copack cpNat cpOne
+        cpThree = Constructor cpNatDuc 1 (Just "S") :@: copack cpNat cpTwo
+    it "evaluates the cpNat identity function to the cpNat identity function" $
+      evalExpr idcpNat
+      `shouldCheck`
+      idcpNat
+    it "evaluates the pZero to the pZero" $
+      evalExpr cpZero
+      `shouldCheck`
+      cpZero
+    it "evaluates the identity function on cpZero to cpZero" $
+      evalExpr (idcpNat :@: cpZero)
+      `shouldCheck`
+      cpZero
+    it "evaluates the cpOne to the cpOne" $
+      evalExpr cpOne
+      `shouldCheck`
+      cpOne
+    it "infer type of expr cpZero yields cpNat" $
+      inferTerm cpZero
+      `shouldCheck`
+      ([], cpNat)
+    it "infers type for succ constructor of pNat" $
+      inferTerm (Constructor pNatDuc 1 (Just "S"))
+      `shouldCheck`
+      ([In $ ducPacked pNat], pNat)
+    it "infer type of expr cpOne yields cpNat" $
+      inferTerm cpOne
+      `shouldCheck`
+      ([], cpNat)
+    it "type cechs the identity function on cpOne to cpNat" $
+      inferTerm (idcpNat :@: cpOne)
+      `shouldCheck`
+      ([], cpNat)
+    it "evaluation of the identity function on cpOne preserves type" $
+      (evalExpr (idcpNat :@: cpOne) >>= inferTerm)
+      `shouldCheck`
+      ([], cpNat)
     -- vector without pair typ, just save the element in gamma2
     let suc = Constructor natDuc 1 (Just "S")
         vec2Duc = Ductive { gamma = [ nat ]
