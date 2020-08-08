@@ -17,6 +17,9 @@ import Parser
 import TypeChecker
 import AbstractSyntaxTree
 
+pShow :: Show a => a -> T.Text
+pShow = T.pack . show
+
 main :: IO ()
 main = hspec $ do
   describe "Parser works" $ do
@@ -288,6 +291,8 @@ main = hspec $ do
       inferTerm UnitExpr
       `shouldCheck`
       ([],UnitType)
+
+    -- natural numbers
     let natDuc = Ductive { gamma = []
                          , sigmas = [[],[]]
                          , as = [UnitType, LocalTypeVar 0 (Just "X")]
@@ -302,7 +307,13 @@ main = hspec $ do
                                   :@: LocalExprVar 0 (Just "y2")]
                     }
         zero = Constructor natDuc 0 (Just "Z"):@: UnitExpr
-        one = Constructor natDuc 1 (Just "S") :@: zero
+        suc = Constructor natDuc 1 (Just "S")
+        one = suc :@: zero
+        two = suc :@: one
+        three = suc :@: two
+        four = suc :@: three
+        five = suc :@: four
+        six = suc :@: five
     it "evaluates the identity function to the identity function" $
       evalExpr idNat
       `shouldCheck`
@@ -316,9 +327,9 @@ main = hspec $ do
       `shouldCheck`
       ([], UnitType)
     it "typeaction works" $
-      typeAction 0 UnitType
-                   [idNat :@: LocalExprVar 0 Nothing]
-                   [[]] [UnitType] [nat]
+      typeAction UnitType
+                 [idNat :@: LocalExprVar 0 Nothing]
+                 [[]] [UnitType] [nat]
       `shouldBe`
       LocalExprVar 0 Nothing
     it "evaluates the identity function on zero to zero" $
@@ -338,9 +349,9 @@ main = hspec $ do
       `shouldCheck`
       ([], nat)
     it "typeaction works on typeVar" $
-      typeAction 0 (LocalTypeVar 0 Nothing)
-                   [idNat :@: LocalExprVar 0 Nothing]
-                   [[]] [nat] [nat]
+      typeAction (LocalTypeVar 0 Nothing)
+                 [idNat :@: LocalExprVar 0 Nothing]
+                 [[]] [nat] [nat]
       `shouldBe`
       idNat :@: LocalExprVar 0 Nothing
     it "substExpr works" $
