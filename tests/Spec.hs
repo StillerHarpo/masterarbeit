@@ -815,6 +815,54 @@ main = hspec $ do
                      :@: mkCopair UnitType nat UnitExpr one  ))
       `shouldCheck`
       (mkPair UnitType nat :@: UnitExpr :@: one)
+    -- Lists with copairs
+    let pairDucVar = Ductive { gamma = []
+                             , sigmas = [[],[]]
+                             , as = [UnitType, LocalTypeVar 1 (Just "X")]
+                             , gamma1s = [[],[]]
+                             , nameDuc = Nothing}--Just "pair"}
+        pairVar = Coin pairDucVar
+        listDuc = Ductive { gamma = []
+                          , sigmas = [[],[]]
+                          , as = [ UnitType, pairVar]
+                          , gamma1s = [[],[]]
+                          , nameDuc = Nothing}--Just "list"}
+        list = In listDuc
+        pairDuc = Ductive { gamma = []
+                          , sigmas = [[],[]]
+                          , as = [UnitType, list]
+                          , gamma1s = [[],[]]
+                          , nameDuc = Nothing}--Just "pair"}
+        pair = Coin pairDuc
+        idList = Rec { fromRec = listDuc
+                     , toRec = list
+                     , matches = [ Constructor listDuc 0 (Just "[]")
+                                   :@: LocalExprVar 0 (Just "y1")
+                                 , Constructor listDuc 1 (Just "::")
+                                   :@: LocalExprVar 0 (Just "y2")]
+                     }
+        emptyList = Constructor listDuc 0 (Just "[]") :@: UnitExpr
+        mkPair x y = Corec { fromCorec = UnitType
+                           , toCorec = pairDuc
+                           , matches = [x,y]} :@: UnitExpr
+        oneList = Constructor listDuc 1 (Just "::")
+                  :@: mkPair UnitExpr emptyList
+    it "infers type list for emptyList" $
+      inferTerm emptyList
+      `shouldCheck`
+      ([],list)
+    it "infers type list for oneList" $
+      inferTerm oneList
+      `shouldCheck`
+      ([],list)
+    it "infers type list for identity function on oneList" $
+      inferTerm (idList :@: oneList)
+      `shouldCheck`
+      ([],list)
+    it "evaluation of the identity function on list preserves typing" $
+      (evalExpr (idList :@: oneList) >>= inferTerm)
+      `shouldCheck`
+      ([],list)
     -- vector without pair typ, just save the element in gamma2
     let suc = Constructor natDuc 1 (Just "S")
         vec2Duc = Ductive { gamma = [ nat ]
