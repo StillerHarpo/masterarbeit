@@ -426,6 +426,43 @@ main = hspec $ do
       evalExpr (snd nat nat :@: (mkPair nat nat :@: one :@: two))
       `shouldCheck`
       two
+
+    -- addition
+    let add =  Rec { fromRec = ducPair nat nat
+                   , toRec = nat
+                   , matches = [Rec { fromRec = natDuc
+                                    , toRec = nat
+                                    , matches = [ LocalExprVar 1 Nothing
+                                                , suc :@: LocalExprVar 0 Nothing ]} :@: LocalExprVar 1 Nothing]}
+    it "type check add to (nat x nat) -> nat" $
+      inferTerm add
+      `shouldCheck`
+      ([pair nat nat], nat)
+    it "type action on nat give back idNat applied to variable" $
+      typeAction nat [add :@: LocalExprVar 0 Nothing] [[nat]] [nat] [nat]
+      `shouldBe`
+      idNat :@: LocalExprVar 0 Nothing
+    it "type action on nat give back idNat applied to variable doesn't change in substitution" $
+      substExpr 0
+       (typeAction nat [add :@: LocalExprVar 0 Nothing] [[nat]] [nat] [nat])
+       ( Rec { fromRec = natDuc
+            , toRec = nat
+            , matches = [ LocalExprVar 1 Nothing
+                        , suc :@: LocalExprVar 0 Nothing ]} :@: LocalExprVar 1 Nothing )
+      `shouldBe`
+       ( Rec { fromRec = natDuc
+            , toRec = nat
+            , matches = [ idNat :@: LocalExprVar 1 Nothing
+                        , suc :@: LocalExprVar 0 Nothing ]} :@: LocalExprVar 1 Nothing )
+    it "add zero and zero to zero" $
+      evalExpr (add :@: (mkPair nat nat :@: zero :@: zero))
+      `shouldCheck`
+      zero
+    it "add two and three to five" $
+      evalExpr (add :@: (mkPair nat nat :@: two :@: three))
+      `shouldCheck`
+      five
+
     -- packed units
     let ducPacked x = Ductive { gamma = []
                               , sigmas = [[]]
