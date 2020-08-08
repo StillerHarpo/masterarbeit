@@ -143,7 +143,7 @@ inferTerm Corec{..} = do
   betaeqCtx gamma' gamma
   sequence_ $ zipWith4 (\ gamma1 sigma a match ->
                           local (over ctx (++gamma1++[applyTypeExprArgs (valFrom,sigma)]))
-                                (checkTerm match ([], shiftFreeVarsTypeExpr 1 0 $ substType 0 valFrom a)))
+                                (checkTerm match ([],substType 0 valFrom a)))
                        gamma1s sigmas as matches
   pure ( gamma ++ [applyTypeExprArgs (valFrom, idCtx gamma)]
        , applyTypeExprArgs (Coin valTo
@@ -340,35 +340,37 @@ substTypesInExpr _ [] e = e
 substTypesInExpr n (v:vs) e = substTypesInExpr (n+1) vs (substTypeInExpr n v e)
 
 typeAction :: TypeExpr -> [Expr] -> [Ctx] -> [TypeExpr] -> [TypeExpr] -> Expr
-typeAction (LocalTypeVar n _) terms _ _ _ = trace ("terms: " <> show terms <> " with length " <> show (length terms) <> " at " <> show n) (terms !! n)
+typeAction (LocalTypeVar n _) terms _ _ _ = terms !! n
 typeAction (GlobalTypeVar ps n) terms _ _ _ = undefined
 typeAction (c :@ s) terms gammas as' bs = substExpr 0 (typeAction c terms gammas as' bs) s
 typeAction (Abstr _ c) terms gammas as' bs = typeAction c terms gammas as' bs
 typeAction (In d) terms gammas as' bs =
   let idDeltas = map idCtx (gamma1s d)
-      fromRec = d { as = trace ("as': " <> show (as d) <> " subst with " <> show as')
-                               (map (substTypes 1 (zipWith abstrArgs as' gammas)) (as d))
-                  , nameDuc = Nothing} -- R_a in paper
+      newAs = (map (substTypes 1 (zipWith abstrArgs as' gammas)) (as d))
+      fromRec = d { as = newAs
+                  , nameDuc = if newAs == as d
+                              then nameDuc d
+                              else Nothing} -- R_a in paper
       toRec = In fromRec
       rb = applyDuctiveCtx IsIn fromRec
       matches = zipWith3 (\idDelta dk k ->
-                             trace ("typeAction on "
-                                    <> show dk
-                                    <> " with terms "
-                                    <> show (LocalExprVar 0 Nothing : terms))$
                              applyExprArgs (Constructor fromRec k Nothing, idDelta)
                                 :@: typeAction dk
                                               -- TODO is this the right variable?
                                               -- Could be bound by wrong binder.
-                                              (terms ++ [LocalExprVar 0 Nothing])
-                                              (gammas ++ [gamma d])
-                                              (as' ++ [rb])
-                                              (bs ++ [rb])) -- g_k in paper
+                                              (LocalExprVar 0 Nothing : terms)
+                                              (gamma d : gammas)
+                                              (rb : as')
+                                              (rb : bs )) -- g_k in paper
                               idDeltas (as d)  [0..]
   in applyExprArgs (Rec {..}  , idCtx (gamma d)) :@: LocalExprVar 0 Nothing
 typeAction (Coin d) terms gammas as' bs =
   let idDeltas = map idCtx (gamma1s d)
-      toCorec = d { as = map (substTypes 1 (zipWith abstrArgs bs gammas)) (as d) }
+      newAs = map (substTypes 1 (zipWith abstrArgs bs gammas)) (as d)
+      toCorec = d { as = newAs
+                  , nameDuc = if newAs == as d
+                              then nameDuc d
+                              else Nothing} -- R_a in paper
       fromCorec = Coin toCorec
       rb = applyDuctiveCtx IsCoin toCorec
       -- g_k in paper
@@ -378,10 +380,10 @@ typeAction (Coin d) terms gammas as' bs =
                                          (typeAction dk
                                                      -- TODO is this the right variable?
                                                      -- Could be bound by wrong binder.
-                                                    (terms ++ [LocalExprVar 0 Nothing])
-                                                    (gammas ++ [gamma d])
-                                                    (as' ++ [rb])
-                                                    (bs ++ [rb])))
+                                                    (LocalExprVar 0 Nothing : terms )
+                                                    (gamma d : gammas )
+                                                    (rb : as')
+                                                    (rb : bs )))
                          idDeltas (as d) [0..]
   in applyExprArgs (Corec {..}  ,idCtx (gamma d)) :@: LocalExprVar 0 Nothing
 typeAction _ _ _ _ _ = LocalExprVar 0 Nothing
