@@ -697,6 +697,41 @@ main = hspec $ do
       (evalExpr (idcpNat :@: cpOne) >>= inferTerm)
       `shouldCheck`
       ([], cpNat)
+
+
+    -- bools
+    let boolDuc = Ductive { gamma = []
+                          , sigmas = [[],[]]
+                          , as = [UnitType, UnitType]
+                          , gamma1s = [[],[]]
+                          , nameDuc = Just "bool"}
+        bool = In boolDuc
+        false = Constructor boolDuc 0 (Just "false")
+        true = Constructor boolDuc 1 (Just "true")
+
+    -- maybe
+    let maybeDuc x = Ductive { gamma = []
+                             , sigmas = [ [], []]
+                             , as = [ UnitType, x]
+                             , gamma1s = [[],[]]
+                             , nameDuc = Just $ "Maybe " <> pShow x}
+        maybe x = In $ maybeDuc x
+        nothing x = Constructor (maybeDuc x) 0 (Just "Nothing") :@: UnitExpr
+        just x = Constructor (maybeDuc x) 1 (Just "Just")
+        isNothing x = Rec { fromRec = maybeDuc x
+                          , toRec = bool
+                          , matches = [true, false]}
+        isJust x = Rec { fromRec = maybeDuc x
+                       , toRec = bool
+                       , matches = [false, true]}
+    it "infer type maybe nat for nothing nat" $
+      inferTerm (nothing nat)
+      `shouldCheck`
+      ([], maybe nat)
+    it "infer type maybe nat for just on one" $
+      inferTerm (just nat :@: one)
+      `shouldCheck`
+      ([], maybe nat)
     -- vector without pair typ, just save the element in gamma2
     let suc = Constructor natDuc 1 (Just "S")
         vec2Duc = Ductive { gamma = [ nat ]
