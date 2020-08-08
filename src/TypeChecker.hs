@@ -206,47 +206,34 @@ evalExpr (f :@: arg) = do
             _               -> pure valF
   valArg <- evalExpr arg
   case (valF', valArg) of
-    -- TODO Should we check if _ = sigma_k\cric \tau
-    ( getExprArgs -> (r@Rec{..}, _), getExprArgs -> (Constructor _ i _, constrArgs)) -> do
-      traceM $ "u = " <> show (last constrArgs)
-      traceM $ "fromRec: " <> show fromRec <> " in i " <> show i
-      traceM $ "as fromRec " <> show (as fromRec)
-      traceM $ "gamma1s fromRec " <> show (gamma1s fromRec)
-      traceM $ "matches " <> show matches
-      traceM $ "typeAction 0 "
-                <> show (as fromRec !! i)
-                <> " "
-                <> show [applyExprArgs (r, idCtx (gamma fromRec))
-                          :@: LocalExprVar 0 Nothing]
-                <> " "
-                <> show [gamma1s fromRec !! i]
-                <> " "
-                <> show [In fromRec]
-                <> " "
-                <> show [toRec]
-      let step = substExprs 0 constrArgs
-                         (substExpr 0 (typeAction (as fromRec !! i)
-                                                  [applyExprArgs (r, idCtx (gamma fromRec))
+    -- TODO Should we check if _ = sigma_k\circ \tau
+    ( getExprArgs -> (r@Rec{..}, _), getExprArgs -> (Constructor _ i _, constrArgs)) ->
+      let gamma1 = gamma1s fromRec !! i
+      in evalExpr $ shiftFreeVarsExpr
+                      ((-1) - length gamma1)
+                      (1 + length gamma1)
+                      (substExprs 0 (reverse constrArgs)
+                        (substExpr 0 (typeAction (as fromRec !! i)
+                                                 [applyExprArgs (r, idCtx (gamma fromRec))
+                                                 :@: LocalExprVar 0 Nothing]
+                                                 [gamma1]
+                                                 [In fromRec]
+                                                 [toRec])
+                                     (matches !! i)))
+    (getExprArgs -> (Destructor ductive i _, tau) , getExprArgs -> (c@Corec{..}, args)) ->
+      let gamma1 = gamma1s toCorec !! i
+      in evalExpr $ shiftFreeVarsExpr
+                      ((-1) - length gamma1)
+                      (1 + length gamma1)
+                      (substExprs 0 (last args : reverse tau)
+                        (substExpr 0 (matches !! i)
+                                     (typeAction (as toCorec !! i)
+                                                 [applyExprArgs (c, idCtx (gamma toCorec))
                                                   :@: LocalExprVar 0 Nothing]
-                                                  [gamma1s fromRec !! i]
-                                                  [In fromRec]
-                                                  [toRec])
-                                      (matches !! i))
-      traceM $ "solution stepn: " <> show step
-      evalExpr step
-    (getExprArgs -> (Destructor ductive i _, tau) , getExprArgs -> (c@Corec{..}, args)) -> do
-      traceM $ "toCorec: " <> show toCorec <> " in i " <> show i
-      let step = substExprs 0 (tau ++ [last args])
-                          (substExpr 0 (matches !! i)
-                                       (typeAction (as toCorec !! i)
-                                                   [applyExprArgs (c, idCtx (gamma toCorec))
-                                                    :@: LocalExprVar 0 Nothing]
-                                                   [gamma1s toCorec !! i]
-                                                   [fromCorec]
-                                                   [Coin toCorec]))
-      traceM $ "solution stepn: " <> show step
-      evalExpr step
-    _ -> pure $ valF :@: valArg
+                                                 [gamma1]
+                                                 [fromCorec]
+                                                 [Coin toCorec])))
+    _ -> pure $ valF' :@: valArg
 evalExpr atom = pure atom
 
 substExpr :: Int -> Expr -> Expr -> Expr
