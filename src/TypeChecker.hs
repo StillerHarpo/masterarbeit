@@ -11,6 +11,7 @@ import Debug.Trace
 
 import Control.Monad.Except
 import Control.Monad.Reader
+import Control.Monad.State
 import Control.Arrow (second)
 
 import Data.List
@@ -29,14 +30,51 @@ import PrettyPrinter
 data ContextTI = ContextTI { _ctx :: Ctx
                            , _tyCtx :: TyCtx
                            , _defCtx :: [Statement]
-                           , _strCtx :: StrCtx
                            }
 $(makeLenses ''ContextTI)
 
 type TI = ExceptT Text (Reader ContextTI)
 
+type PTI = ExceptT Text (State [Statement])
+
 runTI :: TI a -> ContextTI -> Either Text a
 runTI ti = runReader (runExceptT ti)
+
+evalPTI :: PTI a -> [Statement] -> Either Text a
+evalPTI pti = evalState (runExceptT pti)
+
+emptyCtx :: ContextTI
+emptyCtx = ContextTI { _ctx = []
+                     , _tyCtx = []
+                     , _defCtx = []}
+
+checkProgram :: [Statement] -> Either Text [TypedExpr]
+checkProgram = flip evalPTI [] . checkProgramPTI
+  where
+    checkProgramPTI :: [Statement] -> PTI [TypedExpr]
+    checkProgramPTI [] = pure []
+    checkProgramPTI (ExprDef{..} : stmts) = do
+      ty <- Just <$> tiInPTI (inferTerm expr)
+      expr <- tiInPTI $ evalExpr expr
+      modify (ExprDef{..} :)
+      checkProgramPTI stmts
+    checkProgramPTI (TypeDef{..} : stmts) = do
+      tiInPTI $ checkTyCtx parameterCtx
+      kind <- Just <$> tiInPTI (local (set tyCtx parameterCtx)
+                                      (inferType typeExpr))
+      typeExpr <- tiInPTI $ evalTypeExpr typeExpr
+      modify (TypeDef{..} :)
+      checkProgramPTI stmts
+    checkProgramPTI (Expression expr : stmts) =
+      (:) <$> (TypedExpr <$> tiInPTI (evalExpr expr)
+                         <*> tiInPTI (inferTerm expr))
+          <*> checkProgramPTI stmts
+    tiInPTI :: TI a -> PTI a
+    tiInPTI ti = do
+      curDefCtx <- get
+      case runTI ti $ set defCtx curDefCtx emptyCtx of
+        Left err -> throwError err
+        Right a -> pure a
 
 checkTyCtx :: TyCtx -> TI ()
 checkTyCtx = mapM_ checkCtx

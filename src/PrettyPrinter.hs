@@ -18,6 +18,16 @@ class PrettyPresc a where
 prettyParens :: PrettyPresc a => a -> Doc ann
 prettyParens = prettyPresc True
 
+instance Pretty TypedExpr where
+  pretty (TypedExpr expr ([], typeExpr)) = pretty expr
+                                         <> pretty " :: "
+                                         <> pretty typeExpr
+  pretty (TypedExpr expr (ctx, typeExpr)) = pretty expr
+                                         <> pretty " :: "
+                                         <> pretty ctx
+                                         <> pretty " -> "
+                                         <> pretty typeExpr
+
 instance PrettyPresc TypeExpr where
   prettyPresc _ UnitType = pretty "Unit"
   prettyPresc p (e1 :@ e2)  = parensIf p $ pretty e1
@@ -83,6 +93,9 @@ instance Pretty TypeExpr where
 
 instance Pretty Expr where
   pretty = prettyPresc False
+
+instance Show TypedExpr where
+  showsPrec _ = renderShowS . layoutPretty defaultLayoutOptions . pretty
 
 instance Show TypeExpr where
   showsPrec _ = renderShowS . layoutPretty defaultLayoutOptions . pretty

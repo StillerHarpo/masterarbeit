@@ -21,7 +21,10 @@ executable masterarbeit
   main-is:             Main.hs
   -- other-extensions:
   build-depends:       base,
-                       masterarbeit
+                       text,
+                       masterarbeit,
+                       megaparsec,
+                       prettyprinter
   hs-source-dirs:      src-exe
   default-language:    Haskell2010
 

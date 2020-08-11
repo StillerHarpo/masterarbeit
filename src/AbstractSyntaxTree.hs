@@ -9,6 +9,8 @@ import Data.Map (Map)
 type Type = (Ctx,TypeExpr)
 type Kind = Ctx
 
+data TypedExpr = TypedExpr Expr Type
+
 type StrCtx = [(Text,Type)]
 
 data Statement = ExprDef { name :: Text
