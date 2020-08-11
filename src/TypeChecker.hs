@@ -42,32 +42,40 @@ checkTyCtx :: TyCtx -> TI ()
 checkTyCtx = mapM_ checkCtx
 
 checkCtx :: Ctx -> TI ()
-checkCtx [] = pure ()
-checkCtx (typ:ctx') =
-  local (over tyCtx (const []) . over ctx (const ctx'))
-        (checkType typ [])
-  >> checkCtx ctx'
+checkCtx ctx' = catchError (checkCtx' ctx')
+                           (throwError . (<> "\n in context "
+                                          <> T.pack (show ctx')))
+  where
+    checkCtx' [] = pure ()
+    checkCtx' (typ:ctx') =
+      local (over tyCtx (const []) . over ctx (const ctx'))
+            (checkType typ [])
+      >> checkCtx ctx'
 
 checkType :: TypeExpr -> Kind -> TI ()
 checkType e k = inferType e >>= betaeqCtx k
 
 inferType :: TypeExpr -> TI Kind
-inferType UnitType = pure []
-inferType v@(LocalTypeVar idx _) = do
-  ty <- view tyCtx >>= lookupLocalVarTI idx (T.pack $ show v)
-  view ctx >>= checkCtx
-  pure ty
-inferType (GlobalTypeVar var pars) = lookupDefKindTI pars var
-inferType (a :@ t) = inferType a >>= \case
-    [] -> throwError "Can't apply someting to a type with a empty context"
-    (b:gamma2) -> do
-      (ctx,b') <- inferTerm t
-      assert (null ctx) "Type Ctx should be empty"
-      betaeq b b'
-      pure $ substCtx 0 t gamma2
-inferType (Abstr tyX b) = (tyX:) <$> local (ctx %~ (tyX:)) (inferType b)
-inferType (In d) = inferTypeDuctive d
-inferType (Coin d) = inferTypeDuctive d
+inferType tyExpr = catchError (inferType' tyExpr)
+                              (throwError . (<> "\n in type expression "
+                                             <> T.pack (show tyExpr)))
+  where
+    inferType' UnitType = pure []
+    inferType' v@(LocalTypeVar idx _) = do
+      ty <- view tyCtx >>= lookupLocalVarTI idx (T.pack $ show v)
+      view ctx >>= checkCtx
+      pure ty
+    inferType' (GlobalTypeVar var pars) = lookupDefKindTI pars var
+    inferType' (a :@ t) = inferType a >>= \case
+        [] -> throwError "Can't apply someting to a type with a empty context"
+        (b:gamma2) -> do
+          (ctx,b') <- inferTerm t
+          assert (null ctx) "Type Ctx should be empty"
+          betaeq b b'
+          pure $ substCtx 0 t gamma2
+    inferType' (Abstr tyX b) = (tyX:) <$> local (ctx %~ (tyX:)) (inferType b)
+    inferType' (In d) = inferTypeDuctive d
+    inferType' (Coin d) = inferTypeDuctive d
 
 inferTypeDuctive :: Ductive -> TI Kind
 inferTypeDuctive Ductive{..} = do
@@ -79,12 +87,17 @@ inferTypeDuctive Ductive{..} = do
   pure gamma
 
 checkContextMorph :: [Expr] -> Ctx -> Ctx -> TI ()
-checkContextMorph [] gamma1 [] = checkCtx gamma1
-checkContextMorph [] _ _ = throwError $ "Invalid context morphism:"
-                                        <> "Gamma2 should be empty for empty morphism"
-checkContextMorph (t:ts) gamma1 (a:gamma2) = do
-  local (over ctx (const gamma1)) (checkTerm t  ([], substTypeExprs 0 ts a))
-  checkContextMorph ts gamma1 gamma2
+checkContextMorph exprs gamma1 gamma2 =
+  catchError (checkContextMorph' exprs gamma1 gamma2)
+             (throwError . (<> "\n in context morphismus "
+                            <> T.pack (show exprs)))
+  where
+    checkContextMorph' [] gamma1 [] = checkCtx gamma1
+    checkContextMorph' [] _ _ = throwError $ "Invalid context morphism:"
+                                            <> "Gamma2 should be empty for empty morphism"
+    checkContextMorph' (t:ts) gamma1 (a:gamma2) = do
+      local (over ctx (const gamma1)) (checkTerm t ([], substTypeExprs 0 ts a))
+      checkContextMorph ts gamma1 gamma2
 
 checkTerm :: Expr -> Type -> TI ()
 checkTerm e (ctx1,a1) = do
@@ -93,62 +106,66 @@ checkTerm e (ctx1,a1) = do
   betaeq a1 a2
 
 inferTerm :: Expr -> TI Type
-inferTerm UnitExpr = pure ([],UnitType)
-inferTerm v@(LocalExprVar idx _) =
-  ([],) . shiftFreeVarsTypeExpr (idx + 1) 0
-  <$> (view ctx >>= lookupLocalVarTI idx (T.pack $ show v))
-inferTerm (GlobalExprVar x) = lookupDefTypeTI x
-inferTerm (t :@: s) = inferTerm t >>= \case
-  ([],_) -> throwError "Can't apply something to a term with a empty context"
-  (a:ctx2,b) -> do
-    (ctx,a') <- inferTerm s
-    assert (null ctx) "Type Ctx should be empty"
-    betaeq a a'
-    --shift free vars 0
-    pure ( shiftFreeVarsCtx (-1)
-                            0
-                            (substCtx 0 (shiftFreeVarsExpr 1 0 s) ctx2)
-         , shiftFreeVarsTypeExpr
-             (-1)
-             0
-             (substTypeExpr (length ctx2)
-                            (shiftFreeVarsExpr (length ctx2+1) 0 s)
-                             b))
-inferTerm (Constructor d@Ductive{..} i _) =
-  inferTypeDuctive d
-  >> pure (gamma1s !! i ++ [substType 0 (In d) (as !! i)]
-          , applyTypeExprArgs (In d, sigmas !! i))
-inferTerm (Destructor d@Ductive{..} i _) =
-  inferTypeDuctive d
-  >> pure ( gamma1s !! i ++ [applyTypeExprArgs (Coin d, sigmas !! i)]
-          , substType 0 (Coin d) (as !! i) )
-inferTerm Rec{..} = do
-  valTo <- evalTypeExpr toRec
-  valFrom <- evalDuctive fromRec
-  gamma' <- inferType valTo
-  let Ductive{..} = valFrom
-  betaeqCtx gamma' gamma
-  sequence_ $ zipWith4 (\ gamma1 sigma a match ->
-                          local (over ctx (++gamma1++[substType 0 valTo a]))
-                                (checkTerm match ([],applyTypeExprArgs (valTo,sigma))))
-                       gamma1s sigmas as matches
-  pure ( gamma ++ [applyTypeExprArgs (In valFrom, idCtx gamma)]
-       , applyTypeExprArgs ( valTo
-                           , map (shiftFreeVarsExpr 1 0) (idCtx gamma)))
-inferTerm Corec{..} = do
-  valTo <- evalDuctive toCorec
-  valFrom <- evalTypeExpr fromCorec
-  gamma' <- inferType valFrom
-  let Ductive{..} = valTo
-  betaeqCtx gamma' gamma
-  sequence_ $ zipWith4 (\ gamma1 sigma a match ->
-                          local (over ctx (++gamma1++[applyTypeExprArgs (valFrom,sigma)]))
-                                (checkTerm match ([],substType 0 valFrom a)))
-                       gamma1s sigmas as matches
-  pure ( gamma ++ [applyTypeExprArgs (valFrom, idCtx gamma)]
-       , applyTypeExprArgs (Coin valTo
-                           , map (shiftFreeVarsExpr 1 0) (idCtx gamma)))
-inferTerm (WithParameters ps e) = inferTerm $ substTypesInExpr 0 ps e
+inferTerm expr = catchError (inferTerm' expr)
+                                (throwError . (<> "\n in expression "
+                                               <> T.pack (show expr)))
+  where
+    inferTerm' UnitExpr = pure ([],UnitType)
+    inferTerm' v@(LocalExprVar idx _) =
+      ([],) . shiftFreeVarsTypeExpr (idx + 1) 0
+      <$> (view ctx >>= lookupLocalVarTI idx (T.pack $ show v))
+    inferTerm' (GlobalExprVar x) = lookupDefTypeTI x
+    inferTerm' (t :@: s) = inferTerm t >>= \case
+      ([],_) -> throwError "Can't apply something to a term with a empty context"
+      (a:ctx2,b) -> do
+        (ctx,a') <- inferTerm s
+        assert (null ctx) "Type Ctx should be empty"
+        betaeq a a'
+        --shift free vars 0
+        pure ( shiftFreeVarsCtx (-1)
+                                0
+                                (substCtx 0 (shiftFreeVarsExpr 1 0 s) ctx2)
+             , shiftFreeVarsTypeExpr
+                 (-1)
+                     0
+                 (substTypeExpr (length ctx2)
+                                (shiftFreeVarsExpr (length ctx2+1) 0 s)
+                                 b))
+    inferTerm' (Constructor d@Ductive{..} i _) =
+      inferTypeDuctive d
+      >> pure (gamma1s !! i ++ [substType 0 (In d) (as !! i)]
+              , applyTypeExprArgs (In d, sigmas !! i))
+    inferTerm' (Destructor d@Ductive{..} i _) =
+      inferTypeDuctive d
+      >> pure ( gamma1s !! i ++ [applyTypeExprArgs (Coin d, sigmas !! i)]
+              , substType 0 (Coin d) (as !! i) )
+    inferTerm' Rec{..} = do
+      valTo <- evalTypeExpr toRec
+      valFrom <- evalDuctive fromRec
+      gamma' <- inferType valTo
+      let Ductive{..} = valFrom
+      betaeqCtx gamma' gamma
+      sequence_ $ zipWith4 (\ gamma1 sigma a match ->
+                              local (over ctx (++gamma1++[substType 0 valTo a]))
+                                    (checkTerm match ([],applyTypeExprArgs (valTo,sigma))))
+                           gamma1s sigmas as matches
+      pure ( gamma ++ [applyTypeExprArgs (In valFrom, idCtx gamma)]
+           , applyTypeExprArgs ( valTo
+                               , map (shiftFreeVarsExpr 1 0) (idCtx gamma)))
+    inferTerm' Corec{..} = do
+      valTo <- evalDuctive toCorec
+      valFrom <- evalTypeExpr fromCorec
+      gamma' <- inferType valFrom
+      let Ductive{..} = valTo
+      betaeqCtx gamma' gamma
+      sequence_ $ zipWith4 (\ gamma1 sigma a match ->
+                              local (over ctx (++gamma1++[applyTypeExprArgs (valFrom,sigma)]))
+                                    (checkTerm match ([], shiftFreeVarsTypeExpr 1 0 $ substType 0 valFrom a)))
+                           gamma1s sigmas as matches
+      pure ( gamma ++ [applyTypeExprArgs (valFrom, idCtx gamma)]
+           , applyTypeExprArgs (Coin valTo
+                               , map (shiftFreeVarsExpr 1 0) (idCtx gamma)))
+    inferTerm' (WithParameters ps e) = inferTerm $ substTypesInExpr 0 ps e
 
 
 betaeq :: TypeExpr -> TypeExpr -> TI ()
