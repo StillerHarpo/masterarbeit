@@ -153,8 +153,8 @@ inferTerm (WithParameters ps e) = inferTerm $ substTypesInExpr 0 ps e
 
 betaeq :: TypeExpr -> TypeExpr -> TI ()
 betaeq e1 e2 = do
-  ee1 <- evalTypeExpr e1
-  ee2 <- evalTypeExpr e2
+  ee1 <- evalTypeExpr e1 >>= inlineTypeExpr
+  ee2 <- evalTypeExpr e2 >>= inlineTypeExpr
   if ee1 == ee2
   then pure ()
   else throwError $ "couldn't match type "
@@ -167,6 +167,52 @@ betaeqCtx = zipWithM_ betaeq
 
 betaeqTyCtx :: TyCtx -> TyCtx -> TI ()
 betaeqTyCtx = zipWithM_ betaeqCtx
+
+
+inlineTypeExpr :: TypeExpr -> TI TypeExpr
+inlineTypeExpr (tyExpr :@ expr) = (:@) <$> inlineTypeExpr tyExpr <*> inlineExpr expr
+inlineTypeExpr (GlobalTypeVar n _) = lookupDefTypeExprTI n
+                                     >>= inlineTypeExpr
+inlineTypeExpr (Abstr tyExpr1 tyExpr2) = Abstr <$> inlineTypeExpr tyExpr1
+                                               <*> inlineTypeExpr tyExpr2
+inlineTypeExpr (In duc) = In <$> inlineDuctive duc
+inlineTypeExpr (Coin duc) = Coin <$> inlineDuctive duc
+inlineTypeExpr tyExpr = pure tyExpr
+
+inlineDuctive :: Ductive -> TI Ductive
+inlineDuctive Ductive{..} = do
+  gamma <- inlineCtx gamma
+  sigmas <- mapM (mapM inlineExpr) sigmas
+  as <- mapM inlineTypeExpr as
+  gamma1s <- mapM inlineCtx gamma1s
+  pure $ Ductive{..}
+
+inlineExpr :: Expr -> TI Expr
+inlineExpr (GlobalExprVar n) = lookupDefExprTI n >>= inlineExpr
+inlineExpr (e1 :@: e2) = (:@:) <$> inlineExpr e1 <*> inlineExpr e2
+inlineExpr Constructor{..} = do
+  ductive <- inlineDuctive ductive
+  pure Constructor{..}
+inlineExpr Destructor{..} = do
+  ductive <- inlineDuctive ductive
+  pure Destructor{..}
+inlineExpr Rec{..} = do
+  fromRec <- inlineDuctive fromRec
+  toRec <- inlineTypeExpr toRec
+  matches <- mapM inlineExpr matches
+  pure Rec{..}
+inlineExpr Corec{..} = do
+  fromCorec <- inlineTypeExpr fromCorec
+  toCorec <- inlineDuctive toCorec
+  matches <- mapM inlineExpr matches
+  pure Corec{..}
+inlineExpr (WithParameters tyExprs expr) = WithParameters
+                                           <$> mapM inlineTypeExpr tyExprs
+                                           <*> inlineExpr expr
+inlineExpr expr = pure expr
+
+inlineCtx :: Ctx -> TI Ctx
+inlineCtx = mapM inlineTypeExpr
 
 evalTypeExpr :: TypeExpr -> TI TypeExpr
 evalTypeExpr (Abstr ty expr) = Abstr <$> evalTypeExpr ty
