@@ -375,7 +375,9 @@ withParameters ps = WithParameters ps
 
 withLocalExprVars :: [Text] -> Parser a -> Parser a
 withLocalExprVars vars p =
-  (localExprVars %= (vars ++)) *> p <* (localExprVars %= drop (length vars))
+  (localExprVars %= (++ vars))
+  *> p
+  <* (localExprVars %= \allVars -> take (length allVars - length vars) allVars)
 
 withLocalTypeVar :: Text -> Parser a -> Parser a
 withLocalTypeVar var p =
