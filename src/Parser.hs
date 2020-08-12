@@ -7,6 +7,8 @@
 
 module Parser where
 
+import Lib
+
 import AbstractSyntaxTree
 
 import qualified Data.Set as Set
@@ -44,7 +46,7 @@ data ParserState = ParserState {
     _scLineFold :: Maybe (Parsec Void Text ())
   , _exprDefs:: Set Text
   , _typeExprDefs :: Set Text
-  , _defDuctives :: [(Text, ([Text], InOrCoin, Ductive))]
+  , _defDuctives :: [(Text, (InOrCoin, Ductive))]
   , _constructorDefs :: Set Text
   , _destructorDefs :: Set Text
   , _localExprVars :: [Text]
@@ -87,16 +89,17 @@ parseData = nonIndented $ parseBlock
      checkName name
      parseConstructorDef name)
   (\(name, gammaP, parametersCtxP) constructorDefsP -> do
-     let nameDuc = Just name
-         (constructors, gamma1s, as, sigmas) = unzip4 constructorDefsP
+     let nameDuc = name
+         (strs, gamma1s, as, sigmas) = unzip4 constructorDefsP
          (_,gamma) = unzip gammaP
          parameterCtx = map (map snd . snd) parametersCtxP
      localExprVars .= []
      localTypeVars .= []
-     mapM_ checkName constructors
-     defDuctives %= ((name, (constructors, InTag, Ductive{..})):)
+     mapM_ checkName strs
+     let strNames = strs
+     defDuctives %= ((name, (InTag, Ductive{..})):)
      typeExprDefs %= Set.insert name
-     constructorDefs %= Set.union (Set.fromList constructors)
+     constructorDefs %= Set.union (Set.fromList strs)
      let typeExpr = In Ductive{..}
          kind = Nothing
      pure $ TypeDef{..})
@@ -108,16 +111,17 @@ parseCodata = nonIndented $ parseBlock
       checkName name
       parseDestructorDef name)
   (\(name, gammaP, parametersCtxP) destructorDefsP -> do
-     let nameDuc = Just name
-         (destructors, gamma1s, sigmas, as) = unzip4 destructorDefsP
+     let nameDuc = name
+         (strs, gamma1s, sigmas, as) = unzip4 destructorDefsP
          gamma = map snd gammaP
          parameterCtx = map (map snd . snd) parametersCtxP
      localExprVars .= []
      localTypeVars .= []
-     mapM_ checkName destructors
-     defDuctives %= ((name, (destructors, CoinTag, Ductive{..})):)
+     mapM_ checkName strs
+     let strNames = strs
+     defDuctives %= ((name, (CoinTag, Ductive{..})):)
      typeExprDefs %= Set.insert name
-     destructorDefs %= Set.union (Set.fromList destructors)
+     destructorDefs %= Set.union (Set.fromList strs)
      let typeExpr = Coin Ductive{..}
          kind = Nothing
      pure TypeDef{..})
@@ -214,7 +218,7 @@ parseExprVar = do
   else case elemIndex var _localExprVars of
          Just idx ->
            pure $ LocalExprVar (length _localExprVars - idx - 1)
-                               (Just var)
+                               var
          Nothing  ->
            fancyFailure $ Set.singleton $ ErrorFail "Name not defined"
 
@@ -234,7 +238,7 @@ parseTypeVar = do
   else case elemIndex var _localTypeVars of
          Just idx ->
            pure $ LocalTypeVar (length _localTypeVars - idx - 1)
-                               (Just var)
+                               var
          Nothing  ->
            fancyFailure $ Set.singleton $ ErrorFail "Name not defined"
 
@@ -242,21 +246,14 @@ parseStrVar :: Parser Expr
 parseStrVar = do
   var <- parseTypeStrVarT
   parameters <- parseParameters
-  let nameStr = Just var
+  let nameStr = var
       lookupStr [] = singleFailure "Con/Destrunctor not defined"
-      lookupStr ((_,(strs,inOrCoin,ductive)):ductives) =
-        case (saveIdx var strs, inOrCoin) of
+      lookupStr ((_,(inOrCoin,ductive@Ductive{..})):ductives) =
+        case (saveIdx var strNames, inOrCoin) of
           (Just num, InTag) -> pure $ Constructor{..}
           (Just num, CoinTag) -> pure $ Destructor{..}
           (Nothing, _) -> lookupStr ductives
   withParameters parameters <$> ((view defDuctives <$> get) >>= lookupStr)
-
-saveIdx :: Eq a => a -> [a] -> Maybe Int
-saveIdx = saveIdxH 0
-  where
-    saveIdxH _ _ []                 = Nothing
-    saveIdxH i v (x:xs) | v == x    = Just i
-                        | otherwise = saveIdxH (i+1) v xs
 
 parseUnitType :: Parser TypeExpr
 parseUnitType = UnitType <$ string "Unit"
@@ -299,8 +296,8 @@ parseCorec = parseBlock ((,,)
 
 orderMatches :: Text -> [(Text,Expr)] -> Parser (Ductive,[Expr])
 orderMatches name matches = do
-  (structors, _, ductive) <- (view defDuctives <$> get) >>= lookupP name
-  exprs <- orderExprs structors ([],matches)
+  (_, ductive@Ductive{..}) <- (view defDuctives <$> get) >>= lookupP name
+  exprs <- orderExprs strNames ([],matches)
   pure (ductive,exprs)
   where
     orderExprs [] ([],[]) = pure []

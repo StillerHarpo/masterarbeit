@@ -1,10 +1,14 @@
 {-# language RecordWildCards #-}
 {-# language StandaloneDeriving #-}
+{-# language OverloadedStrings #-}
 
 module PrettyPrinter where
 
 import Data.Text.Prettyprint.Doc
 import Data.Text.Prettyprint.Doc.Render.String
+import Data.Text(Text)
+
+import Lib
 
 import AbstractSyntaxTree
 
@@ -20,70 +24,91 @@ prettyParens = prettyPresc True
 
 instance Pretty TypedExpr where
   pretty (TypedExpr expr ([], typeExpr)) = pretty expr
-                                         <> pretty " :: "
+                                         <> " :: "
                                          <> pretty typeExpr
   pretty (TypedExpr expr (ctx, typeExpr)) = pretty expr
-                                         <> pretty " :: "
-                                         <> pretty ctx
-                                         <> pretty " -> "
+                                         <> " :: "
+                                         <> encloseSep lparen rparen comma (map pretty ctx)
+                                         <> " -> "
                                          <> pretty typeExpr
 
 instance PrettyPresc TypeExpr where
-  prettyPresc _ UnitType = pretty "Unit"
+  prettyPresc _ UnitType = "Unit"
   prettyPresc p (e1 :@ e2)  = parensIf p $ pretty e1
-                                           <+> pretty "@"
+                                           <+> "@"
                                            <+> prettyParens e2
-  prettyPresc _ (LocalTypeVar i Nothing) = pretty "tmpTy" <> pretty i
-  prettyPresc _ (LocalTypeVar _ (Just n)) = pretty n
-  prettyPresc _ (GlobalTypeVar n par) = pretty n <+> pretty par
+  prettyPresc _ (LocalTypeVar i "") = "?Ty" <> pretty i
+  prettyPresc _ (LocalTypeVar i n) = pretty n <> "[" <> pretty i <> "]"
+  prettyPresc _ (GlobalTypeVar n []) = pretty n
+  prettyPresc _ (GlobalTypeVar n par) = pretty n <> tupled (map pretty par)
   -- TODO find name of variable if defined
-  prettyPresc _ (Abstr ty body) = pretty "\\?:" <> pretty ty
-                                                <> pretty " -> "
-                                                <> prettyParens body
+  prettyPresc _ (Abstr ty body) = "\\?:" <> pretty ty
+                                         <> " -> "
+                                         <> prettyParens body
   prettyPresc _ (In d@Ductive{..}) = case nameDuc of
-    Nothing -> pretty "mu" <> pretty d
+    "???" -> "mu" <> pretty d
     _       -> pretty d
   prettyPresc _ (Coin d@Ductive{..}) = case nameDuc of
-    Nothing -> pretty "nu" <> pretty d
+    "???" -> "nu" <> pretty d
     _       -> pretty d
 
 instance Pretty Ductive where
   pretty Ductive{..} = case nameDuc of
-    Just t  -> pretty t
-    Nothing -> parens . hsep $ punctuate semi [ pretty gamma
+    "???" -> parens . hsep $ punctuate semi [ pretty gamma
                                               , pretty sigmas
                                               , pretty as
                                               , pretty gamma1s
                                               ]
+    t     -> pretty t
 
 instance PrettyPresc Expr where
-  prettyPresc _ UnitExpr                      = pretty "<>"
-  prettyPresc _ (LocalExprVar i Nothing)      = pretty "tmp{" <> pretty i <> pretty "}"
-  prettyPresc _ (LocalExprVar i (Just n))     = pretty n <> pretty "{" <> pretty i <> pretty "}"
-  prettyPresc _ (GlobalExprVar n)             = pretty n
-  prettyPresc p (e1 :@: e2)                   = parensIf p $ pretty e1
-                                                           <+> pretty "@"
-                                                           <+> prettyPresc True e2
-  prettyPresc _ (Constructor _ _ (Just n))  = pretty n
-  prettyPresc _ (Constructor d i Nothing)   = pretty "alpha_" <> pretty i
-                                              <> pretty "^" <> pretty d
-  prettyPresc _ (Destructor _ _ (Just n))   = pretty n
-  prettyPresc _ (Destructor d i Nothing)    = pretty "xi_" <> pretty i
-                                              <> pretty "^" <> pretty d
-  prettyPresc _ Rec{..}                       = pretty "rec_" <> pretty fromRec
-                                              <> pretty "^" <> pretty toRec
-                                              <> pretty matches
-  prettyPresc _ (WithParameters ps Rec{..})  = pretty "rec_" <> pretty fromRec
-                                              <> prettyPars ps <> pretty "^"
-                                              <> pretty toRec <> pretty matches
-  prettyPresc _ Corec{..}                     = pretty "corec_" <> pretty fromCorec
-                                              <> pretty "^" <> pretty toCorec
-                                              <> pretty matches
-  prettyPresc _ (WithParameters ps Corec{..}) = pretty "corec_" <> pretty fromCorec
-                                              <> pretty "^" <> pretty toCorec
-                                              <> prettyPars ps
-                                              <> pretty matches
-  prettyPresc _ (WithParameters ps e)     = pretty e <> prettyPars ps
+  prettyPresc _ UnitExpr                       = "<>"
+  prettyPresc _ (LocalExprVar i "")            = "?" <> pretty i
+  prettyPresc _ (LocalExprVar i n)             = pretty n <> "{" <> pretty i <> "}"
+  prettyPresc _ (GlobalExprVar n)              = pretty n
+  prettyPresc p (e1 :@: e2)                    =
+    parensIf p $ pretty e1 <+> "@" <+> prettyPresc True e2
+  prettyPresc _ (Constructor d@Ductive{..}  i) =
+    case strNames !!? i of
+      Just n  -> pretty n
+      Nothing -> "alpha_" <> pretty i <> "^" <> pretty d
+  prettyPresc _ (Destructor d@Ductive{..} i)   =
+    case strNames !!? i of
+      Just n  -> pretty n
+      Nothing -> "xi_" <> pretty i <> "^" <> pretty d
+  prettyPresc _ Rec{..}                        =
+    let Ductive{..} = fromRec
+    in nest 2 $ vsep $ ("rec from" <+> pretty fromRec
+                        <+> "to" <+> pretty toRec <+> "where")
+                       : prettyMatches strNames gamma1s matches
+  prettyPresc _ (WithParameters ps Rec{..})    =
+    let Ductive{..} = fromRec
+    in nest 2 $ vsep $ ("rec from" <+> pretty fromRec <> prettyPars ps
+                         <+> "to" <+> pretty toRec <+> "where")
+                       : prettyMatches strNames gamma1s matches
+  prettyPresc _ Corec{..}                      =
+    let Ductive{..} = toCorec
+    in nest 2 $ vsep $ ("corec from" <+> pretty fromCorec
+                       <+> "to" <+> pretty toCorec <+> "where")
+                       : prettyMatches strNames gamma1s matches
+  prettyPresc _ (WithParameters ps Corec{..})   =
+    let Ductive{..} = toCorec
+    in nest 2 $ vsep $ ("corec from" <+> pretty fromCorec <+> "to"
+                        <+> pretty toCorec <> prettyPars ps <+> "where")
+                        : prettyMatches strNames gamma1s matches
+  prettyPresc _ (WithParameters ps e)           = pretty e
+                                                  <> prettyPars ps
+
+prettyMatches :: [Text] -- Constructors
+              -> [Ctx] --- Gamma1s
+              -> [Expr] -- Matches
+              -> [Doc ann]
+prettyMatches = zipWith3 prettyMatch
+  where
+    prettyMatch :: Text -> Ctx -> Expr -> Doc ann
+    prettyMatch str ctx match = pretty str
+                                <+> hsep ["x" <> pretty i | i <- [0..(length ctx)]]
+                                <+> "=" <+> pretty match
 
 prettyPars :: [TypeExpr] -> Doc ann
 prettyPars = encloseSep langle rangle comma . map pretty

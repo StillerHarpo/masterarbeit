@@ -42,6 +42,7 @@ library
                        Parser,
                        TypeChecker,
                        PrettyPrinter
+  other-modules:       Lib
   default-language:   Haskell2010
 
 test-suite tests

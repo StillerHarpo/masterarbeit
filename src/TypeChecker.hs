@@ -169,11 +169,11 @@ inferTerm expr = catchError (inferTerm' expr)
                  (substTypeExpr (length ctx2)
                                 (shiftFreeVarsExpr (length ctx2+1) 0 s)
                                  b))
-    inferTerm' (Constructor d@Ductive{..} i _) =
+    inferTerm' (Constructor d@Ductive{..} i) =
       inferTypeDuctive d
       >> pure (gamma1s !! i ++ [substType 0 (In d) (as !! i)]
               , applyTypeExprArgs (In d, sigmas !! i))
-    inferTerm' (Destructor d@Ductive{..} i _) =
+    inferTerm' (Destructor d@Ductive{..} i) =
       inferTypeDuctive d
       >> pure ( gamma1s !! i ++ [applyTypeExprArgs (Coin d, sigmas !! i)]
               , substType 0 (Coin d) (as !! i) )
@@ -308,11 +308,11 @@ evalExpr (f :@: arg) = do
   valArg <- evalExpr arg
   case (valF', valArg) of
     -- TODO Should we check if _ = sigma_k\circ \tau
-    ( getExprArgs -> (r@Rec{..}, _), getExprArgs -> (Constructor _ i _, constrArgs)) -> do
+    ( getExprArgs -> (r@Rec{..}, _), getExprArgs -> (Constructor _ i, constrArgs)) -> do
       let gamma1 = gamma1s fromRec !! i
       recEval <- typeAction (as fromRec !! i)
                             [applyExprArgs (r, idCtx (gamma fromRec))
-                            :@: LocalExprVar 0 Nothing]
+                            :@: LocalExprVar 0 ""]
                             [gamma1]
                             [In fromRec]
                             [toRec]
@@ -321,11 +321,11 @@ evalExpr (f :@: arg) = do
                                    (substExprs 0 (reverse constrArgs)
                                                  (substExpr 0 recEval
                                                               (matches !! i)))
-    (getExprArgs -> (Destructor ductive i _, tau) , getExprArgs -> (c@Corec{..}, args)) -> do
+    (getExprArgs -> (Destructor ductive i, tau) , getExprArgs -> (c@Corec{..}, args)) -> do
       let gamma1 = gamma1s toCorec !! i
       recEval <- typeAction (as toCorec !! i)
                             [applyExprArgs (c, idCtx (gamma toCorec))
-                            :@: LocalExprVar 0 Nothing]
+                            :@: LocalExprVar 0 ""]
                             [gamma1]
                             [fromCorec]
                             [Coin toCorec]
@@ -386,7 +386,8 @@ substDuctiveExpr i r1 dIn@Ductive{..} =
                                a)
                     gamma1s as
         , gamma1s = map (substCtx i r1) gamma1s
-        , nameDuc = Nothing
+        , nameDuc = "???"
+        , strNames = []
         }
   in if dOut == dIn then dIn else dOut
 
@@ -421,7 +422,7 @@ substTypes n (v:vs) e = substTypes (n+1) vs (substType n v e)
 substDuctiveTypeExpr :: Int -> TypeExpr -> Ductive -> Ductive
 substDuctiveTypeExpr i r1 dOld@Ductive{..} =
   let dNew =  dOld { as = map (substType (i+1) r1) as
-                   , nameDuc = Nothing }
+                   , nameDuc = "" }
   in if dNew == dOld then dOld else dNew
 
 substTypeInExpr :: Int -> TypeExpr -> Expr -> Expr
@@ -455,28 +456,28 @@ typeAction (In d) terms gammas as' bs = do
       fromRec = d { as = newAs
                   , nameDuc = if newAs == as d
                               then nameDuc d
-                              else Nothing} -- R_a in paper
+                              else "???"} -- R_a in paper
       toRec = In fromRec
       rb = applyDuctiveCtx IsIn fromRec
   matches <- sequence $ zipWith3 (\idDelta dk k -> do
     recEval <- typeAction dk
                           -- TODO is this the right variable?
                          -- Could be bound by wrong binder.
-                         (LocalExprVar 0 Nothing : terms)
+                         (LocalExprVar 0 "" : terms)
                          (gamma d : gammas)
                          (rb : as')
                          (rb : bs )
-    pure $ applyExprArgs (Constructor fromRec k Nothing, idDelta)
+    pure $ applyExprArgs (Constructor fromRec k, idDelta)
                           :@: recEval) -- g_k in paper
                                   idDeltas (as d)  [0..]
-  pure$  applyExprArgs (Rec {..}  , idCtx (gamma d)) :@: LocalExprVar 0 Nothing
+  pure$  applyExprArgs (Rec {..}  , idCtx (gamma d)) :@: LocalExprVar 0 ""
 typeAction (Coin d) terms gammas as' bs = do
   let idDeltas = map idCtx (gamma1s d)
       newAs = map (substTypes 1 (zipWith abstrArgs bs gammas)) (as d)
       toCorec = d { as = newAs
                   , nameDuc = if newAs == as d
                               then nameDuc d
-                              else Nothing} -- R_a in paper
+                              else "???"} -- R_a in paper
       fromCorec = Coin toCorec
       rb = applyDuctiveCtx IsCoin toCorec
       -- g_k in paper
@@ -484,17 +485,17 @@ typeAction (Coin d) terms gammas as' bs = do
     recEval <- typeAction dk
                           -- TODO is this the right variable?
                           -- Could be bound by wrong binder.
-                          (LocalExprVar 0 Nothing : terms )
+                          (LocalExprVar 0 "" : terms )
                           (gamma d : gammas )
                           (rb : as')
                           (rb : bs )
-    pure $ substExpr 0 (applyExprArgs ( Destructor toCorec k Nothing
+    pure $ substExpr 0 (applyExprArgs ( Destructor toCorec k
                                       , idDelta)
-                        :@: LocalExprVar 0 Nothing)
+                        :@: LocalExprVar 0 "")
                        recEval)
                                  idDeltas (as d) [0..]
-  pure $ applyExprArgs (Corec {..}  ,idCtx (gamma d)) :@: LocalExprVar 0 Nothing
-typeAction _ _ _ _ _ = pure $ LocalExprVar 0 Nothing
+  pure $ applyExprArgs (Corec {..}  ,idCtx (gamma d)) :@: LocalExprVar 0 ""
+typeAction _ _ _ _ _ = pure $ LocalExprVar 0 ""
 
 -- | splits up a chain of left associative applications to a expression
 -- into a list of  arguments
@@ -510,8 +511,8 @@ abstrArgs = foldr Abstr
 
 idCtx :: Ctx -> [Expr]
 idCtx [] = []
-idCtx [_] = [LocalExprVar 0 Nothing]
-idCtx ctx = map (flip LocalExprVar Nothing) [length ctx - 1, length ctx - 2 .. 0]
+idCtx [_] = [LocalExprVar 0 ""]
+idCtx ctx = map (flip LocalExprVar "") [length ctx - 1, length ctx - 2 .. 0]
 
 -- | splits up a chain of left associative applications to a type into a
 -- list of  arguments
