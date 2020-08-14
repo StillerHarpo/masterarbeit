@@ -575,7 +575,14 @@ lookupDefTypeExprTI t = view defCtx >>= lookupDefTypeExprTI'
     lookupDefTypeExprTI' :: [Statement] -> TI TypeExpr
     lookupDefTypeExprTI' [] = throwError $ "Variable " <> t <> " not defined"
     lookupDefTypeExprTI' (TypeDef{..}:stmts)
-      | t == name = pure typeExpr
+      | t == name = do
+          assert (length pars == length parameterCtx)
+                 "parameters to type variables have to be complete"
+--    TODO This function gets used in evalution with doesn't change the context
+--         Are this tests really not necessary?
+--        parsKinds <- mapM inferType pars
+--        betaeqTyCtx parsKinds parameterCtx
+          pure $ substTypes 0 pars typeExpr
       | otherwise = lookupDefTypeExprTI' stmts
     lookupDefTypeExprTI' (_:stmts) = lookupDefTypeExprTI' stmts
 
