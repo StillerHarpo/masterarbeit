@@ -6,6 +6,7 @@ import Test.Hspec.Megaparsec
 import Text.Megaparsec
 
 import qualified Data.Map as Map
+import Data.Bifunctor (first)
 
 import Control.Monad.State.Strict
 
@@ -52,7 +53,8 @@ main = hspec $ do
                     sigmas = [[]],
                     as = [ Abstr UnitType UnitType ],
                     gamma1s = [[]],
-                    nameDuc = Nothing}
+                    nameDuc = "",
+                    strNames = ["C"]}
                 , kind = Nothing}]
     it "parses a abstraction with multiple arguments" $
       parse parseProgram "" (T.unlines [ "data A : Set where"
@@ -66,7 +68,8 @@ main = hspec $ do
                     sigmas = [[]],
                     as = [ Abstr UnitType (Abstr UnitType UnitType)],
                     gamma1s = [[]],
-                    nameDuc = Nothing}
+                    nameDuc = "",
+                    strNames = ["C"]}
                 , kind = Nothing}]
     it "parse a application left associative" $
       parse parseProgram "" "() @ () @ ()"
@@ -82,9 +85,10 @@ main = hspec $ do
       [ExprDef "x" UnitExpr Nothing]
     let c = Ductive { gamma = []
                     , sigmas = [[]]
-                    , as = [LocalTypeVar 0 (Just "C")]
+                    , as = [LocalTypeVar 0 "C"]
                     , gamma1s = [[]]
-                    , nameDuc = Nothing}
+                    , nameDuc = ""
+                    , strNames = ["C1"]}
     it "parses data" $
       parse parseProgram "" "data C : Set where { C1 : C -> C }"
       `shouldParse`
@@ -127,12 +131,13 @@ main = hspec $ do
                    gamma = [UnitType],
                    sigmas = [ [UnitExpr]
                             , [UnitExpr]],
-                   as = [ LocalTypeVar 0 (Just "C")
-                          :@ LocalExprVar 0 (Just "y")
-                        , LocalTypeVar 0 (Just "C") :@ UnitExpr ],
+                   as = [ LocalTypeVar 0 "C"
+                          :@ LocalExprVar 0 "y"
+                        , LocalTypeVar 0 "C" :@ UnitExpr ],
                    gamma1s = [ [UnitType]
                              , []],
-                   nameDuc = Nothing}
+                   nameDuc = "",
+                   strNames = ["C1", "C2"]}
                , kind = Nothing}]
     it "parses a program" $
       parse parseProgram "" (T.unlines [ "x = () @ ()"
@@ -154,11 +159,12 @@ main = hspec $ do
                     gamma = [ UnitType],
                     sigmas = [ [UnitExpr]
                              , [UnitExpr]],
-                    as = [ LocalTypeVar 0 (Just "A") :@ LocalExprVar 0 (Just "y")
-                         , LocalTypeVar 0 (Just "A"):@ UnitExpr],
+                    as = [ LocalTypeVar 0 "A" :@ LocalExprVar 0 "y"
+                         , LocalTypeVar 0 "A":@ UnitExpr],
                     gamma1s = [ [UnitType]
                               , []],
-                    nameDuc = Nothing}
+                    nameDuc = "",
+                    strNames = ["C1", "C2"]}
                 , kind = Nothing}
       , Expression $ GlobalExprVar "x" :@: GlobalExprVar "z" ]
     it "parses a rec programm" $
@@ -170,17 +176,18 @@ main = hspec $ do
       `shouldParse`
       (let a = Ductive { gamma = []
                        , sigmas = [[]]
-                       , as = [LocalTypeVar 0 (Just "A")]
+                       , as = [LocalTypeVar 0 "A"]
                        , gamma1s = [[]]
-                       , nameDuc = Nothing}
+                       , nameDuc = ""
+                       , strNames = ["C"]}
       in [ TypeDef { name = "A"
                    , parameterCtx = []
                    , typeExpr = In a
                    , kind = Nothing}
          , Expression Rec { fromRec = a
                           , toRec = GlobalTypeVar "A" []
-                          , matches = [ Constructor a 0 Nothing
-                                        :@: LocalExprVar 0 (Just "x") ]}])
+                          , matches = [ Constructor a 0
+                                        :@: LocalExprVar 0 "x" ]}])
     it "parses context with spaces" $
        parse parseProgram "" "data A : (x : Unit, y : Unit) -> Set where"
        `shouldParse`
@@ -190,27 +197,28 @@ main = hspec $ do
                                          , sigmas = []
                                          , as = []
                                          , gamma1s = []
-                                         , nameDuc = Nothing}
+                                         , nameDuc = ""
+                                         , strNames = []}
                  , kind = Nothing }]
-    it "parses parameters of inducive type" $
+    it "parses parameters of inductive type" $
       parse parseProgram "" (T.unlines [ "data A<B : Set> : Set where"
                                        , "  C : B -> A"
                                        , "C<Unit>@()"])
       `shouldParse`
       let duc = Ductive { gamma = []
                         , sigmas = [[]]
-                        , as = [LocalTypeVar 0 (Just "B")]
+                        , as = [LocalTypeVar 1 "B"]
                         , gamma1s = [[]]
-                        , nameDuc = Nothing}
+                        , nameDuc = "A"
+                        , strNames = ["C"]}
       in [ TypeDef { name = "A"
                    , parameterCtx = [[]]
                    , typeExpr = In duc
                    , kind = Nothing}
          , Expression (WithParameters [UnitType] (Constructor { ductive = duc
-                                                              , num = 0
-                                                              , nameStr = Nothing})
+                                                              , num = 0})
                        :@: UnitExpr)]
-    it "parses parameters of coinducive type" $
+    it "parses parameters of coinductive type" $
       parse parseProgram "" (T.unlines [ "codata A<B : Set> : Set where"
                                        , "  C : A -> B"
                                        , "corec<Unit> Unit to A where"
@@ -218,9 +226,10 @@ main = hspec $ do
       `shouldParse`
       let duc = Ductive { gamma = []
                         , sigmas = [[]]
-                        , as = [LocalTypeVar 0 (Just "B")]
+                        , as = [LocalTypeVar 1 "B"]
                         , gamma1s = [[]]
-                        , nameDuc = Just "A"}
+                        , nameDuc = "A"
+                        , strNames = ["C"]}
       in [ TypeDef { name = "A"
                    , parameterCtx = [[]]
                    , typeExpr = Coin duc
@@ -243,45 +252,45 @@ main = hspec $ do
       `shouldParse`
       (let a = Ductive { gamma = []
                        , sigmas = [[],[],[],[]]
-                       , as = [ LocalTypeVar 0 (Just "A")
-                              , LocalTypeVar 0 (Just "A")
-                              , LocalTypeVar 0 (Just "A")
-                              , LocalTypeVar 0 (Just "A")]
+                       , as = [ LocalTypeVar 0 "A"
+                              , LocalTypeVar 0 "A"
+                              , LocalTypeVar 0 "A"
+                              , LocalTypeVar 0 "A"]
                        , gamma1s = [ [UnitType, UnitType, UnitType]
                                    , [UnitType, UnitType]
                                    , [UnitType]
                                    , []]
-                       , nameDuc = Nothing}
+                       , nameDuc = ""
+                       , strNames = ["C1", "C2", "C3", "C4"]}
       in [ TypeDef { name = "A"
                    , parameterCtx = []
                    , typeExpr = In a
                    , kind = Nothing}
          , Expression Rec { fromRec = a
                           , toRec = GlobalTypeVar "A" []
-                          , matches = [ Constructor a 0 Nothing
-                                        :@: LocalExprVar 3 (Just "x")
-                                        :@: LocalExprVar 2 (Just "y")
-                                        :@: LocalExprVar 1 (Just "z")
-                                        :@: LocalExprVar 0 (Just "u")
-                                      , Constructor a 1 Nothing
-                                        :@: LocalExprVar 2 (Just "x")
-                                        :@: LocalExprVar 1 (Just "y")
-                                        :@: LocalExprVar 0 (Just "z")
-                                      , Constructor a 2 Nothing
-                                        :@: LocalExprVar 1 (Just "x")
-                                        :@: LocalExprVar 0 (Just "y")
-                                      , Constructor a 3 Nothing
-                                        :@: LocalExprVar 0 (Just "x")]}])
+                          , matches = [ Constructor a 0
+                                        :@: LocalExprVar 3 "x"
+                                        :@: LocalExprVar 2 "y"
+                                        :@: LocalExprVar 1 "z"
+                                        :@: LocalExprVar 0 "u"
+                                      , Constructor a 1
+                                        :@: LocalExprVar 2 "x"
+                                        :@: LocalExprVar 1 "y"
+                                        :@: LocalExprVar 0 "z"
+                                      , Constructor a 2
+                                        :@: LocalExprVar 1 "x"
+                                        :@: LocalExprVar 0 "y"
+                                      , Constructor a 3
+                                        :@: LocalExprVar 0 "x"]}])
 
   describe "Type Checker works" $ do
     let emptyCtx :: ContextTI
         emptyCtx = ContextTI { _ctx = []
                              , _tyCtx = []
-                             , _defCtx = []
-                             , _strCtx = []}
-        shouldCheckIn :: (HasCallStack, Show a, Eq a) => TI a -> ContextTI -> a -> Expectation
-        shouldCheckIn ti ctx' val = runTI ti ctx' `shouldBe` Right val
-        shouldCheck :: (HasCallStack, Show a, Eq a) => TI a -> a -> Expectation
+                             , _defCtx = []}
+        shouldCheckIn :: (HasCallStack, Show a, Eq a) => TI ann a -> ContextTI -> a -> Expectation
+        shouldCheckIn ti ctx' val = first show (runTI ti ctx') `shouldBe` Right val
+        shouldCheck :: (HasCallStack, Show a, Eq a) => TI ann a -> a -> Expectation
         shouldCheck ti = shouldCheckIn ti emptyCtx
     it "type check unit type" $
       inferType UnitType
@@ -295,19 +304,20 @@ main = hspec $ do
     -- natural numbers
     let natDuc = Ductive { gamma = []
                          , sigmas = [[],[]]
-                         , as = [UnitType, LocalTypeVar 0 (Just "X")]
+                         , as = [UnitType, LocalTypeVar 0 "X"]
                          , gamma1s = [[],[]]
-                         , nameDuc = Just "nat"}
+                         , nameDuc = "nat"
+                         , strNames = ["S", "N"]}
         nat = In natDuc
         idNat = Rec { fromRec = natDuc
                     , toRec = nat
-                    , matches = [ Constructor natDuc 0 (Just "Z")
-                                  :@: LocalExprVar 0 (Just "y1")
-                                , Constructor natDuc 1 (Just "S")
-                                  :@: LocalExprVar 0 (Just "y2")]
+                    , matches = [ Constructor natDuc 0
+                                  :@: LocalExprVar 0 "y1"
+                                , Constructor natDuc 1
+                                  :@: LocalExprVar 0 "y2"]
                     }
-        zero = Constructor natDuc 0 (Just "Z"):@: UnitExpr
-        suc = Constructor natDuc 1 (Just "S")
+        zero = Constructor natDuc 0:@: UnitExpr
+        suc = Constructor natDuc 1
         one = suc :@: zero
         two = suc :@: one
         three = suc :@: two
@@ -328,10 +338,10 @@ main = hspec $ do
       ([], UnitType)
     it "typeaction works" $
       typeAction UnitType
-                 [idNat :@: LocalExprVar 0 Nothing]
+                 [idNat :@: LocalExprVar 0 ""]
                  [[]] [UnitType] [nat]
-      `shouldBe`
-      LocalExprVar 0 Nothing
+      `shouldCheck`
+      LocalExprVar 0 ""
     it "evaluates the identity function on zero to zero" $
       evalExpr (idNat :@: zero)
       `shouldCheck`
@@ -349,23 +359,23 @@ main = hspec $ do
       `shouldCheck`
       ([], nat)
     it "typeaction works on typeVar" $
-      typeAction (LocalTypeVar 0 Nothing)
-                 [idNat :@: LocalExprVar 0 Nothing]
+      typeAction (LocalTypeVar 0 "")
+                 [idNat :@: LocalExprVar 0 ""]
                  [[]] [nat] [nat]
-      `shouldBe`
-      idNat :@: LocalExprVar 0 Nothing
+      `shouldCheck`
+      (idNat :@: LocalExprVar 0 "")
     it "substExpr works" $
-      substExpr 0 (idNat :@: LocalExprVar 0 Nothing)
-                  (Constructor natDuc 1 (Just "S")
-                   :@: LocalExprVar 0 Nothing)
+      substExpr 0 (idNat :@: LocalExprVar 0 "")
+                  (Constructor natDuc 1
+                   :@: LocalExprVar 0 "")
       `shouldBe`
-      Constructor natDuc 1 (Just "S")
-      :@: (idNat :@: LocalExprVar 0 Nothing)
+      Constructor natDuc 1
+      :@: (idNat :@: LocalExprVar 0 "")
     it "substExprs works" $
-      substExprs 0 [zero] (Constructor natDuc 1 (Just "S")
-                           :@: (idNat :@: LocalExprVar 0 Nothing))
+      substExprs 0 [zero] (Constructor natDuc 1
+                           :@: (idNat :@: LocalExprVar 0 ""))
       `shouldBe`
-      (Constructor natDuc 1 (Just "S") :@: (idNat :@: zero))
+      (Constructor natDuc 1 :@: (idNat :@: zero))
     it "evaluates the identity function on one to one" $
       evalExpr (idNat :@: one)
       `shouldCheck`
@@ -376,16 +386,17 @@ main = hspec $ do
                               , sigmas = [[]]
                               , as = [y]
                               , gamma1s = [[x]]
-                              , nameDuc = Just $ pShow x <> " x " <> pShow y
+                              , nameDuc = pShow x <> " x " <> pShow y
+                              , strNames = ["Fst", "Snd"]
                               }
         pair x y = In $ ducPair x y
-        mkPair x y = Constructor (ducPair x y) 0 (Just "mkPair")
+        mkPair x y = Constructor (ducPair x y) 0
         fst x y = Rec { fromRec = ducPair x y
                       , toRec = x
-                      , matches = [LocalExprVar 1 Nothing]}
+                      , matches = [LocalExprVar 1 ""]}
         snd x y = Rec { fromRec = ducPair x y
                       , toRec = y
-                      , matches = [LocalExprVar 0 Nothing]}
+                      , matches = [LocalExprVar 0 ""]}
     it "type checks fst on nat and unit tor (nat x unit) -> nat" $
       inferTerm (fst nat UnitType)
       `shouldCheck`
@@ -432,28 +443,28 @@ main = hspec $ do
                    , toRec = nat
                    , matches = [Rec { fromRec = natDuc
                                     , toRec = nat
-                                    , matches = [ LocalExprVar 1 Nothing
-                                                , suc :@: LocalExprVar 0 Nothing ]} :@: LocalExprVar 1 Nothing]}
+                                    , matches = [ LocalExprVar 1 ""
+                                                , suc :@: LocalExprVar 0 "" ]} :@: LocalExprVar 1 ""]}
     it "type check add to (nat x nat) -> nat" $
       inferTerm add
       `shouldCheck`
       ([pair nat nat], nat)
     it "type action on nat give back idNat applied to variable" $
-      typeAction nat [add :@: LocalExprVar 0 Nothing] [[nat]] [nat] [nat]
-      `shouldBe`
-      idNat :@: LocalExprVar 0 Nothing
+      typeAction nat [add :@: LocalExprVar 0 ""] [[nat]] [nat] [nat]
+      `shouldCheck`
+      (idNat :@: LocalExprVar 0 "")
     it "type action on nat give back idNat applied to variable doesn't change in substitution" $
-      substExpr 0
-       (typeAction nat [add :@: LocalExprVar 0 Nothing] [[nat]] [nat] [nat])
+      (flip (substExpr 0)
+       ( Rec { fromRec = natDuc
+             , toRec = nat
+             , matches = [ LocalExprVar 1 ""
+                         , suc :@: LocalExprVar 0 "" ]} :@: LocalExprVar 1 "" )
+        <$> typeAction nat [add :@: LocalExprVar 0 ""] [[nat]] [nat] [nat])
+      `shouldCheck`
        ( Rec { fromRec = natDuc
             , toRec = nat
-            , matches = [ LocalExprVar 1 Nothing
-                        , suc :@: LocalExprVar 0 Nothing ]} :@: LocalExprVar 1 Nothing )
-      `shouldBe`
-       ( Rec { fromRec = natDuc
-            , toRec = nat
-            , matches = [ idNat :@: LocalExprVar 1 Nothing
-                        , suc :@: LocalExprVar 0 Nothing ]} :@: LocalExprVar 1 Nothing )
+            , matches = [ idNat :@: LocalExprVar 1 ""
+                        , suc :@: LocalExprVar 0 "" ]} :@: LocalExprVar 1 "" )
     it "add zero and zero to zero" $
       evalExpr (add :@: (mkPair nat nat :@: zero :@: zero))
       `shouldCheck`
@@ -468,22 +479,23 @@ main = hspec $ do
                               , sigmas = [[]]
                               , as = [x]
                               , gamma1s = [[]]
-                              , nameDuc = Just $ "packed " <> pShow x
+                              , nameDuc = "packed " <> pShow x
+                              , strNames = ["Pac"]
                               }
         packed x = In $ ducPacked x
         ducPackedUnit = ducPacked UnitType
         packedUnit = packed UnitType
         unpack x = Rec { fromRec = ducPacked x
                        , toRec = x
-                       , matches = [LocalExprVar 0 Nothing]}
+                       , matches = [LocalExprVar 0 ""]}
         unpackUnit = unpack UnitType
-        pack x = Constructor (ducPacked x) 0 Nothing
+        pack x = Constructor (ducPacked x) 0
         pu = pack UnitType :@: UnitExpr
         ducPPUnit = ducPacked packedUnit
         ppUnit = In ducPPUnit
         unppUnit =  Rec { fromRec = ducPPUnit
                         , toRec = UnitType
-                        , matches = [unpackUnit :@: LocalExprVar 0 Nothing]}
+                        , matches = [unpackUnit :@: LocalExprVar 0 ""]}
         ppu = pack packedUnit :@: pu
     it "type checks unpackUnit function on pu to the unit expression" $
       inferTerm (unpackUnit :@: pu)
@@ -505,24 +517,25 @@ main = hspec $ do
     -- packed nats
     let pNatDuc = Ductive { gamma = []
                           , sigmas = [[],[]]
-                          , as = [UnitType, In $ ducPacked $ LocalTypeVar 1 (Just "X")]
+                          , as = [UnitType, In $ ducPacked $ LocalTypeVar 1 "X"]
                           , gamma1s = [[],[]]
-                          , nameDuc = Just "pNat"}
+                          , nameDuc = "pNat"
+                          , strNames = ["Z", "S"]}
         pNat = In pNatDuc
         idpNat = Rec { fromRec = pNatDuc
                      , toRec = pNat
-                     , matches = [ Constructor pNatDuc 0 (Just "Z")
-                                  :@: LocalExprVar 0 (Just "y1")
-                                , Constructor pNatDuc 1 (Just "S")
-                                  :@: LocalExprVar 0 (Just "y2")]
+                     , matches = [ Constructor pNatDuc 0
+                                  :@: LocalExprVar 0 "y1"
+                                , Constructor pNatDuc 1
+                                  :@: LocalExprVar 0 "y2"]
                     }
         unpackIdpNat = Rec { fromRec = ducPacked pNat
                            , toRec = In $ ducPacked pNat
-                           , matches = [ pack pNat :@: (idpNat :@: LocalExprVar 0 Nothing)]}
-        pZero = Constructor pNatDuc 0 (Just "Z"):@: UnitExpr
-        pOne = Constructor pNatDuc 1 (Just "S") :@: (pack pNat :@: pZero)
-        pTwo = Constructor pNatDuc 1 (Just "S") :@: (pack pNat :@: pOne)
-        pThree = Constructor pNatDuc 1 (Just "S") :@: (pack pNat :@: pTwo)
+                           , matches = [ pack pNat :@: (idpNat :@: LocalExprVar 0 "")]}
+        pZero = Constructor pNatDuc 0:@: UnitExpr
+        pOne = Constructor pNatDuc 1 :@: (pack pNat :@: pZero)
+        pTwo = Constructor pNatDuc 1 :@: (pack pNat :@: pOne)
+        pThree = Constructor pNatDuc 1 :@: (pack pNat :@: pTwo)
     it "evaluates the pNat identity function to the pNat identity function" $
       evalExpr idpNat
       `shouldCheck`
@@ -533,10 +546,10 @@ main = hspec $ do
       pZero
     it "typeaction works" $
       typeAction UnitType
-                 [idpNat :@: LocalExprVar 0 Nothing]
+                 [idpNat :@: LocalExprVar 0 ""]
                  [[]] [UnitType] [pNat]
-      `shouldBe`
-      LocalExprVar 0 Nothing
+      `shouldCheck`
+      LocalExprVar 0 ""
     it "evaluates the identity function on pZero to pZero" $
       evalExpr (idpNat :@: pZero)
       `shouldCheck`
@@ -550,7 +563,7 @@ main = hspec $ do
       `shouldCheck`
       ([], pNat)
     it "infers type for succ constructor of pNat" $
-      inferTerm (Constructor pNatDuc 1 (Just "S"))
+      inferTerm (Constructor pNatDuc 1)
       `shouldCheck`
       ([In $ ducPacked pNat], pNat)
     it "infer type of expr pOne yields pNat" $
@@ -558,23 +571,23 @@ main = hspec $ do
       `shouldCheck`
       ([], pNat)
     it "pNat: typeaction works on typeVar" $
-      typeAction (LocalTypeVar 0 Nothing)
-                 [idpNat :@: LocalExprVar 0 Nothing]
+      typeAction (LocalTypeVar 0 "")
+                 [idpNat :@: LocalExprVar 0 ""]
                  [[]] [pNat] [pNat]
-      `shouldBe`
-      idpNat :@: LocalExprVar 0 Nothing
+      `shouldCheck`
+      (idpNat :@: LocalExprVar 0 "")
     it "pNat: substExpr works" $
-      substExpr 0 (idpNat :@: LocalExprVar 0 Nothing)
-                  (Constructor pNatDuc 1 (Just "S")
-                   :@: LocalExprVar 0 Nothing)
+      substExpr 0 (idpNat :@: LocalExprVar 0 "")
+                  (Constructor pNatDuc 1
+                   :@: LocalExprVar 0 "")
       `shouldBe`
-      Constructor pNatDuc 1 (Just "S")
-      :@: (idpNat :@: LocalExprVar 0 Nothing)
+      Constructor pNatDuc 1
+      :@: (idpNat :@: LocalExprVar 0 "")
     it "substExprs works" $
-      substExprs 0 [pZero] (Constructor pNatDuc 1 (Just "S")
-                           :@: (idpNat :@: LocalExprVar 0 Nothing))
+      substExprs 0 [pZero] (Constructor pNatDuc 1
+                           :@: (idpNat :@: LocalExprVar 0 ""))
       `shouldBe`
-      (Constructor pNatDuc 1 (Just "S") :@: (idpNat :@: pZero))
+      (Constructor pNatDuc 1 :@: (idpNat :@: pZero))
     it "evaluates the identity function on pZero to pZero" $
       evalExpr (idpNat :@: pZero)
       `shouldCheck`
@@ -595,7 +608,7 @@ main = hspec $ do
 
  -- copacked units
     let copackedUnit = Coin ducPackedUnit
-        counpack x = Destructor (ducPacked x) 0 Nothing
+        counpack x = Destructor (ducPacked x) 0
         copack x vx = Corec { fromCorec = UnitType
                             , toCorec = ducPacked x
                             , matches = [vx]} :@: UnitExpr
@@ -641,26 +654,27 @@ main = hspec $ do
     -- copacked nats
     let cpNatDuc = Ductive { gamma = []
                            , sigmas = [[],[]]
-                           , as = [UnitType, Coin $ ducPacked $ LocalTypeVar 1 (Just "X")]
+                           , as = [UnitType, Coin $ ducPacked $ LocalTypeVar 1 "X"]
                            , gamma1s = [[],[]]
-                           , nameDuc = Just "cpNat"}
+                           , nameDuc = "cpNat"
+                           , strNames = ["Z", "S"]}
         cpNat = In cpNatDuc
         idcpNat = Rec { fromRec = cpNatDuc
                       , toRec = cpNat
-                      , matches = [ Constructor cpNatDuc 0 (Just "Z")
-                                   :@: LocalExprVar 0 (Just "y1")
-                                 , Constructor cpNatDuc 1 (Just "S")
-                                   :@: LocalExprVar 0 (Just "y2")]
+                      , matches = [ Constructor cpNatDuc 0
+                                   :@: LocalExprVar 0 "y1"
+                                 , Constructor cpNatDuc 1
+                                   :@: LocalExprVar 0 "y2"]
                       }
         {-
         unpackIdcpNat = Rec { fromRec = ducPacked pNat
                             , toRec = In $ ducPacked pNat
-                            , matches = [ pack pNat :@: (idpNat :@: LocalExprVar 0 Nothing)]}
+                            , matches = [ pack pNat :@: (idpNat :@: LocalExprVar 0 "")]}
         -}
-        cpZero = Constructor cpNatDuc 0 (Just "Z") :@: UnitExpr
-        cpOne = Constructor cpNatDuc 1 (Just "S") :@: copack cpNat cpZero
-        cpTwo = Constructor cpNatDuc 1 (Just "S") :@: copack cpNat cpOne
-        cpThree = Constructor cpNatDuc 1 (Just "S") :@: copack cpNat cpTwo
+        cpZero = Constructor cpNatDuc 0 :@: UnitExpr
+        cpOne = Constructor cpNatDuc 1 :@: copack cpNat cpZero
+        cpTwo = Constructor cpNatDuc 1 :@: copack cpNat cpOne
+        cpThree = Constructor cpNatDuc 1 :@: copack cpNat cpTwo
     it "evaluates the cpNat identity function to the cpNat identity function" $
       evalExpr idcpNat
       `shouldCheck`
@@ -682,7 +696,7 @@ main = hspec $ do
       `shouldCheck`
       ([], cpNat)
     it "infers type for succ constructor of pNat" $
-      inferTerm (Constructor pNatDuc 1 (Just "S"))
+      inferTerm (Constructor pNatDuc 1)
       `shouldCheck`
       ([In $ ducPacked pNat], pNat)
     it "infer type of expr cpOne yields cpNat" $
@@ -704,20 +718,22 @@ main = hspec $ do
                           , sigmas = [[],[]]
                           , as = [UnitType, UnitType]
                           , gamma1s = [[],[]]
-                          , nameDuc = Just "bool"}
+                          , nameDuc = "bool"
+                          , strNames = ["TT", "FF"]}
         bool = In boolDuc
-        false = Constructor boolDuc 0 (Just "false")
-        true = Constructor boolDuc 1 (Just "true")
+        false = Constructor boolDuc 0
+        true = Constructor boolDuc 1
 
     -- maybe
     let maybeDuc x = Ductive { gamma = []
                              , sigmas = [ [], []]
                              , as = [ UnitType, x]
                              , gamma1s = [[],[]]
-                             , nameDuc = Just $ "Maybe " <> pShow x}
+                             , nameDuc = "Maybe " <> pShow x
+                             , strNames = ["Nothing", "Just"]}
         maybe x = In $ maybeDuc x
-        nothing x = Constructor (maybeDuc x) 0 (Just "Nothing") :@: UnitExpr
-        just x = Constructor (maybeDuc x) 1 (Just "Just")
+        nothing x = Constructor (maybeDuc x) 0 :@: UnitExpr
+        just x = Constructor (maybeDuc x) 1
         isNothing x = Rec { fromRec = maybeDuc x
                           , toRec = bool
                           , matches = [true, false]}
@@ -737,13 +753,14 @@ main = hspec $ do
                                 , sigmas = [ [] , []]
                                 , as = [ x , y ]
                                 , gamma1s = [[],[]]
-                                , nameDuc = Just $ pShow x <> " x " <> pShow y }
+                                , nameDuc = pShow x <> " x " <> pShow y
+                                , strNames = ["Fst", "Snd"]}
         copair x y = Coin $ copairDuc x y
         mkCopair tyX tyY x y= Corec { fromCorec = UnitType
                                     , toCorec = copairDuc tyX tyY
                                     , matches = [x,y]} :@: UnitExpr
-        cofst x y = Destructor (copairDuc x y) 0 (Just "fst")
-        cosnd x y = Destructor (copairDuc x y) 1 (Just "snd")
+        cofst x y = Destructor (copairDuc x y) 0
+        cosnd x y = Destructor (copairDuc x y) 1
     it "infer copair of units for copair of unit expression " $
       inferTerm (mkCopair UnitType UnitType UnitExpr UnitExpr)
       `shouldCheck`
@@ -772,15 +789,15 @@ main = hspec $ do
     -- pair and copair are isomporph
     let pairToCopair x y = Rec { fromRec = ducPair x y
                                , toRec = copair x y
-                               , matches = [mkCopair x y (LocalExprVar 0 Nothing)
-                                                         (LocalExprVar 1 Nothing)]}
+                               , matches = [mkCopair x y (LocalExprVar 0 "")
+                                                         (LocalExprVar 1 "")]}
         copairToPair x y = Rec { fromRec = ducPacked (copair x y)
                                , toRec = pair x y
                                , matches = [mkPair x y
                                             :@: (cofst x y
-                                                 :@: LocalExprVar 0 Nothing)
+                                                 :@: LocalExprVar 0 "")
                                             :@: (cosnd x y
-                                                 :@: LocalExprVar 0 Nothing)]}
+                                                 :@: LocalExprVar 0 "")]}
     it "typechecks pairToCopair Unit Unit" $
       inferTerm (pairToCopair UnitType UnitType)
       `shouldCheck`
@@ -818,34 +835,37 @@ main = hspec $ do
     -- Lists with copairs
     let pairDucVar = Ductive { gamma = []
                              , sigmas = [[],[]]
-                             , as = [UnitType, LocalTypeVar 1 (Just "X")]
+                             , as = [UnitType, LocalTypeVar 1 "X"]
                              , gamma1s = [[],[]]
-                             , nameDuc = Nothing}--Just "pair"}
+                             , nameDuc = ""
+                             , strNames = ["Fst", "Snd"]}--Just "pair"}
         pairVar = Coin pairDucVar
         listDuc = Ductive { gamma = []
                           , sigmas = [[],[]]
                           , as = [ UnitType, pairVar]
                           , gamma1s = [[],[]]
-                          , nameDuc = Nothing}--Just "list"}
+                          , nameDuc = ""
+                          , strNames = ["Nil", "Cons"]}--Just "list"}
         list = In listDuc
         pairDuc = Ductive { gamma = []
                           , sigmas = [[],[]]
                           , as = [UnitType, list]
                           , gamma1s = [[],[]]
-                          , nameDuc = Nothing}--Just "pair"}
+                          , nameDuc = ""
+                          , strNames = ["Fst", "Snd"]}--Just "pair"}
         pair = Coin pairDuc
         idList = Rec { fromRec = listDuc
                      , toRec = list
-                     , matches = [ Constructor listDuc 0 (Just "[]")
-                                   :@: LocalExprVar 0 (Just "y1")
-                                 , Constructor listDuc 1 (Just "::")
-                                   :@: LocalExprVar 0 (Just "y2")]
+                     , matches = [ Constructor listDuc 0
+                                   :@: LocalExprVar 0 "y1"
+                                 , Constructor listDuc 1
+                                   :@: LocalExprVar 0 "y2"]
                      }
-        emptyList = Constructor listDuc 0 (Just "[]") :@: UnitExpr
+        emptyList = Constructor listDuc 0 :@: UnitExpr
         mkPair x y = Corec { fromCorec = UnitType
                            , toCorec = pairDuc
                            , matches = [x,y]} :@: UnitExpr
-        oneList = Constructor listDuc 1 (Just "::")
+        oneList = Constructor listDuc 1
                   :@: mkPair UnitExpr emptyList
     it "infers type list for emptyList" $
       inferTerm emptyList
@@ -864,27 +884,28 @@ main = hspec $ do
       `shouldCheck`
       ([],list)
     -- vector without pair typ, just save the element in gamma2
-    let suc = Constructor natDuc 1 (Just "S")
+    let suc = Constructor natDuc 1
         vec2Duc = Ductive { gamma = [ nat ]
                           , sigmas = [ [zero]
-                                     , [suc :@: LocalExprVar 2 (Just "k")]]
+                                     , [suc :@: LocalExprVar 2 "k"]]
                           , as = [ UnitType
-                                 , LocalTypeVar 0 (Just "X") :@ LocalExprVar 1 (Just "k")]
+                                 , LocalTypeVar 0 "X" :@ LocalExprVar 1 "k"]
                           , gamma1s = [[],[nat, UnitType]]
-                          , nameDuc = Just "vec2"}
+                          , nameDuc = "vec2"
+                          , strNames = ["Nil", "Cons"]}
 
         vec2 = In vec2Duc
-        emptyVec2 = Constructor vec2Duc 0 (Just "[]") :@: UnitExpr
-        oneVec2 = Constructor vec2Duc 1 (Just "::") :@: zero :@: UnitExpr
+        emptyVec2 = Constructor vec2Duc 0 :@: UnitExpr
+        oneVec2 = Constructor vec2Duc 1 :@: zero :@: UnitExpr
                  :@: emptyVec2
         idVec2 = Rec { fromRec = vec2Duc
                      , toRec = vec2
-                     , matches = [ Constructor vec2Duc 0 (Just "[]")
-                                   :@: LocalExprVar 0 (Just "y1")
-                                 , Constructor vec2Duc 1 (Just "::")
-                                   :@: LocalExprVar 2 (Just "k")
-                                   :@: LocalExprVar 1 (Just "x")
-                                   :@: LocalExprVar 0 (Just "y2")]
+                     , matches = [ Constructor vec2Duc 0
+                                   :@: LocalExprVar 0 "y1"
+                                 , Constructor vec2Duc 1
+                                   :@: LocalExprVar 2 "k"
+                                   :@: LocalExprVar 1 "x"
+                                   :@: LocalExprVar 0 "y2"]
                      }
     it "infers type vec2 for emptyVec2" $
       inferTerm emptyVec2
