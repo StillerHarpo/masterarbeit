@@ -282,6 +282,60 @@ main = hspec $ do
                                         :@: LocalExprVar 0 "y"
                                       , Constructor a 3
                                         :@: LocalExprVar 0 "x"]}])
+    it "parse pairs" $
+       parse parseProgram "" (T.unlines [ "data Pair : Set where"
+                                        , "  MkPair : (x:Unit) -> Unit -> Pair"
+                                        , "MkPair @ () @ ()"
+                                        ])
+      `shouldParse`
+      (let pairDuc = Ductive { gamma = []
+                             , sigmas = [[]]
+                             , as = [ UnitType ]
+                             , gamma1s = [ [UnitType] ]
+                             , nameDuc = ""
+                             , strNames = ["MkPair"]}
+       in [ TypeDef { name = "Pair"
+                    , parameterCtx = []
+                    , typeExpr = In pairDuc
+                    , kind = Nothing }
+          , Expression (Constructor pairDuc 0 :@: UnitExpr :@: UnitExpr)])
+    it "parse pairs of nats" $
+       parse parseProgram "" (T.unlines [ "data Nat : Set where"
+                                        , "  Z : Unit -> Nat"
+                                        , "  S : Nat -> Nat"
+                                        , "one = S @ (Z @ ())"
+                                        , "data Pair : Set where"
+                                        , "  MkPair : (x:Nat) -> Unit -> Pair"
+                                        , "MkPair @ one @ one"
+                                        ])
+      `shouldParse`
+      (let natDuc = Ductive { gamma = []
+                            , sigmas = [[], []]
+                            , as = [ LocalTypeVar 0 "Nat", UnitType ]
+                            , gamma1s = [ [], [] ]
+                            , nameDuc = "Nat"
+                            , strNames = ["S", "Z"]}
+           pairDuc = Ductive { gamma = []
+                             , sigmas = [[]]
+                             , as = [ UnitType ]
+                             , gamma1s = [ [ GlobalTypeVar "Nat" [] ] ]
+                             , nameDuc = "Pair"
+                             , strNames = ["MkPair"]}
+       in [ TypeDef { name = "Nat"
+                    , parameterCtx = []
+                    , typeExpr = In natDuc
+                    , kind = Nothing }
+          , ExprDef { name = "one"
+                    , expr = Constructor natDuc 0
+                             :@: (Constructor natDuc 1
+                                  :@: UnitExpr)
+                    , ty = Nothing }
+          , TypeDef { name = "Pair"
+                    , parameterCtx = []
+                    , typeExpr = In pairDuc
+                    , kind = Nothing }
+          , Expression (Constructor pairDuc 0 :@: GlobalExprVar "one" :@: GlobalExprVar "one")])
+
 
   describe "Type Checker works" $ do
     let emptyCtx :: ContextTI
