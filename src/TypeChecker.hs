@@ -405,7 +405,7 @@ substType :: Int -> TypeExpr -> TypeExpr -> TypeExpr
 substType i r v@(LocalTypeVar j _)
   | i == j = r
   | otherwise = v
-substType i r v@(GlobalTypeVar _ _) = v
+substType i r (GlobalTypeVar n vars) = GlobalTypeVar n $ map (substType i r) vars
 substType i r1 (Abstr t r2) = Abstr (substType i r1 t) (substType i r1 r2)
 substType i r (In d) = In $ substDuctiveTypeExpr i r d
 substType i r (Coin d) = Coin $ substDuctiveTypeExpr i r d
