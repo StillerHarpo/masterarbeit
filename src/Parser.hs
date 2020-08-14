@@ -378,7 +378,9 @@ withLocalExprVars vars p =
 
 withLocalTypeVar :: Text -> Parser a -> Parser a
 withLocalTypeVar var p =
-  (localTypeVars %= (var:)) *> p <* (localTypeVars %= tail)
+  (localTypeVars %= (++ [var]))
+  *> p
+  <* (localTypeVars %= \allVars -> take (length allVars - 1) allVars)
 
 -- | checks if name is already used.  We forbid name shadowing for now
 checkName :: Text -- ^ name
