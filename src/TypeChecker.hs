@@ -301,11 +301,8 @@ evalExpr r@Corec{..} = Corec <$> evalTypeExpr fromCorec
                              <*> mapM evalExpr matches
 evalExpr (f :@: arg) = do
   valF <- evalExpr f
-  valF' <- case valF of
-            GlobalExprVar x -> lookupDefExprTI x
-            _               -> pure valF
   valArg <- evalExpr arg
-  case (valF', valArg) of
+  case (valF, valArg) of
     -- TODO Should we check if _ = sigma_k\circ \tau
     ( getExprArgs -> (r@Rec{..}, _), getExprArgs -> (Constructor _ i, constrArgs)) -> do
       let gamma1 = gamma1s fromRec !! i
@@ -333,8 +330,9 @@ evalExpr (f :@: arg) = do
                                    (substExprs 0 (last args : reverse tau)
                                                  (substExpr 0 (matches !! i)
                                                               recEval))
-    _ -> pure $ valF' :@: valArg
+    _ -> pure $ valF :@: valArg
 evalExpr (GlobalExprVar v) = lookupDefExprTI v >>= evalExpr
+evalExpr (WithParameters pars expr) = pure $ substTypesInExpr 0 pars expr
 evalExpr atom = pure atom
 
 substExpr :: Int -> Expr -> Expr -> Expr
