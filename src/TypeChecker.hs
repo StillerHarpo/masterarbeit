@@ -24,6 +24,7 @@ import qualified Data.Text as T
 import Data.Maybe (fromJust)
 
 import AbstractSyntaxTree
+import Data.Text.Prettyprint.Doc
 
 import PrettyPrinter
 
@@ -33,14 +34,14 @@ data ContextTI = ContextTI { _ctx :: Ctx
                            }
 $(makeLenses ''ContextTI)
 
-type TI = ExceptT Text (Reader ContextTI)
+type TI ann = ExceptT (Doc ann) (Reader ContextTI)
 
-type PTI = ExceptT Text (State [Statement])
+type PTI ann = ExceptT (Doc ann) (State [Statement])
 
-runTI :: TI a -> ContextTI -> Either Text a
+runTI :: TI ann a -> ContextTI -> Either (Doc ann) a
 runTI ti = runReader (runExceptT ti)
 
-evalPTI :: PTI a -> [Statement] -> Either Text a
+evalPTI :: PTI ann a -> [Statement] -> Either (Doc ann) a
 evalPTI pti = evalState (runExceptT pti)
 
 emptyCtx :: ContextTI
@@ -48,10 +49,10 @@ emptyCtx = ContextTI { _ctx = []
                      , _tyCtx = []
                      , _defCtx = []}
 
-checkProgram :: [Statement] -> Either Text [TypedExpr]
+checkProgram :: [Statement] -> Either (Doc ann) [TypedExpr]
 checkProgram = flip evalPTI [] . checkProgramPTI
   where
-    checkProgramPTI :: [Statement] -> PTI [TypedExpr]
+    checkProgramPTI :: [Statement] -> PTI ann [TypedExpr]
     checkProgramPTI [] = pure []
     checkProgramPTI (ExprDef{..} : stmts) = do
       ty <- Just <$> tiInPTI (inferTerm expr)
@@ -69,20 +70,20 @@ checkProgram = flip evalPTI [] . checkProgramPTI
       (:) <$> (TypedExpr <$> tiInPTI (evalExpr expr)
                          <*> tiInPTI (inferTerm expr))
           <*> checkProgramPTI stmts
-    tiInPTI :: TI a -> PTI a
+    tiInPTI :: TI ann a -> PTI ann a
     tiInPTI ti = do
       curDefCtx <- get
       case runTI ti $ set defCtx curDefCtx emptyCtx of
         Left err -> throwError err
         Right a -> pure a
 
-checkTyCtx :: TyCtx -> TI ()
+checkTyCtx :: TyCtx -> TI ann ()
 checkTyCtx = mapM_ checkCtx
 
-checkCtx :: Ctx -> TI ()
+checkCtx :: Ctx -> TI ann ()
 checkCtx ctx' = catchError (checkCtx' ctx')
-                           (throwError . (<> "\n in context "
-                                          <> T.pack (show ctx')))
+                           (throwError . (<> "\n in context"
+                                          <+> pretty ctx'))
   where
     checkCtx' [] = pure ()
     checkCtx' (typ:ctx') =
@@ -90,20 +91,20 @@ checkCtx ctx' = catchError (checkCtx' ctx')
             (checkType typ [])
       >> checkCtx ctx'
 
-checkType :: TypeExpr -> Kind -> TI ()
+checkType :: TypeExpr -> Kind -> TI ann ()
 checkType e k = inferType e >>= betaeqCtx k
 
-inferType :: TypeExpr -> TI Kind
+inferType :: TypeExpr -> TI ann Kind
 inferType tyExpr = catchError (inferType' tyExpr)
                               (throwError . (<> "\n in type expression "
-                                             <> T.pack (show tyExpr)))
+                                             <+> pretty tyExpr))
   where
     inferType' UnitType = pure []
     inferType' v@(LocalTypeVar idx _) = do
       ty <- view tyCtx >>= lookupLocalVarTI idx (T.pack $ show v)
       view ctx >>= checkCtx
       pure ty
-    inferType' (GlobalTypeVar var pars) = lookupDefKindTI pars var
+    inferType' (GlobalTypeVar n pars) = lookupDefKindTI n pars
     inferType' (a :@ t) = inferType a >>= \case
         [] -> throwError "Can't apply someting to a type with a empty context"
         (b:gamma2) -> do
@@ -115,7 +116,7 @@ inferType tyExpr = catchError (inferType' tyExpr)
     inferType' (In d) = inferTypeDuctive d
     inferType' (Coin d) = inferTypeDuctive d
 
-inferTypeDuctive :: Ductive -> TI Kind
+inferTypeDuctive :: Ductive -> TI ann Kind
 inferTypeDuctive Ductive{..} = do
   -- in sigmas shouldn't be variables wich refer to unittype
   zipWithM_ (\sigma gamma1 -> checkContextMorph sigma (gamma1++[UnitType]) gamma) sigmas gamma1s
@@ -124,11 +125,11 @@ inferTypeDuctive Ductive{..} = do
             gamma1s as
   pure gamma
 
-checkContextMorph :: [Expr] -> Ctx -> Ctx -> TI ()
+checkContextMorph :: [Expr] -> Ctx -> Ctx -> TI ann ()
 checkContextMorph exprs gamma1 gamma2 =
   catchError (checkContextMorph' exprs gamma1 gamma2)
              (throwError . (<> "\n in context morphismus "
-                            <> T.pack (show exprs)))
+                            <+> pretty exprs))
   where
     checkContextMorph' [] gamma1 [] = checkCtx gamma1
     checkContextMorph' [] _ _ = throwError $ "Invalid context morphism:"
@@ -137,16 +138,16 @@ checkContextMorph exprs gamma1 gamma2 =
       local (over ctx (const gamma1)) (checkTerm t ([], substTypeExprs 0 ts a))
       checkContextMorph ts gamma1 gamma2
 
-checkTerm :: Expr -> Type -> TI ()
+checkTerm :: Expr -> Type -> TI ann ()
 checkTerm e (ctx1,a1) = do
   (ctx2, a2) <- inferTerm e
   betaeqCtx ctx1 ctx2
   betaeq a1 a2
 
-inferTerm :: Expr -> TI Type
+inferTerm :: Expr -> TI ann Type
 inferTerm expr = catchError (inferTerm' expr)
-                                (throwError . (<> "\n in expression "
-                                               <> T.pack (show expr)))
+                                (throwError . (<> "\n in expression"
+                                               <+> pretty expr))
   where
     inferTerm' UnitExpr = pure ([],UnitType)
     inferTerm' v@(LocalExprVar idx _) =
@@ -196,44 +197,44 @@ inferTerm expr = catchError (inferTerm' expr)
       gamma' <- inferType valFrom
       let Ductive{..} = valTo
       betaeqCtx gamma' gamma
-      sequence_ $ zipWith4 (\ gamma1 sigma a match ->
-                              local (over ctx (++gamma1++[applyTypeExprArgs (valFrom,sigma)]))
-                                    (checkTerm match ([], shiftFreeVarsTypeExpr 1 0 $ substType 0 valFrom a)))
+      sequence_ $ zipWith4 (\gamma1 sigma a match ->
+                               local (over ctx (++gamma1++[applyTypeExprArgs (valFrom,sigma)]))
+                                     (checkTerm match ([], shiftFreeVarsTypeExpr 1 0 $ substType 0 valFrom a)))
                            gamma1s sigmas as matches
       pure ( gamma ++ [applyTypeExprArgs (valFrom, idCtx gamma)]
            , applyTypeExprArgs (Coin valTo
                                , map (shiftFreeVarsExpr 1 0) (idCtx gamma)))
     inferTerm' (WithParameters ps e) = inferTerm $ substTypesInExpr 0 (reverse ps) e
 
-betaeq :: TypeExpr -> TypeExpr -> TI ()
+betaeq :: TypeExpr -> TypeExpr -> TI ann ()
 betaeq e1 e2 = do
   ee1 <- evalTypeExpr e1 >>= inlineTypeExpr
   ee2 <- evalTypeExpr e2 >>= inlineTypeExpr
   if ee1 == ee2
   then pure ()
-  else throwError $ "couldn't match type "
-                  <> T.pack (show e1)
-                  <> " with type "
-                  <> T.pack (show e2)
+  else throwError $ "couldn't match type"
+                  <+> pretty e1
+                  <+> "with type"
+                  <+> pretty e2
 
-betaeqCtx :: Ctx -> Ctx -> TI ()
+betaeqCtx :: Ctx -> Ctx -> TI ann ()
 betaeqCtx = zipWithM_ betaeq
 
-betaeqTyCtx :: TyCtx -> TyCtx -> TI ()
+betaeqTyCtx :: TyCtx -> TyCtx -> TI ann ()
 betaeqTyCtx = zipWithM_ betaeqCtx
 
 
-inlineTypeExpr :: TypeExpr -> TI TypeExpr
+inlineTypeExpr :: TypeExpr -> TI ann TypeExpr
 inlineTypeExpr (tyExpr :@ expr) = (:@) <$> inlineTypeExpr tyExpr <*> inlineExpr expr
-inlineTypeExpr (GlobalTypeVar n _) = lookupDefTypeExprTI n
-                                     >>= inlineTypeExpr
+inlineTypeExpr (GlobalTypeVar n vars) = lookupDefTypeExprTI n vars
+                                        >>= inlineTypeExpr
 inlineTypeExpr (Abstr tyExpr1 tyExpr2) = Abstr <$> inlineTypeExpr tyExpr1
                                                <*> inlineTypeExpr tyExpr2
 inlineTypeExpr (In duc) = In <$> inlineDuctive duc
 inlineTypeExpr (Coin duc) = Coin <$> inlineDuctive duc
 inlineTypeExpr tyExpr = pure tyExpr
 
-inlineDuctive :: Ductive -> TI Ductive
+inlineDuctive :: Ductive -> TI ann Ductive
 inlineDuctive Ductive{..} = do
   gamma <- inlineCtx gamma
   sigmas <- mapM (mapM inlineExpr) sigmas
@@ -241,7 +242,7 @@ inlineDuctive Ductive{..} = do
   gamma1s <- mapM inlineCtx gamma1s
   pure $ Ductive{..}
 
-inlineExpr :: Expr -> TI Expr
+inlineExpr :: Expr -> TI ann Expr
 inlineExpr (GlobalExprVar n) = lookupDefExprTI n >>= inlineExpr
 inlineExpr (e1 :@: e2) = (:@:) <$> inlineExpr e1 <*> inlineExpr e2
 inlineExpr Constructor{..} = do
@@ -265,10 +266,10 @@ inlineExpr (WithParameters tyExprs expr) = WithParameters
                                            <*> inlineExpr expr
 inlineExpr expr = pure expr
 
-inlineCtx :: Ctx -> TI Ctx
+inlineCtx :: Ctx -> TI ann Ctx
 inlineCtx = mapM inlineTypeExpr
 
-evalTypeExpr :: TypeExpr -> TI TypeExpr
+evalTypeExpr :: TypeExpr -> TI ann TypeExpr
 evalTypeExpr (Abstr ty expr) = Abstr <$> evalTypeExpr ty
                                      <*> evalTypeExpr expr
 evalTypeExpr (f :@ arg) = do
@@ -281,10 +282,10 @@ evalTypeExpr (In d) = In <$> evalDuctive d
 evalTypeExpr (Coin d) = Coin <$> evalDuctive d
 evalTypeExpr atom = pure atom
 
-evalCtx :: Ctx -> TI Ctx
+evalCtx :: Ctx -> TI ann Ctx
 evalCtx = mapM evalTypeExpr
 
-evalDuctive :: Ductive -> TI Ductive
+evalDuctive :: Ductive -> TI ann Ductive
 evalDuctive Ductive{..} = do
   gamma <- evalCtx gamma
   sigmas <- mapM (mapM evalExpr) sigmas
@@ -292,7 +293,7 @@ evalDuctive Ductive{..} = do
   gamma1s <- mapM evalCtx gamma1s
   pure Ductive{..}
 
-evalExpr :: Expr -> TI Expr
+evalExpr :: Expr -> TI ann Expr
 evalExpr r@Rec{..} = Rec <$> evalDuctive fromRec
                          <*> evalTypeExpr toRec
                          <*> mapM evalExpr matches
@@ -439,10 +440,10 @@ substTypesInExpr :: Int -> [TypeExpr] -> Expr -> Expr
 substTypesInExpr _ [] e = e
 substTypesInExpr n (v:vs) e = substTypesInExpr (n+1) vs (substTypeInExpr n v e)
 
-typeAction :: TypeExpr -> [Expr] -> [Ctx] -> [TypeExpr] -> [TypeExpr] -> TI Expr
+typeAction :: TypeExpr -> [Expr] -> [Ctx] -> [TypeExpr] -> [TypeExpr] -> TI ann Expr
 typeAction (LocalTypeVar n _) terms _ _ _ = pure $ terms !! n
-typeAction (GlobalTypeVar n _) terms gammas as' bs  = do
-  tyExpr <- lookupDefTypeExprTI n
+typeAction (GlobalTypeVar n vars) terms gammas as' bs  = do
+  tyExpr <- lookupDefTypeExprTI n vars
   typeAction tyExpr terms gammas as' bs
 typeAction (c :@ s) terms gammas as' bs = flip (substExpr 0) s
                                           <$> typeAction c terms gammas as' bs
@@ -520,43 +521,43 @@ getTypeExprArgs arg = (arg,[])
 applyTypeExprArgs :: (TypeExpr,[Expr]) -> TypeExpr
 applyTypeExprArgs (f,args) = foldl (:@) f args
 
-lookupLocalVarTI :: Int -> Text -> [a] -> TI a
+lookupLocalVarTI :: Int -> Text -> [a] -> TI ann a
 lookupLocalVarTI i t ctx = lookupLocalVarTI' i (reverse ctx)
   where
-    lookupLocalVarTI' :: Int -> [a] -> TI a
-    lookupLocalVarTI' _ []     = throwError (t <> " not defined")
+    lookupLocalVarTI' :: Int -> [a] -> TI ann a
+    lookupLocalVarTI' _ []     = throwError (pretty t <+> "not defined")
     lookupLocalVarTI' 0 (x:_)  = pure x
     lookupLocalVarTI' n (x:xs)
       | n < 0 = error "internal error negative variable lookup"
       | otherwise = lookupLocalVarTI' (n-1) xs
 
-lookupDefTypeTI :: Text -> TI Type
+lookupDefTypeTI :: Text -> TI ann Type
 lookupDefTypeTI t = view defCtx >>= lookupDefTypeTI'
   where
-    lookupDefTypeTI' :: [Statement] -> TI Type
-    lookupDefTypeTI' [] = throwError $ "Variable " <> t <> " not defined"
+    lookupDefTypeTI' :: [Statement] -> TI ann Type
+    lookupDefTypeTI' [] = throwError $ "Variable" <+> pretty t <+> "not defined"
     lookupDefTypeTI' (ExprDef{..}:stmts)
       | t == name = pure $ fromJust ty
       | otherwise = lookupDefTypeTI' stmts
     lookupDefTypeTI' (_:stmts) = lookupDefTypeTI' stmts
 
-lookupDefExprTI :: Text -> TI Expr
+lookupDefExprTI :: Text -> TI ann Expr
 lookupDefExprTI t = view defCtx >>= lookupDefExprTI'
   where
-    lookupDefExprTI' :: [Statement] -> TI Expr
-    lookupDefExprTI' [] = throwError $ "Variable " <> t <> " not defined"
+    lookupDefExprTI' :: [Statement] -> TI ann Expr
+    lookupDefExprTI' [] = throwError $ "Variable" <+> pretty t <> "not defined"
     lookupDefExprTI' (ExprDef{..}:stmts)
       | t == name = pure expr
       | otherwise = lookupDefExprTI' stmts
     lookupDefExprTI' (_:stmts) = lookupDefExprTI' stmts
 
-lookupDefKindTI :: [TypeExpr] -- ^ parameters to check
-                -> Text -- ^ name of type var
-                -> TI Kind
-lookupDefKindTI pars t = view defCtx >>= lookupDefKindTI'
+lookupDefKindTI :: Text -- ^ name of type var
+                -> [TypeExpr] -- ^ parameters to check
+                -> TI ann Kind
+lookupDefKindTI t pars = view defCtx >>= lookupDefKindTI'
   where
-    lookupDefKindTI' :: [Statement] -> TI Kind
-    lookupDefKindTI' [] = throwError $ "Variable " <> t <> " not defined"
+    lookupDefKindTI' :: [Statement] -> TI ann Kind
+    lookupDefKindTI' [] = throwError $ "Variable" <+> pretty t <+> "not defined"
     lookupDefKindTI' (TypeDef{..}:stmts)
       | t == name = do
           assert (length pars == length parameterCtx)
@@ -567,11 +568,13 @@ lookupDefKindTI pars t = view defCtx >>= lookupDefKindTI'
       | otherwise = lookupDefKindTI' stmts
     lookupDefKindTI' (_:stmts) = lookupDefKindTI' stmts
 
-lookupDefTypeExprTI :: Text -> TI TypeExpr
-lookupDefTypeExprTI t = view defCtx >>= lookupDefTypeExprTI'
+lookupDefTypeExprTI :: Text -- ^ name of type var
+                    -> [TypeExpr] -- ^ parameters to check
+                    -> TI ann TypeExpr
+lookupDefTypeExprTI t pars = view defCtx >>= lookupDefTypeExprTI'
   where
-    lookupDefTypeExprTI' :: [Statement] -> TI TypeExpr
-    lookupDefTypeExprTI' [] = throwError $ "Variable " <> t <> " not defined"
+    lookupDefTypeExprTI' :: [Statement] -> TI ann TypeExpr
+    lookupDefTypeExprTI' [] = throwError $ "Variable" <+> pretty t <+> "not defined"
     lookupDefTypeExprTI' (TypeDef{..}:stmts)
       | t == name = do
           assert (length pars == length parameterCtx)
@@ -584,33 +587,40 @@ lookupDefTypeExprTI t = view defCtx >>= lookupDefTypeExprTI'
       | otherwise = lookupDefTypeExprTI' stmts
     lookupDefTypeExprTI' (_:stmts) = lookupDefTypeExprTI' stmts
 
-assert :: Bool -> Text -> TI ()
+assert :: Bool -> Doc ann -> TI ann ()
 assert True  _   = pure ()
 assert False msg = throwError msg
 
 shiftFreeVarsCtx :: Int -> Int -> Ctx -> Ctx
 shiftFreeVarsCtx _ _ []       = []
-shiftFreeVarsCtx k j (ty:tys) =
-  shiftFreeVarsTypeExpr k j ty : shiftFreeVarsCtx k (j+1) tys
+shiftFreeVarsCtx j k (ty:tys) =
+  shiftFreeVarsTypeExpr j k ty : shiftFreeVarsCtx j (k+1) tys
 
-shiftFreeVarsTypeExpr :: Int -> Int -> TypeExpr -> TypeExpr
+shiftFreeVarsTypeExpr :: Int -- ^ how much should they be shifted
+                      -> Int -- ^ offset for free vars
+                      -> TypeExpr -> TypeExpr
 shiftFreeVarsTypeExpr j k (e1 :@ e2) = e1 :@ shiftFreeVarsExpr j k e2
--- every thing else shouldn't contain free variables
+shiftFreeVarsTypeExpr j k (GlobalTypeVar n vars) =
+  GlobalTypeVar n $ map (shiftFreeVarsTypeExpr j k) vars
+shiftFreeVarsTypeExpr j k (Abstr ty body) =
+  Abstr (shiftFreeVarsTypeExpr j k ty) (shiftFreeVarsTypeExpr j (k+1) body)
 shiftFreeVarsTypeExpr _ _ e = e
 
-shiftFreeVarsExpr :: Int -> Int -> Expr -> Expr
-shiftFreeVarsExpr k j v@(LocalExprVar i n)
-  | i < j = v
-  | otherwise = LocalExprVar (i+k) n
+shiftFreeVarsExpr :: Int -- ^ how much should they be shifted
+                  -> Int -- ^ offset for free vars
+                  -> Expr -> Expr
+shiftFreeVarsExpr j k v@(LocalExprVar i n)
+  | i < k = v
+  | otherwise = LocalExprVar (i+j) n
 -- TODO maybe GlobaleExprVar
-shiftFreeVarsExpr k j (e1 :@: e2) = shiftFreeVarsExpr k j e1
-                                    :@: shiftFreeVarsExpr k j e2
-shiftFreeVarsExpr k j r@Rec{..} =
-  r {matches = zipWith (shiftFreeVarsExpr k) (map ( (1+) . (j+) . length)
+shiftFreeVarsExpr j k (e1 :@: e2) = shiftFreeVarsExpr j k e1
+                                    :@: shiftFreeVarsExpr j k e2
+shiftFreeVarsExpr j k r@Rec{..} =
+  r {matches = zipWith (shiftFreeVarsExpr j) (map ( (1+) . (k+) . length)
                                              (gamma1s fromRec))
                        matches }
-shiftFreeVarsExpr k j c@Corec{..} =
-  c {matches = zipWith (shiftFreeVarsExpr k) (map ( (1+) . (j+). length)
+shiftFreeVarsExpr j k c@Corec{..} =
+  c {matches = zipWith (shiftFreeVarsExpr j) (map ( (1+) . (k+). length)
                                              (gamma1s toCorec))
                        matches }
 shiftFreeVarsExpr _ _ e = e

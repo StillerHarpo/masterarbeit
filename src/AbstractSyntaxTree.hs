@@ -10,6 +10,7 @@ type Type = (Ctx,TypeExpr)
 type Kind = Ctx
 
 data TypedExpr = TypedExpr Expr Type
+  deriving (Show)
 
 type StrCtx = [(Text,Type)]
 
@@ -23,7 +24,7 @@ data Statement = ExprDef { name :: Text
                          , kind :: Maybe Kind
                          }
                | Expression Expr
-  deriving (Eq)
+  deriving (Eq,Show)
 
 data TypeExpr = UnitType -- verum type
               | TypeExpr :@ Expr
@@ -35,6 +36,7 @@ data TypeExpr = UnitType -- verum type
               | Abstr TypeExpr TypeExpr
               | In Ductive
               | Coin Ductive
+  deriving (Show)
 
 instance Eq TypeExpr where
   UnitType              == UnitType              = True
@@ -53,6 +55,7 @@ data Ductive = Ductive { gamma :: Ctx
                        , nameDuc :: Text
                        , strNames :: [Text]
                        }
+  deriving (Show)
 
 instance Eq Ductive where
   Ductive g1 s1 a1 g11 _ _ == Ductive g2 s2 a2 g12 _ _ =
@@ -80,6 +83,7 @@ data Expr = UnitExpr -- verum value
                   , matches :: [Expr]
                   }
           | WithParameters [TypeExpr] Expr
+  deriving (Show)
 
 instance Eq Expr where
   UnitExpr                == UnitExpr                = True

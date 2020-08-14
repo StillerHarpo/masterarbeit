@@ -4,8 +4,8 @@
 
 module PrettyPrinter where
 
+
 import Data.Text.Prettyprint.Doc
-import Data.Text.Prettyprint.Doc.Render.String
 import Data.Text(Text)
 
 import Lib
@@ -40,7 +40,7 @@ instance PrettyPresc TypeExpr where
   prettyPresc _ (LocalTypeVar i "") = "?Ty" <> pretty i
   prettyPresc _ (LocalTypeVar i n) = pretty n <> "[" <> pretty i <> "]"
   prettyPresc _ (GlobalTypeVar n []) = pretty n
-  prettyPresc _ (GlobalTypeVar n par) = pretty n <> tupled (map pretty par)
+  prettyPresc _ (GlobalTypeVar n par) = pretty n <> angles (hsep . punctuate comma $ map pretty par)
   -- TODO find name of variable if defined
   prettyPresc _ (Abstr ty body) = "\\?:" <> pretty ty
                                          <> " -> "
@@ -118,17 +118,3 @@ instance Pretty TypeExpr where
 
 instance Pretty Expr where
   pretty = prettyPresc False
-
-instance Show TypedExpr where
-  showsPrec _ = renderShowS . layoutPretty defaultLayoutOptions . pretty
-
-instance Show TypeExpr where
-  showsPrec _ = renderShowS . layoutPretty defaultLayoutOptions . pretty
-
-instance Show Ductive where
-  showsPrec _ = renderShowS . layoutPretty defaultLayoutOptions . pretty
-
-instance Show Expr where
-  showsPrec _ = renderShowS . layoutPretty defaultLayoutOptions . pretty
-
-deriving instance Show Statement

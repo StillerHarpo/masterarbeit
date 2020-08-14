@@ -24,7 +24,8 @@ executable masterarbeit
                        text,
                        masterarbeit,
                        megaparsec,
-                       prettyprinter
+                       prettyprinter,
+                       prettyprinter-ansi-terminal
   hs-source-dirs:      src-exe
   default-language:    Haskell2010
 
@@ -37,7 +38,8 @@ library
                        parser-combinators,
                        microlens-platform,
                        mtl,
-                       prettyprinter
+                       prettyprinter,
+                       prettyprinter-ansi-terminal
   exposed-modules:     AbstractSyntaxTree,
                        Parser,
                        TypeChecker,

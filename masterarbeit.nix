@@ -1,7 +1,7 @@
 { mkDerivation, base, containers, hspec, hspec-discover
 , hspec-expectations, hspec-megaparsec, megaparsec
 , microlens-platform, mtl, parser-combinators, prettyprinter
-, stdenv, text
+, prettyprinter-ansi-terminal, stdenv, text
 }:
 mkDerivation {
   pname = "masterarbeit";
@@ -11,9 +11,11 @@ mkDerivation {
   isExecutable = true;
   libraryHaskellDepends = [
     base containers megaparsec microlens-platform mtl
-    parser-combinators prettyprinter text
+    parser-combinators prettyprinter prettyprinter-ansi-terminal text
   ];
-  executableHaskellDepends = [ base ];
+  executableHaskellDepends = [
+    base megaparsec prettyprinter prettyprinter-ansi-terminal text
+  ];
   testHaskellDepends = [
     base containers hspec hspec-expectations hspec-megaparsec
     megaparsec microlens-platform mtl text
