@@ -421,7 +421,7 @@ substTypes n (v:vs) e = substTypes (n+1) vs (substType n v e)
 substDuctiveTypeExpr :: Int -> TypeExpr -> Ductive -> Ductive
 substDuctiveTypeExpr i r1 dOld@Ductive{..} =
   let dNew =  dOld { as = map (substType (i+1) r1) as
-                   , nameDuc = "" }
+                   , nameDuc = "???" }
   in if dNew == dOld then dOld else dNew
 
 substTypeInExpr :: Int -> TypeExpr -> Expr -> Expr
