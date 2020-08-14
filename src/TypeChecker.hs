@@ -341,7 +341,7 @@ substExpr :: Int -> Expr -> Expr -> Expr
 substExpr i r v@(LocalExprVar j _)
   | i == j = r
   | otherwise = v
-substExpr i r (GlobalExprVar var) = undefined
+substExpr i r var@(GlobalExprVar _) = var
 substExpr i r (e1 :@: e2) = substExpr i r e1 :@: substExpr i r e2
 substExpr i r re@Rec{..} = let Ductive{..} = fromRec
                                newMatches  = zipWith (\i m -> substExpr i (shiftFreeVarsExpr i 0 r) m)
