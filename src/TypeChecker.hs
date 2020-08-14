@@ -172,11 +172,11 @@ inferTerm expr = catchError (inferTerm' expr)
     inferTerm' (Constructor d@Ductive{..} i) =
       inferTypeDuctive d
       >> pure (gamma1s !! i ++ [substType 0 (In d) (as !! i)]
-              , applyTypeExprArgs (In d, sigmas !! i))
+              , shiftFreeVarsTypeExpr 1 0 $ applyTypeExprArgs (In d, sigmas !! i))
     inferTerm' (Destructor d@Ductive{..} i) =
       inferTypeDuctive d
       >> pure ( gamma1s !! i ++ [applyTypeExprArgs (Coin d, sigmas !! i)]
-              , substType 0 (Coin d) (as !! i) )
+              , shiftFreeVarsTypeExpr 1 0 $ substType 0 (Coin d) (as !! i) )
     inferTerm' Rec{..} = do
       valTo <- evalTypeExpr toRec
       valFrom <- evalDuctive fromRec
