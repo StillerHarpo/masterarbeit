@@ -203,8 +203,7 @@ inferTerm expr = catchError (inferTerm' expr)
       pure ( gamma ++ [applyTypeExprArgs (valFrom, idCtx gamma)]
            , applyTypeExprArgs (Coin valTo
                                , map (shiftFreeVarsExpr 1 0) (idCtx gamma)))
-    inferTerm' (WithParameters ps e) = inferTerm $ substTypesInExpr 0 ps e
-
+    inferTerm' (WithParameters ps e) = inferTerm $ substTypesInExpr 0 (reverse ps) e
 
 betaeq :: TypeExpr -> TypeExpr -> TI ()
 betaeq e1 e2 = do
