@@ -119,9 +119,9 @@ inferType tyExpr = catchError (inferType' tyExpr)
 inferTypeDuctive :: Ductive -> TI ann Kind
 inferTypeDuctive Ductive{..} = do
   -- in sigmas shouldn't be variables wich refer to unittype
-  zipWithM_ (\sigma gamma1 -> checkContextMorph sigma (gamma1++[UnitType]) gamma) sigmas gamma1s
+  zipWithM_ (\sigma gamma1 -> checkContextMorph sigma gamma1 gamma) sigmas gamma1s
   zipWithM_ (\gamma1 a ->
-              local (over tyCtx (gamma:) . set ctx gamma1) (checkType a []))
+              local (over tyCtx (++[gamma]) . set ctx gamma1) (checkType a []))
             gamma1s as
   pure gamma
 
@@ -289,7 +289,7 @@ evalDuctive :: Ductive -> TI ann Ductive
 evalDuctive Ductive{..} = do
   gamma <- evalCtx gamma
   sigmas <- mapM (mapM evalExpr) sigmas
-  as <- local (over tyCtx (gamma:)) $ mapM evalTypeExpr as
+  as <- local (over tyCtx (++[gamma])) $ mapM evalTypeExpr as
   gamma1s <- mapM evalCtx gamma1s
   pure Ductive{..}
 
