@@ -300,32 +300,34 @@ main = hspec $ do
                     , typeExpr = In pairDuc
                     , kind = Nothing }
           , Expression (Constructor pairDuc 0 :@: UnitExpr :@: UnitExpr)])
+    let nat = [ "data Nat : Set where"
+              , "  Z : Unit -> Nat"
+              , "  S : Nat -> Nat"]
+        natDuc = Ductive { gamma = []
+                         , sigmas = [[], []]
+                         , as = [ UnitType,  LocalTypeVar 0 "Nat"]
+                         , gamma1s = [ [], [] ]
+                         , nameDuc = "Nat"
+                         , strNames = ["Z", "S"]}
+        natRes = TypeDef { name = "Nat"
+                         , parameterCtx = []
+                         , typeExpr = In natDuc
+                         , kind = Nothing }
     it "parse pairs of nats" $
-       parse parseProgram "" (T.unlines [ "data Nat : Set where"
-                                        , "  Z : Unit -> Nat"
-                                        , "  S : Nat -> Nat"
-                                        , "one = S @ (Z @ ())"
+       parse parseProgram "" (T.unlines $ nat <>
+                                        [ "one = S @ (Z @ ())"
                                         , "data Pair : Set where"
                                         , "  MkPair : (x:Nat) -> Unit -> Pair"
                                         , "MkPair @ one @ one"
                                         ])
       `shouldParse`
-      (let natDuc = Ductive { gamma = []
-                            , sigmas = [[], []]
-                            , as = [ UnitType,  LocalTypeVar 0 "Nat"]
-                            , gamma1s = [ [], [] ]
-                            , nameDuc = "Nat"
-                            , strNames = ["Z", "S"]}
-           pairDuc = Ductive { gamma = []
+      (let pairDuc = Ductive { gamma = []
                              , sigmas = [[]]
                              , as = [ UnitType ]
                              , gamma1s = [ [ GlobalTypeVar "Nat" [] ] ]
                              , nameDuc = "Pair"
                              , strNames = ["MkPair"]}
-       in [ TypeDef { name = "Nat"
-                    , parameterCtx = []
-                    , typeExpr = In natDuc
-                    , kind = Nothing }
+       in [ natRes
           , ExprDef { name = "one"
                     , expr = Constructor natDuc 1
                              :@: (Constructor natDuc 0
@@ -336,25 +338,30 @@ main = hspec $ do
                     , typeExpr = In pairDuc
                     , kind = Nothing }
           , Expression (Constructor pairDuc 0 :@: GlobalExprVar "one" :@: GlobalExprVar "one")])
+    let copair = [ "codata Copair<A : Set,B : Set> : Set where"
+                 , "  First : Copair -> A"
+                 , "  Second : Copair -> B" ]
+        copairDuc = Ductive { gamma = []
+                             , sigmas = [[], []]
+                             , as = [ LocalTypeVar 2 "A", LocalTypeVar 1 "B" ]
+                             , gamma1s = [ [], [] ]
+                             , nameDuc = "Copair"
+                             , strNames = ["First", "Second"]}
+        copairRes = TypeDef { name = "Copair"
+                            , parameterCtx = [[],[]]
+                            , typeExpr = Coin copairDuc
+                            , kind = Nothing }
     it "parse List of Units" $
-       parse parseProgram "" (T.unlines [ "codata Copair<A : Set,B : Set> : Set where"
-                                        , "  First : Copair -> A"
-                                        , "  Second : Copair -> B"
-                                        , "data ListUnit : Set where"
-                                        , "  LNilU : Unit -> ListUnit"
-                                        , "  LConsU : Copair<Unit, ListUnit> -> ListUnit"
-                                        , "LConsU @ (( corec<Unit,ListUnit> Unit to Copair where"
-                                        , "             { First x = ()"
-                                        , "             ; Second x = LNilU @ () }) @ ())"
-                                        ])
+       parse parseProgram "" (T.unlines $ copair
+                                         <> [ "data ListUnit : Set where"
+                                            , "  LNilU : Unit -> ListUnit"
+                                            , "  LConsU : Copair<Unit, ListUnit> -> ListUnit"
+                                            , "LConsU @ (( corec<Unit,ListUnit> Unit to Copair where"
+                                            , "             { First x = ()"
+                                            , "             ; Second x = LNilU @ () }) @ ())"
+                                            ])
       `shouldParse`
-      (let copairDuc = Ductive { gamma = []
-                               , sigmas = [[], []]
-                               , as = [ LocalTypeVar 2 "A", LocalTypeVar 1 "B" ]
-                               , gamma1s = [ [], [] ]
-                               , nameDuc = "Copair"
-                               , strNames = ["First", "Second"]}
-           listUnitDuc = Ductive { gamma = []
+      (let listUnitDuc = Ductive { gamma = []
                                  , sigmas = [[], []]
                                  , as = [ UnitType
                                         , GlobalTypeVar "Copair" [ UnitType
@@ -362,10 +369,7 @@ main = hspec $ do
                                  , gamma1s = [ [], [] ]
                                  , nameDuc = "ListUnit"
                                  , strNames = ["LNilU", "LConsU"]}
-       in [ TypeDef { name = "Copair"
-                    , parameterCtx = [[],[]]
-                    , typeExpr = Coin copairDuc
-                    , kind = Nothing }
+       in [ copairRes
           , TypeDef { name = "ListUnit"
                     , parameterCtx = []
                     , typeExpr = In listUnitDuc
@@ -378,6 +382,30 @@ main = hspec $ do
                                                               , Constructor listUnitDuc 0
                                                                 :@: UnitExpr ]
                                                   } :@: UnitExpr)])
+
+    it "parse Vec of Units" $
+       parse parseProgram "" (T.unlines $ copair <> nat
+                                          <> [ "data Vec : (n : Nat) -> Set where"
+                                             , "  Nil : Unit -> Vec (Z @ ())"
+                                             , "  Cons : (n : Nat) -> Copair<Unit,Vec @ n> -> Vec (S @ n)"])
+       `shouldParse`
+       (let vecDuc = Ductive { gamma = [GlobalTypeVar "Nat" []]
+                             , sigmas = [ [Constructor natDuc 0 :@: UnitExpr]
+                                        , [Constructor natDuc 1 :@: LocalExprVar 0 "n"]]
+                             , as = [ UnitType
+                                    , GlobalTypeVar "Copair" [ UnitType
+                                                             , LocalTypeVar 0 "Vec"
+                                                               :@ LocalExprVar 0 "n"] ]
+                             , gamma1s = [ [], [GlobalTypeVar "Nat" []] ]
+                             , nameDuc = "Vec"
+                             , strNames = ["Nil", "Cons"]}
+       in [ copairRes
+          , natRes
+          , TypeDef { name = "Vec"
+                    , parameterCtx = []
+                    , typeExpr = In vecDuc
+                    , kind = Nothing }])
+
 
   let emptyCtx :: ContextTI
       emptyCtx = ContextTI { _ctx = []
