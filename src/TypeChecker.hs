@@ -362,6 +362,7 @@ substExpr i r c@Corec{..} = let Ductive{..} = toCorec
 substExpr _ _ e = e
 
 substTypeExpr :: Int -> Expr -> TypeExpr -> TypeExpr
+substTypeExpr i r (GlobalTypeVar n pars) = GlobalTypeVar n $ map (substTypeExpr i r) pars
 substTypeExpr i r1 (Abstr t r2) =
   Abstr (substTypeExpr i r1 t)
         (substTypeExpr (i+1) (shiftFreeVarsExpr 0 1 r1) r2)
