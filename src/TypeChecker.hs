@@ -218,11 +218,18 @@ betaeq e1 e2 = do
                   <+> pretty e2
 
 betaeqCtx :: Ctx -> Ctx -> TI ann ()
-betaeqCtx = zipWithM_ betaeq
+betaeqCtx ctx1 ctx2 = do
+  assert (length ctx1 == length ctx2)
+         ("length of context" <+> pretty ctx1 <>
+          "\ndoesn't match length of context" <+> pretty ctx2)
+  zipWithM_ betaeq ctx1 ctx2
 
 betaeqTyCtx :: TyCtx -> TyCtx -> TI ann ()
-betaeqTyCtx = zipWithM_ betaeqCtx
-
+betaeqTyCtx ctx1 ctx2 = do
+  assert (length ctx1 == length ctx2)
+         ("length of type context " <+> pretty ctx1 <>
+          "\ndoesn't match length of type context" <+> pretty ctx2)
+  zipWithM_ betaeqCtx ctx1 ctx2
 
 inlineTypeExpr :: TypeExpr -> TI ann TypeExpr
 inlineTypeExpr (tyExpr :@ expr) = (:@) <$> inlineTypeExpr tyExpr <*> inlineExpr expr
@@ -560,10 +567,12 @@ lookupDefKindTI t pars = view defCtx >>= lookupDefKindTI'
     lookupDefKindTI' [] = throwError $ "Variable" <+> pretty t <+> "not defined"
     lookupDefKindTI' (TypeDef{..}:stmts)
       | t == name = do
-          assert (length pars == length parameterCtx)
-                 "parameters to type variables have to be complete"
           parsKinds <- mapM inferType pars
-          betaeqTyCtx parsKinds parameterCtx
+          catchError (betaeqTyCtx parsKinds parameterCtx)
+                     (throwError . (<> "\n while looking up variable "
+                                    <+> pretty t
+                                    <+> "with parameters"
+                                    <+> pretty pars))
           pure (fromJust kind)
       | otherwise = lookupDefKindTI' stmts
     lookupDefKindTI' (_:stmts) = lookupDefKindTI' stmts
@@ -578,7 +587,10 @@ lookupDefTypeExprTI t pars = view defCtx >>= lookupDefTypeExprTI'
     lookupDefTypeExprTI' (TypeDef{..}:stmts)
       | t == name = do
           assert (length pars == length parameterCtx)
-                 "parameters to type variables have to be complete"
+                 ("parameters to type variables have to be complete"
+                 <> "\n while looking up" <+> pretty t
+                 <> "\n with parameters" <+> pretty pars
+                 <> "\n and parameter context" <+> pretty parameterCtx)
 --    TODO This function gets used in evalution with doesn't change the context
 --         Are this tests really not necessary?
 --        parsKinds <- mapM inferType pars
