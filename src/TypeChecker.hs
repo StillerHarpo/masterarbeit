@@ -583,7 +583,7 @@ lookupDefTypeExprTI t pars = view defCtx >>= lookupDefTypeExprTI'
 --         Are this tests really not necessary?
 --        parsKinds <- mapM inferType pars
 --        betaeqTyCtx parsKinds parameterCtx
-          pure $ substTypes 0 pars typeExpr
+          pure $ substTypes 0 (reverse pars) typeExpr
       | otherwise = lookupDefTypeExprTI' stmts
     lookupDefTypeExprTI' (_:stmts) = lookupDefTypeExprTI' stmts
 
