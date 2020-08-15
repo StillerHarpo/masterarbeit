@@ -131,11 +131,11 @@ main = hspec $ do
                    gamma = [UnitType],
                    sigmas = [ [UnitExpr]
                             , [UnitExpr]],
-                   as = [ LocalTypeVar 0 "C"
-                          :@ LocalExprVar 0 "y"
-                        , LocalTypeVar 0 "C" :@ UnitExpr ],
-                   gamma1s = [ [UnitType]
-                             , []],
+                   as = [ LocalTypeVar 0 "C" :@ UnitExpr
+                        , LocalTypeVar 0 "C"
+                          :@ LocalExprVar 0 "y"],
+                   gamma1s = [ []
+                             , [UnitType]],
                    nameDuc = "",
                    strNames = ["C1", "C2"]}
                , kind = Nothing}]
@@ -159,10 +159,10 @@ main = hspec $ do
                     gamma = [ UnitType],
                     sigmas = [ [UnitExpr]
                              , [UnitExpr]],
-                    as = [ LocalTypeVar 0 "A" :@ LocalExprVar 0 "y"
-                         , LocalTypeVar 0 "A":@ UnitExpr],
-                    gamma1s = [ [UnitType]
-                              , []],
+                    as = [ LocalTypeVar 0 "A":@ UnitExpr
+                         , LocalTypeVar 0 "A" :@ LocalExprVar 0 "y"],
+                    gamma1s = [ []
+                              , [UnitType]],
                     nameDuc = "",
                     strNames = ["C1", "C2"]}
                 , kind = Nothing}
@@ -256,10 +256,10 @@ main = hspec $ do
                               , LocalTypeVar 0 "A"
                               , LocalTypeVar 0 "A"
                               , LocalTypeVar 0 "A"]
-                       , gamma1s = [ [UnitType, UnitType, UnitType]
-                                   , [UnitType, UnitType]
+                       , gamma1s = [ []
                                    , [UnitType]
-                                   , []]
+                                   , [UnitType, UnitType]
+                                   , [UnitType, UnitType, UnitType]]
                        , nameDuc = ""
                        , strNames = ["C1", "C2", "C3", "C4"]}
       in [ TypeDef { name = "A"
@@ -269,19 +269,20 @@ main = hspec $ do
          , Expression Rec { fromRec = a
                           , toRec = GlobalTypeVar "A" []
                           , matches = [ Constructor a 0
+                                        :@: LocalExprVar 0 "x"
+                                      , Constructor a 1
+                                        :@: LocalExprVar 1 "x"
+                                        :@: LocalExprVar 0 "y"
+                                      , Constructor a 2
+                                        :@: LocalExprVar 2 "x"
+                                        :@: LocalExprVar 1 "y"
+                                        :@: LocalExprVar 0 "z"
+                                      , Constructor a 3
                                         :@: LocalExprVar 3 "x"
                                         :@: LocalExprVar 2 "y"
                                         :@: LocalExprVar 1 "z"
                                         :@: LocalExprVar 0 "u"
-                                      , Constructor a 1
-                                        :@: LocalExprVar 2 "x"
-                                        :@: LocalExprVar 1 "y"
-                                        :@: LocalExprVar 0 "z"
-                                      , Constructor a 2
-                                        :@: LocalExprVar 1 "x"
-                                        :@: LocalExprVar 0 "y"
-                                      , Constructor a 3
-                                        :@: LocalExprVar 0 "x"]}])
+                                      ]}])
     it "parse pairs" $
        parse parseProgram "" (T.unlines [ "data Pair : Set where"
                                         , "  MkPair : (x:Unit) -> Unit -> Pair"
@@ -311,10 +312,10 @@ main = hspec $ do
       `shouldParse`
       (let natDuc = Ductive { gamma = []
                             , sigmas = [[], []]
-                            , as = [ LocalTypeVar 0 "Nat", UnitType ]
+                            , as = [ UnitType,  LocalTypeVar 0 "Nat"]
                             , gamma1s = [ [], [] ]
                             , nameDuc = "Nat"
-                            , strNames = ["S", "Z"]}
+                            , strNames = ["Z", "S"]}
            pairDuc = Ductive { gamma = []
                              , sigmas = [[]]
                              , as = [ UnitType ]
@@ -326,8 +327,8 @@ main = hspec $ do
                     , typeExpr = In natDuc
                     , kind = Nothing }
           , ExprDef { name = "one"
-                    , expr = Constructor natDuc 0
-                             :@: (Constructor natDuc 1
+                    , expr = Constructor natDuc 1
+                             :@: (Constructor natDuc 0
                                   :@: UnitExpr)
                     , ty = Nothing }
           , TypeDef { name = "Pair"
@@ -335,6 +336,48 @@ main = hspec $ do
                     , typeExpr = In pairDuc
                     , kind = Nothing }
           , Expression (Constructor pairDuc 0 :@: GlobalExprVar "one" :@: GlobalExprVar "one")])
+    it "parse List of Units" $
+       parse parseProgram "" (T.unlines [ "codata Copair<A : Set,B : Set> : Set where"
+                                        , "  First : Copair -> A"
+                                        , "  Second : Copair -> B"
+                                        , "data ListUnit : Set where"
+                                        , "  LNilU : Unit -> ListUnit"
+                                        , "  LConsU : Copair<Unit, ListUnit> -> ListUnit"
+                                        , "LConsU @ (( corec<Unit,ListUnit> Unit to Copair where"
+                                        , "             { First x = ()"
+                                        , "             ; Second x = LNilU @ () }) @ ())"
+                                        ])
+      `shouldParse`
+      (let copairDuc = Ductive { gamma = []
+                               , sigmas = [[], []]
+                               , as = [ LocalTypeVar 2 "A", LocalTypeVar 1 "B" ]
+                               , gamma1s = [ [], [] ]
+                               , nameDuc = "Copair"
+                               , strNames = ["First", "Second"]}
+           listUnitDuc = Ductive { gamma = []
+                                 , sigmas = [[], []]
+                                 , as = [ UnitType
+                                        , GlobalTypeVar "Copair" [ UnitType
+                                                                 , LocalTypeVar 0 "ListUnit"] ]
+                                 , gamma1s = [ [], [] ]
+                                 , nameDuc = "ListUnit"
+                                 , strNames = ["LNilU", "LConsU"]}
+       in [ TypeDef { name = "Copair"
+                    , parameterCtx = [[],[]]
+                    , typeExpr = Coin copairDuc
+                    , kind = Nothing }
+          , TypeDef { name = "ListUnit"
+                    , parameterCtx = []
+                    , typeExpr = In listUnitDuc
+                    , kind = Nothing }
+          , Expression $ Constructor listUnitDuc 1
+                         :@: (WithParameters [UnitType, GlobalTypeVar "ListUnit" []]
+                                            Corec { fromCorec = UnitType
+                                                  , toCorec = copairDuc
+                                                  , matches = [ UnitExpr
+                                                              , Constructor listUnitDuc 0
+                                                                :@: UnitExpr ]
+                                                  } :@: UnitExpr)])
 
 
   describe "Type Checker works" $ do

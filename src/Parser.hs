@@ -430,7 +430,7 @@ parseBlock pHeader pItems f =
         f header items
       pIndented = do
         header <- pHeader
-        pure $ L.IndentMany Nothing (f header) (pItems header)
+        pure $ L.IndentMany Nothing (f header . reverse) (pItems header)
 
 lineFold :: Parser a -> Parser a
 lineFold p = do
