@@ -379,15 +379,53 @@ main = hspec $ do
                                                                 :@: UnitExpr ]
                                                   } :@: UnitExpr)])
 
-
-  describe "Type Checker works" $ do
-    let emptyCtx :: ContextTI
-        emptyCtx = ContextTI { _ctx = []
+  let emptyCtx :: ContextTI
+      emptyCtx = ContextTI { _ctx = []
                              , _tyCtx = []
                              , _defCtx = []}
-        shouldCheckIn :: (HasCallStack, Show a, Eq a) => TI ann a -> ContextTI -> a -> Expectation
-        shouldCheckIn ti ctx' val = first show (runTI ti ctx') `shouldBe` Right val
-        shouldCheck :: (HasCallStack, Show a, Eq a) => TI ann a -> a -> Expectation
+      shouldCheckIn :: (HasCallStack, Show a, Eq a) => TI ann a -> ContextTI -> a -> Expectation
+      shouldCheckIn ti ctx' val = first show (runTI ti ctx') `shouldBe` Right val
+
+  describe "Inlining works" $ do
+    let shouldCheckInGlobCtx :: (HasCallStack, Show a, Eq a) => [Statement]
+                                                             -> TI ann a
+                                                             -> a
+                                                             -> Expectation
+        shouldCheckInGlobCtx defCtx' ti = shouldCheckIn ti (set defCtx defCtx' emptyCtx)
+        tyA = TypeDef { name = "A"
+                      , parameterCtx = []
+                      , typeExpr = UnitType
+                      , kind = Nothing}
+    it "inlines nested Global Var" $
+      shouldCheckInGlobCtx [tyA]
+                           (inlineTypeExpr $ GlobalTypeVar "A" [])
+                           UnitType
+    let tyB = TypeDef { name = "B"
+                      , parameterCtx = []
+                      , typeExpr = GlobalTypeVar "A" []
+                      , kind = Nothing}
+    it "inlines nested Global Var" $
+      shouldCheckInGlobCtx [tyA,tyB]
+                           (inlineTypeExpr $ GlobalTypeVar "A" [])
+                           UnitType
+    let tyC = TypeDef { name = "C"
+                      , parameterCtx = [[]]
+                      , typeExpr = LocalTypeVar 0 "X"
+                      , kind = Nothing}
+    it "inlines parameterized Global Var" $
+      shouldCheckInGlobCtx [tyC]
+                           (inlineTypeExpr $ GlobalTypeVar "C" [UnitType])
+                           UnitType
+    let a = ExprDef { name = "a"
+                    , expr = UnitExpr
+                    , ty = Nothing}
+    it "inlines Global var with unit expr" $
+      shouldCheckInGlobCtx [a]
+                           (inlineExpr $ GlobalExprVar "a")
+                           UnitExpr
+
+  describe "Type Checker works" $ do
+    let shouldCheck :: (HasCallStack, Show a, Eq a) => TI ann a -> a -> Expectation
         shouldCheck ti = shouldCheckIn ti emptyCtx
     it "type check unit type" $
       inferType UnitType
