@@ -51,31 +51,31 @@ emptyCtx = ContextTI { _ctx = []
 
 checkProgram :: [Statement] -> Either (Doc ann) [TypedExpr]
 checkProgram = flip evalPTI [] . checkProgramPTI
-  where
-    checkProgramPTI :: [Statement] -> PTI ann [TypedExpr]
-    checkProgramPTI [] = pure []
-    checkProgramPTI (ExprDef{..} : stmts) = do
-      ty <- Just <$> tiInPTI (inferTerm expr)
-      expr <- tiInPTI $ evalExpr expr
-      modify (ExprDef{..} :)
-      checkProgramPTI stmts
-    checkProgramPTI (TypeDef{..} : stmts) = do
-      tiInPTI $ checkTyCtx parameterCtx
-      kind <- Just <$> tiInPTI (local (set tyCtx parameterCtx)
-                                      (inferType typeExpr))
-      typeExpr <- tiInPTI $ evalTypeExpr typeExpr
-      modify (TypeDef{..} :)
-      checkProgramPTI stmts
-    checkProgramPTI (Expression expr : stmts) =
-      (:) <$> (TypedExpr <$> tiInPTI (evalExpr expr)
-                         <*> tiInPTI (inferTerm expr))
-          <*> checkProgramPTI stmts
-    tiInPTI :: TI ann a -> PTI ann a
-    tiInPTI ti = do
-      curDefCtx <- get
-      case runTI ti $ set defCtx curDefCtx emptyCtx of
-        Left err -> throwError err
-        Right a -> pure a
+
+checkProgramPTI :: [Statement] -> PTI ann [TypedExpr]
+checkProgramPTI [] = pure []
+checkProgramPTI (ExprDef{..} : stmts) = do
+  ty <- Just <$> tiInPTI (inferTerm expr)
+  expr <- tiInPTI $ evalExpr expr
+  modify (ExprDef{..} :)
+  checkProgramPTI stmts
+checkProgramPTI (TypeDef{..} : stmts) = do
+  tiInPTI $ checkTyCtx parameterCtx
+  kind <- Just <$> tiInPTI (local (set tyCtx parameterCtx)
+                                  (inferType typeExpr))
+  typeExpr <- tiInPTI $ evalTypeExpr typeExpr
+  modify (TypeDef{..} :)
+  checkProgramPTI stmts
+checkProgramPTI (Expression expr : stmts) =
+  (:) <$> (TypedExpr <$> tiInPTI (evalExpr expr)
+                     <*> tiInPTI (inferTerm expr))
+      <*> checkProgramPTI stmts
+tiInPTI :: TI ann a -> PTI ann a
+tiInPTI ti = do
+  curDefCtx <- get
+  case runTI ti $ set defCtx curDefCtx emptyCtx of
+    Left err -> throwError err
+    Right a -> pure a
 
 checkTyCtx :: TyCtx -> TI ann ()
 checkTyCtx = mapM_ checkCtx

@@ -54,6 +54,9 @@ data ParserState = ParserState {
   }
 $(makeLenses ''ParserState)
 
+emptyState :: ParserState
+emptyState = ParserState Nothing Set.empty Set.empty [] Set.empty Set.empty [] []
+
 -- | a parser with a space consumer state for line folding
 type Parser = StateT ParserState (Parsec Void Text)
 
@@ -61,8 +64,7 @@ instance (Monad m, IsString (m a)) => IsString (StateT s m a) where
   fromString = lift . fromString
 
 parseProgram :: Parsec Void Text [Statement]
-parseProgram = evalStateT (many parseStatement <* eof)
-                          (ParserState Nothing Set.empty Set.empty [] Set.empty Set.empty [] [])
+parseProgram = evalStateT (many parseStatement <* eof) emptyState
 
 parseStatement :: Parser Statement
 parseStatement = nonIndented $ choice
