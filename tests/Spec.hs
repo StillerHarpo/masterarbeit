@@ -6,7 +6,6 @@ import Test.Hspec.Megaparsec
 import Text.Megaparsec
 
 import qualified Data.Map as Map
-import Data.Bifunctor (first)
 
 import Control.Monad.State.Strict
 
@@ -18,11 +17,17 @@ import Parser
 import TypeChecker
 import AbstractSyntaxTree
 
+import Lib
+import qualified Pair
+import qualified List
+
 pShow :: Show a => a -> T.Text
 pShow = T.pack . show
 
 main :: IO ()
 main = hspec $ do
+  List.tests
+  Pair.tests
   describe "Parser works" $ do
     it "parses the unit expression" $
       parse parseProgram "" "()" `shouldParse` [Expression UnitExpr]
@@ -406,21 +411,8 @@ main = hspec $ do
                     , typeExpr = In vecDuc
                     , kind = Nothing }])
 
-
-  let emptyCtx :: ContextTI
-      emptyCtx = ContextTI { _ctx = []
-                             , _tyCtx = []
-                             , _defCtx = []}
-      shouldCheckIn :: (HasCallStack, Show a, Eq a) => TI ann a -> ContextTI -> a -> Expectation
-      shouldCheckIn ti ctx' val = first show (runTI ti ctx') `shouldBe` Right val
-
   describe "Inlining works" $ do
-    let shouldCheckInGlobCtx :: (HasCallStack, Show a, Eq a) => [Statement]
-                                                             -> TI ann a
-                                                             -> a
-                                                             -> Expectation
-        shouldCheckInGlobCtx defCtx' ti = shouldCheckIn ti (set defCtx defCtx' emptyCtx)
-        tyA = TypeDef { name = "A"
+    let tyA = TypeDef { name = "A"
                       , parameterCtx = []
                       , typeExpr = UnitType
                       , kind = Nothing}

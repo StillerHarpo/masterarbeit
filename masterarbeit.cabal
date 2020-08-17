@@ -49,6 +49,18 @@ library
 
 test-suite tests
   main-is:            Spec.hs
+  other-modules:      Lib,
+                      Nat
+                      Nat.Definition,
+                      Nat.Examples,
+                      Nat.Functions,
+                      Pair
+                      Pair.Definition,
+                      Pair.Examples,
+                      List
+                      List.Definition,
+                      List.Examples,
+                      List.Functions
   hs-source-dirs:     tests
   type:               exitcode-stdio-1.0
   -- other-modules:    
