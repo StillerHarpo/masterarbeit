@@ -67,3 +67,17 @@ shouldCheckWithDefs defs input expOutput =
       let typedDefCtx =
             execState (runExceptT $ checkProgramPTI defCtx') []
       in shouldCheckInGlobCtx typedDefCtx (inferTerm input) expOutput
+
+-- | first parses definition then check if evaluating the expression
+--   matches the expected one in the parsed context
+shouldEvalWithDefs :: [Text] -- ^ definitions to parse
+                    -> Expr  -- ^ expression to evaluate
+                    -> Expr -- ^ expected expression
+                    -> Expectation
+shouldEvalWithDefs defs input expOutput =
+  case parse parseProgram "" (unlines defs) of
+    Left err -> error . show $ errorBundlePretty err
+    Right defCtx' ->
+      let typedDefCtx =
+            execState (runExceptT $ checkProgramPTI defCtx') []
+      in shouldCheckInGlobCtx typedDefCtx (evalExpr input) expOutput
