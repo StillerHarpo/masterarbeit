@@ -18,6 +18,7 @@ import TypeChecker
 import AbstractSyntaxTree
 
 import Lib
+import qualified Nat
 import qualified Pair
 import qualified List
 
@@ -26,6 +27,7 @@ pShow = T.pack . show
 
 main :: IO ()
 main = hspec $ do
+  Nat.tests
   List.tests
   Pair.tests
   describe "Parser works" $ do
