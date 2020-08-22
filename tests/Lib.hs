@@ -56,7 +56,8 @@ shouldCheckInGlobCtx defCtx' ti =
 
 -- | first parses definition then check if type checking the expression
 --   matches the expected type in the parsed context
-shouldCheckWithDefs :: [Text] -- ^ definitions to parse
+shouldCheckWithDefs :: HasCallStack
+                    => [Text] -- ^ definitions to parse
                     -> Expr  -- ^ expression to type check
                     -> Type -- ^ expected type
                     -> Expectation
@@ -70,10 +71,11 @@ shouldCheckWithDefs defs input expOutput =
 
 -- | first parses definition then check if evaluating the expression
 --   matches the expected one in the parsed context
-shouldEvalWithDefs :: [Text] -- ^ definitions to parse
-                    -> Expr  -- ^ expression to evaluate
-                    -> Expr -- ^ expected expression
-                    -> Expectation
+shouldEvalWithDefs :: HasCallStack
+                   => [Text] -- ^ definitions to parse
+                   -> Expr  -- ^ expression to evaluate
+                   -> Expr -- ^ expected expression
+                   -> Expectation
 shouldEvalWithDefs defs input expOutput =
   case parse parseProgram "" (unlines defs) of
     Left err -> error . show $ errorBundlePretty err
