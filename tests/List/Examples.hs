@@ -24,18 +24,18 @@ listEx4D = "list4 = Cons<Nat> @ "
             <> mkPairD "Nat" "List<Nat>" "one" "list3"
 
 listEx1Expr, listEx2Expr, listEx3Expr, listEx4Expr :: Expr
-listEx1Expr = WithParameters [UnitType] (Constructor listDuc 0)
+listEx1Expr = WithParameters [UnitType] (Constructor listDucA 0)
               :@: UnitExpr
-listEx2Expr = WithParameters [UnitType] (Constructor listDuc 1)
+listEx2Expr = WithParameters [UnitType] (Constructor listDucA 1)
               :@: mkPairExpr UnitType
                              (GlobalTypeVar "List" [UnitType])
                              UnitExpr
                              (GlobalExprVar "list1")
 listEx3Expr = WithParameters [GlobalTypeVar "Nat" []]
-                             (Constructor listDuc 0)
+                             (Constructor listDucA 0)
               :@: UnitExpr
 listEx4Expr = WithParameters [GlobalTypeVar "Nat" []]
-                             (Constructor listDuc 1)
+                             (Constructor listDucA 1)
               :@: mkPairExpr (GlobalTypeVar "Nat" [])
                              (GlobalTypeVar "List"
                                             [GlobalTypeVar "Nat" []])
@@ -51,7 +51,7 @@ listExTest = do
                 , ty = Nothing}]
   it "Type checks a empty list of units to List<Unit>" $
     shouldCheckWithDefs [pairD, listD] listEx1Expr
-      ([], GlobalTypeVar "List" [UnitType])
+      ([], listExpr UnitType)
   it "Parses a list with one unit" $
     shouldParseWithDefs [pairD, listD, listEx1D] listEx2D
       [ ExprDef { name = "list2"
@@ -59,7 +59,7 @@ listExTest = do
                 , ty = Nothing}]
   it "Type checks a list with one unit to List<Unit>" $
     shouldCheckWithDefs [pairD, listD, listEx1D] listEx2Expr
-      ([], GlobalTypeVar "List" [UnitType])
+      ([], listExpr UnitType)
   it "Parses a empty list of nats" $
     shouldParseWithDefs [natD, pairD, listD] listEx3D
       [ ExprDef { name = "list3"
@@ -67,7 +67,7 @@ listExTest = do
                 , ty = Nothing}]
   it "Type checks a empty list of nats to List<Nat>" $
     shouldCheckWithDefs [natD, pairD, listD] listEx3Expr
-      ([], GlobalTypeVar "List" [GlobalTypeVar "Nat" []])
+      ([], listExpr (GlobalTypeVar "Nat" []))
   it "Parses a list with one number one" $
     shouldParseWithDefs [oneDR, pairD, listD, listEx3D] listEx4D
       [ ExprDef { name = "list4"
@@ -75,5 +75,5 @@ listExTest = do
                 , ty = Nothing}]
   it "Type checks a list with one number one to List<Nat>" $
     shouldCheckWithDefs [oneDR, pairD, listD, listEx3D] listEx4Expr
-      ([], GlobalTypeVar "List" [GlobalTypeVar "Nat" []])
+      ([], listExpr (GlobalTypeVar "Nat" []))
 

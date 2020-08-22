@@ -17,18 +17,22 @@ pairD = T.unlines
   , "  Second : Pair -> B"
   ]
 
-pairDuc :: Ductive
-pairDuc = Ductive { gamma = []
-                  , sigmas = [[],[]]
-                  , as = [ LocalTypeVar 2 "A"
-                         , LocalTypeVar 1 "B"]
-                  , gamma1s = [[],[]]
-                  , nameDuc = "Pair"
-                  , strNames = [ "First"
-                               , "Second"]}
+pairDuc :: TypeExpr -> TypeExpr -> Ductive
+pairDuc x y = Ductive { gamma = []
+                      , sigmas = [[],[]]
+                      , as = [ x , y]
+                      , gamma1s = [[],[]]
+                      , nameDuc = "Pair"
+                      , strNames = [ "First" , "Second"]}
 
-pairExpr :: TypeExpr
-pairExpr = Coin pairDuc
+pairDucAB :: Ductive
+pairDucAB = pairDuc (LocalTypeVar 2 "A") (LocalTypeVar 1 "B")
+
+pairExpr :: TypeExpr -> TypeExpr -> TypeExpr
+pairExpr x y = Coin $ pairDuc x y
+
+pairExprAB :: TypeExpr
+pairExprAB = Coin pairDucAB
 
 pairTest :: Spec
 pairTest =
@@ -37,5 +41,5 @@ pairTest =
         [ TypeDef { name = "Pair"
                   , parameterCtx = [[],[]]
                   , kind = Nothing
-                  , typeExpr = pairExpr}]
+                  , typeExpr = pairExprAB}]
 

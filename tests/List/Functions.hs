@@ -24,12 +24,12 @@ lengthD = T.unlines
 
 lengthExpr :: Expr
 lengthExpr = WithParameters [UnitType]
-  Rec { fromRec = listDuc
+  Rec { fromRec = listDucA
       , toRec = GlobalTypeVar "Nat" []
       , matches = [ Constructor natDuc 0 :@: UnitExpr
                   , Constructor natDuc 1
                     :@: (WithParameters [UnitType, GlobalTypeVar "Nat" []]
-                                        (Destructor pairDuc 1)
+                                        (Destructor pairDucAB 1)
                          :@: LocalExprVar 0 "n")]}
 
 lengthTest :: Spec
@@ -41,4 +41,4 @@ lengthTest = do
                 , ty = Nothing}]
   it "Type checks length to (List<Unit>) -> Nat" $
     shouldCheckWithDefs [natD, pairD, listD] lengthExpr
-      ([GlobalTypeVar "List" [UnitType]], GlobalTypeVar "Nat" [])
+      ([listExpr UnitType], GlobalTypeVar "Nat" [])

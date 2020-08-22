@@ -19,25 +19,30 @@ listD = T.unlines
   , "  Cons : Pair<A, List> -> List"
   ]
 
-listDuc :: Ductive
-listDuc = Ductive { gamma = []
-                  , sigmas = [[],[]]
-                  , as = [ UnitType
-                         , GlobalTypeVar "Pair" [ LocalTypeVar 1 "A"
-                                                , LocalTypeVar 0 "List"]]
-                  , gamma1s = [[],[]]
-                  , nameDuc = "List"
-                  , strNames = ["Nil", "Cons"]}
+listDuc :: TypeExpr -> Ductive
+listDuc x = Ductive { gamma = []
+                    , sigmas = [[],[]]
+                    , as = [ UnitType
+                           , GlobalTypeVar "Pair" [ x , LocalTypeVar 0 "List"]]
+                    , gamma1s = [[],[]]
+                    , nameDuc = "List"
+                    , strNames = ["Nil", "Cons"]}
 
-listExpr :: TypeExpr
-listExpr = In listDuc
+listDucA ::  Ductive
+listDucA = listDuc (LocalTypeVar 1 "A")
+
+listExpr :: TypeExpr -> TypeExpr
+listExpr = In . listDuc
+
+listExprA :: TypeExpr
+listExprA = In listDucA
 
 listTest :: Spec
 listTest =
-  it "Parses a List" $
+  it "Parses the definition of List" $
     shouldParseWithDefs [pairD] listD
       [ TypeDef { name = "List"
                 , parameterCtx = [[]]
-                , typeExpr = listExpr
+                , typeExpr = listExprA
                 , kind = Nothing}]
 

@@ -23,7 +23,7 @@ mkPairD tyX tyY x y = T.unlines
 mkPairExpr :: TypeExpr -> TypeExpr -> Expr -> Expr -> Expr
 mkPairExpr tyX tyY x y = WithParameters [tyX, tyY]
                                         (Corec { fromCorec = UnitType
-                                               , toCorec = pairDuc
+                                               , toCorec = pairDucAB
                                                , matches = [x, y]})
                          :@: UnitExpr
 
@@ -36,13 +36,13 @@ pairEx4D = "pair4 = " <> mkPairD "Nat" "Nat" "one" "two"
 pairEx1Expr, pairEx2Expr, pairEx3Expr, pairEx4Expr :: Expr
 pairEx1Expr = mkPairExpr UnitType UnitType UnitExpr UnitExpr
 pairEx2Expr = mkPairExpr UnitType (GlobalTypeVar "Nat" [])
-                          UnitExpr (GlobalExprVar "one")
+                         UnitExpr (GlobalExprVar "one")
 pairEx3Expr = mkPairExpr (GlobalTypeVar "Nat" []) UnitType
                          (GlobalExprVar "one") UnitExpr
 pairEx4Expr = mkPairExpr (GlobalTypeVar "Nat" [])
-                          (GlobalTypeVar "Nat" [])
-                          (GlobalExprVar "one")
-                          (GlobalExprVar "two")
+                         (GlobalTypeVar "Nat" [])
+                         (GlobalExprVar "one")
+                         (GlobalExprVar "two")
 
 pairExTest :: Spec
 pairExTest = do
@@ -53,7 +53,7 @@ pairExTest = do
                 , ty = Nothing}]
   it "Type checks a pair of units to Pair<Unit,Unit>" $
     shouldCheckWithDefs [pairD] pairEx1Expr
-      ([], GlobalTypeVar "Pair" [UnitType, UnitType])
+      ([], pairExpr UnitType UnitType)
   it "Parses pair of unit and one" $
     shouldParseWithDefs [oneDR, pairD] pairEx2D
       [ ExprDef { name = "pair2"
@@ -61,7 +61,7 @@ pairExTest = do
                 , ty = Nothing}]
   it "Type checks a pair of unit and one to Pair<Unit,Nat>" $
     shouldCheckWithDefs [oneDR, pairD] pairEx2Expr
-      ([], GlobalTypeVar "Pair" [UnitType, GlobalTypeVar "Nat" []])
+      ([], pairExpr UnitType (GlobalTypeVar "Nat" []))
   it "Parses pair of one and unit" $
     shouldParseWithDefs [oneDR, pairD] pairEx3D
       [ ExprDef { name = "pair3"
@@ -69,7 +69,7 @@ pairExTest = do
                 , ty = Nothing}]
   it "Type checks a pair of one and unit to Pair<Nat,Unit>" $
     shouldCheckWithDefs [oneDR, pairD] pairEx3Expr
-      ([], GlobalTypeVar "Pair" [UnitType, GlobalTypeVar "Nat" []])
+      ([], pairExpr (GlobalTypeVar "Nat" []) UnitType)
   it "Parses pair of one and two" $
     shouldParseWithDefs [twoDR, pairD] pairEx4D
       [ ExprDef { name = "pair4"
@@ -77,5 +77,5 @@ pairExTest = do
                 , ty = Nothing}]
   it "Type checks a pair of one and two to Pair<Nat,Nat>" $
     shouldCheckWithDefs [twoDR, pairD] pairEx4Expr
-      ([], GlobalTypeVar "Pair" [GlobalTypeVar "Nat" [], GlobalTypeVar "Nat" []])
+      ([], pairExpr (GlobalTypeVar "Nat" []) (GlobalTypeVar "Nat" []))
 
