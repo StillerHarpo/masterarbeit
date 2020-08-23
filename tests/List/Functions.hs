@@ -10,6 +10,7 @@ import AbstractSyntaxTree
 
 import Lib
 import Nat.Definition
+import Nat.Examples
 import Pair.Definition
 import List.Definition
 import List.Examples
@@ -35,10 +36,16 @@ lengthExpr = WithParameters [UnitType]
 lengthTest :: Spec
 lengthTest = do
   it "Parses length" $
-    shouldParseWithDefs [natD, pairD, listD] lengthD
+    shouldParseWithDefs [natD, listDR] lengthD
       [ ExprDef { name = "length"
                 , expr = lengthExpr
                 , ty = Nothing}]
   it "Type checks length to (List<Unit>) -> Nat" $
-    shouldCheckWithDefs [natD, pairD, listD] lengthExpr
+    shouldCheckWithDefs [natD, listDR] lengthExpr
       ([listExpr UnitType], GlobalTypeVar "Nat" [])
+  it "Evaluates length on empty list to zero" $
+    shouldEvalWithDefs [natD, listDR] (lengthExpr :@: listEx1Expr)
+      zeroExpr
+  it "Evaluates length on one element list to inlined one" $
+    shouldEvalWithDefs [natD, listEx1DR] (lengthExpr :@: listEx2Expr)
+      oneExprI

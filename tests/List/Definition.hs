@@ -12,12 +12,13 @@ import Lib
 import Nat
 import Pair.Definition
 
-listD :: Text
+listD, listDR :: Text
 listD = T.unlines
   [ "data List<A : Set> : Set where"
   , "  Nil : Unit -> List"
   , "  Cons : Pair<A, List> -> List"
   ]
+listDR = T.unlines [pairD, listD]
 
 listDuc :: TypeExpr -> Ductive
 listDuc x = Ductive { gamma = []
@@ -28,7 +29,7 @@ listDuc x = Ductive { gamma = []
                     , nameDuc = "List"
                     , strNames = ["Nil", "Cons"]}
 
-listDucA ::  Ductive
+listDucA :: Ductive
 listDucA = listDuc (LocalTypeVar 1 "A")
 
 listExpr :: TypeExpr -> TypeExpr
