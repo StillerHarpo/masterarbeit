@@ -22,7 +22,8 @@ import Prelude hiding (unlines)
 
 -- | first parses definitions then checks if parsing the expression
 --   matches the expected expression in the parsed context
-shouldParseWithDefs :: [Text] -- ^ definitions to parse
+shouldParseWithDefs :: HasCallStack
+                    => [Text] -- ^ definitions to parse
                     -> Text -- ^ expression to parse
                     -> [Statement] -- ^ expected parsing result
                     -> Expectation
