@@ -78,22 +78,22 @@ instance PrettyPresc Expr where
       Nothing -> "xi_" <> pretty i <> "^" <> pretty d
   prettyPresc _ Rec{..}                        =
     let Ductive{..} = fromRec
-    in nest 2 $ vsep $ ("rec from" <+> pretty fromRec
+    in parens $ nest 2 $ vsep $ ("rec" <+> pretty fromRec
                         <+> "to" <+> pretty toRec <+> "where")
                        : prettyMatches strNames gamma1s matches
   prettyPresc _ (WithParameters ps Rec{..})    =
     let Ductive{..} = fromRec
-    in nest 2 $ vsep $ ("rec from" <+> pretty fromRec <> prettyPars ps
+    in parens $ nest 2 $ vsep $ ("rec" <+> pretty fromRec <> prettyPars ps
                          <+> "to" <+> pretty toRec <+> "where")
                        : prettyMatches strNames gamma1s matches
   prettyPresc _ Corec{..}                      =
     let Ductive{..} = toCorec
-    in nest 2 $ vsep $ ("corec from" <+> pretty fromCorec
+    in parens $ nest 2 $ vsep $ ("corec" <+> pretty fromCorec
                        <+> "to" <+> pretty toCorec <+> "where")
                        : prettyMatches strNames gamma1s matches
   prettyPresc _ (WithParameters ps Corec{..})   =
     let Ductive{..} = toCorec
-    in nest 2 $ vsep $ ("corec from" <+> pretty fromCorec <+> "to"
+    in parens $ nest 2 $ vsep $ ("corec" <+> pretty fromCorec <+> "to"
                         <+> pretty toCorec <> prettyPars ps <+> "where")
                         : prettyMatches strNames gamma1s matches
   prettyPresc _ (WithParameters ps e)           = pretty e
