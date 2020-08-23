@@ -19,6 +19,7 @@ import AbstractSyntaxTree
 
 import Lib
 import qualified Nat
+import qualified Packed
 import qualified Maybe
 import qualified Pair
 import qualified List
@@ -29,6 +30,7 @@ pShow = T.pack . show
 main :: IO ()
 main = hspec $ do
   Nat.tests
+  Packed.tests
   Maybe.tests
   List.tests
   Pair.tests
