@@ -35,13 +35,13 @@ idTests = do
   it "Type checks id to (Nat) -> Nat" $
     shouldCheckWithDefs [natD] idExpr
       ([natExpr], GlobalTypeVar "Nat" [])
-  it "Type checks id one zero to Nat" $
+  it "Type checks id on zero to Nat" $
     shouldCheckWithDefs [natD] (idExpr :@: zeroExpr)
       ([], GlobalTypeVar "Nat" [])
   it "Evaluates id on zero to zero" $
     shouldEvalWithDefs [natD] (idExpr :@: zeroExpr)
       zeroExpr
-  it "Type checks id one zero to Nat" $
+  it "Type checks id on one to Nat" $
     shouldCheckWithDefs [zeroDR] (idExpr :@: oneExpr)
       ([], GlobalTypeVar "Nat" [])
   it "Evaluates id on one to inlined one" $
