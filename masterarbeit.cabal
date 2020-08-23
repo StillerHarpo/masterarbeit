@@ -54,6 +54,10 @@ test-suite tests
                       Nat.Definition,
                       Nat.Examples,
                       Nat.Functions,
+                      Maybe,
+                      Maybe.Definition,
+                      Maybe.Examples,
+                      Maybe.Functions,
                       Pair
                       Pair.Definition,
                       Pair.Examples,
