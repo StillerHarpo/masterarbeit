@@ -11,8 +11,6 @@ import AbstractSyntaxTree
 import Lib
 import Nat.Definition
 import Nat.Examples
-import Pair.Definition
-import Pair.Examples
 import Maybe.Definition
 
 maybeEx1D, maybeEx1DR, maybeEx2D, maybeEx2DR :: Text
