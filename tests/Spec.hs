@@ -18,6 +18,7 @@ import TypeChecker
 import AbstractSyntaxTree
 
 import Lib
+import qualified Bool
 import qualified Nat
 import qualified Packed
 import qualified Maybe
@@ -29,6 +30,7 @@ pShow = T.pack . show
 
 main :: IO ()
 main = hspec $ do
+  Bool.tests
   Nat.tests
   Packed.tests
   Maybe.tests

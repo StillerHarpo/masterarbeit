@@ -50,6 +50,10 @@ library
 test-suite tests
   main-is:            Spec.hs
   other-modules:      Lib,
+                      Bool
+                      Bool.Definition,
+                      Bool.Examples,
+                      Bool.Functions,
                       Nat
                       Nat.Definition,
                       Nat.Examples,
