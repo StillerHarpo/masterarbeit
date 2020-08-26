@@ -6,6 +6,7 @@
 #+LATEX_HEADER: \usepackage{amsthm}
 #+LATEX_HEADER: \usepackage{newfloat}
 #+LATEX_HEADER: \usepackage{minted}
+#+LATEX_HEADER: \usepackage{lscape}
 #+LATEX_HEADER: \usepackage[T1]{fontenc}
 #+latex_header: \usepackage[citestyle=authoryear-icomp,bibstyle=authoryear, hyperref=true,backref=true,maxcitenames=3,url=true,backend=biber,natbib=true] {biblatex}
 #+latex_header: \addbibresource{~/Dokumente/bibliography/references.bib}
@@ -27,8 +28,39 @@
 #+LATEX_HEADER:   left=20mm,
 #+LATEX_HEADER:   top=20mm,
 #+LATEX_HEADER: }
- #+LATEX_HEADER: \newcommand{\id}[1]{\text{id}_{#1}}
+#+LATEX_HEADER: \newcommand{\id}[1]{\text{id}_{#1}}
+#+LATEX_HEADER: \newcommand{\rec}{\text{rec}}
+#+LATEX_HEADER: \newcommand{\corec}{\text{corec}}
+#+LATEX_HEADER: \newcommand{\TyCtx}{\enskip\textbf{TyCtx}}
+#+LATEX_HEADER: \newcommand{\Ctx}{\enskip\textbf{Ctx}}
+#+LATEX_HEADER: \newcommand{\D}{\AxiomC{$\mathcal{D}$}\noLine}
+#+LATEX_HEADER: \newcommand{\Di}[1]{\AxiomC{$\mathcal{D}_{#1}$}\noLine}
+#+LATEX_HEADER: \newcommand{\topI}[1]{\RightLabel{\textbf{($\top$-I)}}\UnaryInfC{#1}}
+#+LATEX_HEADER: \newcommand{\TyVarI}[1]{\RightLabel{\textbf{TyVar-I}}\BinaryInfC{#1}}
+#+LATEX_HEADER: \newcommand{\TyVarWeak}[1]{\RightLabel{\textbf{(TyVar-Weak)}}\BinaryInfC{#1}}
+#+LATEX_HEADER: \newcommand{\TyWeak}[1]{\RightLabel{\textbf{(Ty-Weak)}}\BinaryInfC{#1}}
+#+LATEX_HEADER: \newcommand{\TyInst}[1]{\RightLabel{\textbf{(Ty-Inst)}}\BinaryInfC{#1}}
+#+LATEX_HEADER: \newcommand{\ParamAbstr}[1]{\RightLabel{\textbf{(Param-Abstr)}}\UnaryInfC{#1}}
+#+LATEX_HEADER: \newcommand{\FPTy}{\RightLabel{\textbf{(FP-Ty)}}}
+#+LATEX_HEADER: \newcommand{\Inst}[1]{\RightLabel{\textbf{(Inst)}}\BinaryInfC{#1}}
+#+LATEX_HEADER: \newcommand{\Conv}[1]{\RightLabel{\textbf{(Conv)}}\BinaryInfC{#1}}
+#+LATEX_HEADER: \newcommand{\Proj}[1]{\RightLabel{\textbf{(Proj)}}\UnaryInfC{#1}}
+#+LATEX_HEADER: \newcommand{\TermWeak}[1]{\RightLabel{\textbf{(Term-Weak)}}\BinaryInfC{#1}}
+#+LATEX_HEADER: \newcommand{\IndI}[1]{\RightLabel{\textbf{(Ind-I)}}\UnaryInfC{#1}}
+#+LATEX_HEADER: \newcommand{\CoindE}[1]{\RightLabel{\textbf{(Coind-E)}}\UnaryInfC{#1}}
+#+LATEX_HEADER: \newcommand{\IndE}{\RightLabel{\textbf{(Ind-E)}}}
+#+LATEX_HEADER: \newcommand{\CoindI}{\RightLabel{\textbf{(Coind-I)}}}
 #+LATEX_HEADER: \newcommand{\rat}{\rightarrowtriangle}
+#+LATEX_HEADER: \newenvironment{changemargin}[2]{%
+#+LATEX_HEADER: \begin{list}{}{%
+#+LATEX_HEADER: \setlength{\topsep}{0pt}%
+#+LATEX_HEADER: \setlength{\leftmargin}{#1}%
+#+LATEX_HEADER: \setlength{\rightmargin}{#2}%
+#+LATEX_HEADER: \setlength{\listparindent}{\parindent}%
+#+LATEX_HEADER: \setlength{\itemindent}{\parindent}%
+#+LATEX_HEADER: \setlength{\parsep}{\parskip}%
+#+LATEX_HEADER: }%
+#+LATEX_HEADER: \item[]}{\end{list}}
 #+LATEX_HEADER: \newtheorem{theorem}{Theorem}
 #+LATEX_HEADER: \newtheorem{definition}{Definition}
 #+TITLE: Implementation of Type Theory based on dependent Inductive and Coinductive Types
@@ -1195,20 +1227,20 @@
     just them
     \begin{center}
     \AxiomC{}
-    \UnaryInfC{$\vdash\emptyset$ \textbf{TyCtx}}
+    \UnaryInfC{$\vdash\emptyset$ \TyCtx}
     \DisplayProof
     \hskip 1.5em
-    \AxiomC{$\vdash\Theta$ \textbf{TyCtx}}
-    \AxiomC{$\vdash\Gamma$ \textbf{Ctx}}
-    \BinaryInfC{$\vdash\Theta,X:\Gamma\rat*$ \textbf{TyCtx}}
+    \AxiomC{$\vdash\Theta$ \TyCtx}
+    \AxiomC{$\vdash\Gamma$ \Ctx}
+    \BinaryInfC{$\vdash\Theta,X:\Gamma\rat*$ \TyCtx}
     \DisplayProof
     \vskip 0.5em
     \AxiomC{}
-    \UnaryInfC{$\vdash\emptyset$ \textbf{Ctx}}
+    \UnaryInfC{$\vdash\emptyset$ \Ctx}
     \DisplayProof
     \hskip 1.5em
     \AxiomC{$\emptyset|\Gamma\vdash A:*$}
-    \UnaryInfC{$\vdash\Gamma,x:A$ \textbf{Ctx}}
+    \UnaryInfC{$\vdash\Gamma,x:A$ \Ctx}
     \DisplayProof
     \end{center}
 
@@ -1217,12 +1249,12 @@
     $\Gamma\rat*$. We add 2 rules for looking up something in a
     type-context.  They are:
     \begin{center}
-      \AxiomC{$\vdash \Theta$ \textbf{TyCtx}}
-      \AxiomC{$\vdash \Gamma$ \textbf{Ctx}}
+      \AxiomC{$\vdash \Theta$ \TyCtx}
+      \AxiomC{$\vdash \Gamma$ \Ctx}
       \BinaryInfC{$\Theta,X:\Gamma\rat*(X)\rightsquigarrow\Gamma\rat*$}
       \DisplayProof
       \hskip 1.5em
-      \AxiomC{$\vdash \Gamma_1$ \textbf{Ctx}}
+      \AxiomC{$\vdash \Gamma_1$ \Ctx}
       \AxiomC{$\Theta(X) \rightsquigarrow\Gamma_2\rat*$}
       \BinaryInfC{$\Theta,Y:\Gamma_1\rat*(X)\rightsquigarrow\Gamma_2\rat*$}
       \DisplayProof
@@ -1233,7 +1265,7 @@
     up the termvariable $x$ in term-context $\Gamma$ yields type $A$. The
     rules for term-contexts are:
     \begin{center}
-      \AxiomC{$\vdash \Gamma$ \textbf{Ctx}}
+      \AxiomC{$\vdash \Gamma$ \Ctx}
       \AxiomC{$\Gamma\vdash A:*$}
       \BinaryInfC{$\Gamma,x:A(x)\rightsquigarrow A$}
       \DisplayProof
@@ -1309,8 +1341,8 @@
 
      The rule
      \begin{prooftree}
-      \AxiomC{$\vdash \Theta$ \textbf{TyCtx}}
-      \AxiomC{$\vdash \Gamma$ \textbf{Ctx}}
+      \AxiomC{$\vdash \Theta$ \TyCtx}
+      \AxiomC{$\vdash \Gamma$ \Ctx}
       \RightLabel{\textbf{(TyVar-I)}}
       \BinaryInfC{$\Theta,X:\Gamma\rat*|\emptyset\vdash X : \Gamma \rat *$}
     \end{prooftree}
@@ -1318,7 +1350,7 @@
 
      \begin{prooftree}
       \AxiomC{\colorbox{gray}{$\Theta(X)\rightsquigarrow\Gamma'\rat*$}}
-      \AxiomC{\colorbox{gray}{$\vdash \Gamma_1$ \textbf{Ctx}}}
+      \AxiomC{\colorbox{gray}{$\vdash \Gamma_1$ \Ctx}}
       \AxiomC{\colorbox{gray}{$\Gamma'\equiv_\beta\Gamma$}}
       \RightLabel{\textbf{(TyVar-I)}}
       \TrinaryInfC{$\Theta|$\colorbox{gray}{$\Gamma_1$}$\vdash X : \Gamma \rat *$}
