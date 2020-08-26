@@ -11,3 +11,4 @@ tests = describe "Nats:" $ do
   natTest
   natExTests
   idTests
+  plusTests
