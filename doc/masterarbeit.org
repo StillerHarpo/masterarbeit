@@ -412,10 +412,12 @@
        end.
    #+end_src
 
-   This first matches on x to force it, to reduce to ~in y~.  Then the new goal
-   becomes ~in y = force (in y)~.  ~force (in y)~ evaluates to just ~in y~, as it
-   is just pattern matching on ~in y~.  So the final goal is ~in y = in y~ which
-   can be shown by ~refl~.  If we now instantiate ~eq~ with ~u~ we become ~eq u~
+   This first matches on x to force it, to reduce to ~In y~. Then the new goal
+   becomes ~In y = force (In y)~. ~force (In y)~ evaluates to just ~In y~, as it
+   is just pattern matching on ~In y~. So the final goal is ~In y = In y~ which
+   can be shown by ~eq_refl~. ~eq_refl~ is a constructor for ~=~, where both
+   sides of ~=~ are exactly the same. If we now instantiate ~eq~ with ~u~ we
+   become ~eq u~
 
    #+begin_src coq
      Definition eq_u : u = In u := eq u
