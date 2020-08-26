@@ -1973,4 +1973,69 @@
 
    #+end_proof
 
- \printbibliography
+\printbibliography
+
+* Appendix
+** Type action derivation
+\begin{landscape}
+\begin{changemargin}{-1cm}{-1cm}
+  \begin{prooftree}
+   \AxiomC{$\Gamma_1\vdash\sigma:\Gamma_2$}
+   \AxiomC{$\Gamma_3\vdash\tau:\Gamma_1$}
+   \RightLabel{($*$)}
+   \BinaryInfC{$\Gamma_3\vdash\sigma\circ\tau:\Gamma_2$}
+  \end{prooftree}
+  \begin{prooftree}
+    \D
+    \UnaryInfC{$\Delta,\Gamma_k,y_k:A_k[C/X]\vdash g_k:C@\sigma_k$}
+    \RightLabel{TyAct}
+    \UnaryInfC{$\Delta,\Gamma_k,x:A_k[\mu/X]\vdash g_k[\widehat{A_k}(\rec^\mu\overline{(\Gamma_k,y_k).g_k}@\id{\Gamma}@x/y_k]$}
+    \D
+    \UnaryInfC{$\Delta\vdash\tau:\Gamma_k$}
+    \D
+    \UnaryInfC{$\Delta\vdash u:A_k[\mu/X]$}
+    \TrinaryInfC{$\Delta\vdash g_k[\widehat{A_k}(\rec^\mu\overline{(\Gamma_k,y_k).g_k}@\id{\Gamma}@x)/y_k][\tau,u]:C@\sigma_k$}
+  \end{prooftree}
+\begin{scprooftree}{0.93}
+  \D
+  \UnaryInfC{$\Delta,\Gamma_k,y_k:\Delta_k[C/X]\vdash g_k: C@\sigma_k$}
+  \IndE
+  \UnaryInfC{$\Delta\vdash\rec^\mu\overline{(\Gamma_k,y_k).g_k}:(\Gamma,x:\mu@\sigma_k)\rat C@\sigma_k$}
+  \D
+  \UnaryInfC{$\Gamma_k\vdash\sigma_k:\Gamma$}
+  \D
+  \UnaryInfC{$\Delta\vdash\tau:\Gamma_k$}
+  \RightLabel{($*$)}
+  \BinaryInfC{$\Delta\vdash\sigma_k\circ\tau:\Gamma$}
+  \Inst{$\Delta\vdash(rec^\mu\overline{(\Gamma_k,y_k).g_k}@(\sigma_k\circ\tau)):(x:\mu@\sigma_k)\rat C@\sigma_k$}
+  \AxiomC{}
+  \IndI{$\Delta\vdash\alpha_k^\mu:(\Gamma_k,y:A_k[\mu/X])\rat\mu@\sigma_k$}
+  \D
+  \UnaryInfC{$\Delta\vdash\tau:\Gamma_k$}
+  \Inst{$\Delta\vdash\alpha_k^\mu @\tau: (y:A_k[\mu/X])\rat\mu@\sigma_k$}
+  \D
+  \UnaryInfC{$\Delta\vdash u:A_k[\mu/X])$}
+  \Inst{$\Delta\vdash\alpha_k^\mu @\tau@u:\mu@\sigma_k$}
+  \Inst{$\Delta\vdash(\rec^\mu\overline{(\Gamma_k,y_k).g_k}@(\sigma_k\circ\tau))@(\alpha_k^\mu @\tau@u):C@\sigma_k$}
+\end{scprooftree}
+\begin{scprooftree}{0.63}
+  \AxiomC{$\vdash\overbrace{\mu[\overline{(\Gamma_k).A_k}/\overline{X_k}]}^C:\Gamma\rat*$}
+  \AxiomC{}
+  \IndI{$\Gamma,x:\mu[\overline{(\Gamma_k).A_k}/\overline{X_k}]@\id{\Gamma},\Delta_k,y_k:A_k[\mu[\overline{(\Gamma_k).B_k}/\overline{X_k}]/X]\vdash\alpha_k^{\mu[\overline{(\Gamma_k).B_k}/\overline{X_k}]}:(\Delta_k,y_k:A_k[\overline{(\Gamma_k).B_k}/\overline{X_k}])\rat\mu[\overline{(\Gamma_k).B_k}/\overline{X_k}]@\sigma_k$}
+  \AxiomC{$\Gamma,x:\mu[\overline{(\Gamma_k).A_k}/\overline{X_k}]@\id{\Gamma},\Delta_k,y_k:\overbrace{A_k[\mu[\overline{(\Gamma_k).B_k}/\overline{X_k}]/X]}^{=\widehat{A_k}(\overline{B},?)}\vdash\widehat{A_k}(\overline{t},y_k):\overbrace{A_k[\mu[\overline{(\Gamma_k).B_k}/\overline{X_k}]/X]}^{=\widehat{A_k}(\overline{B},?)}$}
+  \Inst{$\Gamma,x:\mu[\overline{(\Gamma_k).A_k}/\overline{X_k}]@\id{\Gamma},\Delta_k,y_k:A_k[\mu[\overline{(\Gamma_k).B_k}/\overline{X_k}]/X]\vdash\alpha_k^{\mu[\overline{(\Gamma_k).B_k}/\overline{X_k}]}@\id{\Delta_k}@\widehat{A_k}(\overline{t},y_k):\mu[\overline{(\Gamma_k).B_k}/\overline{X_k}]@\sigma_k$}
+  \IndE
+  \BinaryInfC{$\Gamma,x:\mu[\overline{(\Gamma_k).A_k}/\overline{X_k}]@\id{\Gamma}\vdash\rec^{\mu[\overline{(\Gamma_k).A_k}/\overline{X_k}]}\overline{(\Delta_k,\overset{{\color{red}?}}{y_k}).\alpha_k^{\mu[\overline{(\Gamma_k).B_k}/\overline{X_k}]}@\id{\Delta_k}@\widehat{A_k}(\overline{t},\overset{{\color{red}?}}{y_k})}:(\Gamma,x:\mu[\overline{(\Gamma_k).A_k}/\overline{X_k}]@\id{\Gamma})\rat\mu[\overline{(\Gamma_k).B_k}/\overline{X_k}]@\id{\Gamma}$}
+  \AxiomC{$\ldots$}
+  \Inst{$\Gamma,x:\mu[\overline{(\Gamma_k).A_k}/\overline{X_k}]@\id{\Gamma}\vdash\rec^{\mu[\overline{(\Gamma_k).A_k}/\overline{X_k}]}\overline{(\Delta_k,\overset{{\color{red}?}}{y_k}).\alpha_k^{\mu[\overline{(\Gamma_k).B_k}/\overline{X_k}]}@\id{\Delta_k}@\widehat{A_k}(\overline{t},\overset{{\color{red}?}}{y_k})}@\id{\Gamma}@x:\mu[\overline{(\Gamma_k).B_k}/\overline{X_k}]@\id{\Gamma}$}
+\end{scprooftree}
+\begin{scprooftree}{0.63}
+  \AxiomC{$\vdash\overbrace{\nu[\overline{(\Gamma_k).A_k}/\overline{X_k}]}^C:\Gamma\rat*$}
+  \AxiomC{$\Gamma,x:\nu[\overline{(\Gamma_k).A_k}/\overline{X_k}]@\id{\Gamma},\Delta_k,\overset{{\color{red}?}}{y_k}:\nu[\overline{(\Gamma_k).A_k}/\overline{X_k}]@\sigma_k\vdash\widehat{A_k}(\overline{t},\overset{{\color{red}?}}{y_k})[(\xi_k^{\nu[\overline{(\Gamma_k).A_k}/\overline{X_k}]}@\id{\Delta_k}@\overset{{\color{red}?}}{y_k})/\overset{{\color{red}?}}{y_k}]:A_k[\nu[\overline{(\Gamma_k).A_k}/\overline{X_k}]/X]$}
+  \IndE
+  \BinaryInfC{$\Gamma,x:\nu[\overline{(\Gamma_k).A_k}/\overline{X_k}]@\id{\Gamma}\vdash\corec^{\nu[\overline{(\Gamma_k).B_k}/\overline{X_k}]}\overline{(\Delta_k,\overset{{\color{red}?}}{y_k}).\widehat{A_k}(\overline{t},\overset{{\color{red}?}}{y_k})[(\xi_k^{\nu[\overline{(\Gamma_k).A_k}/\overline{X_k}]}@\id{\Delta_k}@\overset{{\color{red}?}}{y_k})/\overset{{\color{red}?}}{y_k}]}:(\Gamma,x:\nu[\overline{(\Gamma_k).A_k}/\overline{X_k}]@\id{\Gamma})\rat\nu[\overline{(\Gamma_k).B_k}/\overline{X_k}]$}
+  \AxiomC{$\ldots$}
+  \Inst{$\Gamma,x:\nu[\overline{(\Gamma_k).A_k}/\overline{X_k}]@\id{\Gamma}\vdash\corec^{\nu[\overline{(\Gamma_k).B_k}/\overline{X_k}]}\overline{(\Delta_k,\overset{{\color{red}?}}{y_k}).\widehat{A_k}(\overline{t},\overset{{\color{red}?}}{y_k})[(\xi_k^{\nu[\overline{(\Gamma_k).A_k}/\overline{X_k}]}@\id{\Delta_k}@\overset{{\color{red}?}}{y_k})/\overset{{\color{red}?}}{y_k}]}@\id{\Gamma}@x:\nu[\overline{(\Gamma_k).B_k}/\overline{X_k}]$}
+\end{scprooftree}
+\end{changemargin}
+\end{landscape}
