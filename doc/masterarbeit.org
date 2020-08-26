@@ -217,11 +217,53 @@
   That terms can occur in types makes it necessary to ensure that function
   terminate. Otherwise type checking wouldn't be decidable. If we have a
   function ~f : Nat -> Nat~ and we want to check a value ~a~ against a type ~Vec
-  (f 1)~ we have to know what ~f 1~ evaluates to. So ~f~ has to terminate. For
-  coinductive types termination means that functions which produce them should
-  be productive. If a function is productive it produces in each step a new part
-  of the infinitely large coinductive type. To ensure that the guard condition
-  is used. The guard condition will be explained below on code examples in coq.
+  (f 1)~ we have to know what ~f 1~ evaluates to. So ~f~ has to terminate.  We check
+  termination in coq via a structural decreasing argument.  A argument is structural decreasing, if
+  it is structural smaller in a recursive call.  Structural smaller means it is a recursive occurrence
+  in a constructor.  As an example we look at the definition of the natural numbers and the add function
+  on them.  We define the natural numbers in coq like follows.
+  #+begin_src coq
+  Inductive nat : Set :=
+  | O : nat
+  | S : nat -> nat.
+  #+end_src
+  ~O~ is the constructor for 0 and ~S~ is the successor of its argument. Here
+  the recursive argument to ~S~ is structural smaller than S applied to it i.e.
+  ~n~ is structural smaller than ~S n~. Then we can define addition like follows
+  #+begin_src coq
+  Fixpoint add (n m:nat) : nat :=
+  match n with
+  | O => m
+  | S p => S (add p m)
+  end
+  #+end_src
+  In the recursive call the first argument is structural decreasing. ~p~ is
+  smaller than ~s p~. So coq accepts this definition.  The classical example
+  for a function where a argument is decreasing, but not structural decreasing
+  is quicksort.  A naive implementation would be the following.
+  #+begin_src coq
+  Fixpoint quicksort (l : list nat) : list nat :=
+  match l with
+  | nil => nil
+  | cons x xs => match split x xs with
+                | (lower, upper) => app (quicksort lower) (cons x (quicksort upper))
+                end
+  end.
+  #+end_src
+  Here ~split~ is just a function which gets a number and a list of numbers.
+  It gives back a pair of two lists where the left list are all elements of
+  the input list which are smaller than the input number and the right this
+  which are bigger.  It is clear that this lists can't be longer than the
+  input list.  So ~lower~ and ~upper~ can't be longer than ~xs~.  Here ~xs~ is
+  structural smaller than the input ~cons x xs~.  So ~lower~ and ~upper~ are smaller
+  than the input.  Therefore we know that ~quicksort~ is terminating.  But coq won't
+  accept our code, because no argument is structural decreasing.
+
+
+  For coinductive types termination means that functions which produce them
+  should be productive. If a function is productive it produces in each step a
+  new part of the infinitely large coinductive type.
+
   In section [[Coinductive Types in Coq]] we will look at the implementation in coq.
   There are two ways to define them. The older way uses positive coinductive
   types. This is known to violate subject reduction. Therefore it is highly
