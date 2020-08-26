@@ -92,10 +92,10 @@
 * Introduction
   Through this work I will explain coinductive types at the examples of streams
   and functions. They will be generalized to partial streams and the Pi type in
-  dependently typed languages. Streams are lists which are infinitly long. They
+  dependently typed languages. Streams are lists which are infinitely long. They
   are useful to modelling many IO interaction. For example a chat of a text
-  messenger might be infinitly long. We can never know if the chat is finished.
-  This is of course limited by the hardware, but we are intrested in abstract
+  messenger might be infinitely long. We can never know if the chat is finished.
+  This is of course limited by the hardware, but we are interested in abstract
   models. Functions are used every where in functional programming. In most of
   this languages they are first-class objects. But in languages with coinductive
   types we can define them. If we only have types which are defined through
@@ -111,7 +111,7 @@
   in section [[*Implementation]] we will m
 
 * Coinductive Types
-  Inductive types are defined via their constructors.  Couinductive types on
+  Inductive types are defined via their constructors.  Coinductive types on
   the other hand are defined via their destructors.  In the paper cite:abel2013copatterns
   functions, which have coinductive types as their output, are implemented via
   copattern matching.  In this paper streams are defined like the following
@@ -265,7 +265,7 @@
    a normal coq function i.e. write ~Fixpoint~ instead of ~CoFixpoint~ coq
    wouldn't except our code. It rejects it, because there is no argument which
    is structural decreasing. ~x~ stays always the same. ~CoFixpoint~ on the
-   other hand only checks the the previously mentioned conditions. It sees the
+   other hand only checks the previously mentioned conditions. It sees the
    recursive call ~repeat A x~ occurs as an argument to constructor ~LCons~ of
    the coinductive type ~Stream~. This constructor is also not nested. So our
    definition is accepted.
@@ -379,7 +379,7 @@
 
    But ~u~ is not definitional equal to ~In u~.  As mentioned above expression
    with a coinductive type are always values to prevent inifinite evaluation.
-   So ~in u~ is a value and ~u~ is also a value.  But values are only
+   So ~In u~ is a value and ~u~ is also a value.  But values are only
    definitional equal, if they are exactly the same.  The next section will
    solve this problem through negative coinductive types.
 
@@ -511,7 +511,7 @@
    We can now define a function $g(n)=f_n(n)+1$ this function is total and not
    in the list, because it is different to any function in the list for at least
    on input To allow more functions we can use a unique feature of agda, sized
-   types. They are described in section[[Termination Checking with Sized Types]].
+   types. They are described in section [[Termination Checking with Sized Types]].
 
 *** Positive Coinductive Types in Agda
    Agda doesn't has a special keyword to define coinductive types like coq.  It
