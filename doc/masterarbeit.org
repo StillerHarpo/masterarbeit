@@ -376,9 +376,11 @@
    see easily that the expression ~cofix bad : Stream nat := bad~ loops for ever.
    So we never get the value at position ~0~.
 
-   With positive coinductive types subject reduction is no longer valid.  We
-   illustrate this by Oury's counterexample cite:oury2008.  First we define the
-   codata type ~U~ as follows
+   An important property of typed languages is subject reduction. Subject
+   reduction says if we evaluate a expression $e_1$ of type $t$ to a expression
+   $e_2$, $e_2$ should also be of type $t$. With positive coinductive types subject
+   reduction is no longer valid. We illustrate this by Oury's counterexample
+   cite:oury2008. First we define the codata type ~U~ as follows
 
    #+begin_src coq
     CoInductive U : Set := In : U -> U.
