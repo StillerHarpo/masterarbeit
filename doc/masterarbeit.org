@@ -1556,9 +1556,12 @@
        X_1 : \Gamma_1 \rat \ast,\ldots,X_n : \Gamma_n \rat \ast\ |\ \Gamma' \vdash C : \Gamma \rat \ast \\
        \Gamma_i \vdash A_i : \ast \\
        \Gamma_i \vdash B_i : \ast \\
-       \Gamma_i, x : \square \vdash t_i : \square \\
        \Gamma_i, x : A_i \vdash t_i : B_i
      \end{align*}
+     We will define the type action so that the following holds
+     \begin{equation*}
+       \Gamma',\Gamma,x:\hat{C}(\vv{A})\vdash\hat{C}(\vv{t}):\hat{C}(\vv{B})
+     \end{equation*}
      Then we define the type action on terms inductively over $C$
      \begin{align*}
        \begin{array}{ll}
@@ -1612,83 +1615,149 @@
      We show this by induction on t
    #+end_proof
    #+begin_theorem
-   The typeing rule (5) in the paper holds
+   The typing rule (5) in the paper holds
    \begin{prooftree}
-     \AxiomC{$X:\Gamma_1\rat*\mid\Gamma_2'\vdash C:\Gamma_2\rat*$}
+     \AxiomC{$X:\Gamma_1\rat*\mid\Gamma'\vdash C:\Gamma\rat*$}
      \AxiomC{$\Gamma_1,x:A\vdash t:B$}
-     \BinaryInfC{$\Gamma_2',\Gamma_2,x:\widehat{C}(A)\vdash\widehat{C}(t):\widehat{C}(B) $}
+     \BinaryInfC{$\Gamma',\Gamma,x:\widehat{C}(A)\vdash\widehat{C}(t):\widehat{C}(B) $}
    \end{prooftree}
    #+end_theorem
    #+begin_proof
    First we will generalize the rule to
    \begin{prooftree}
-     \AxiomC{$X_1:\Gamma_1\rat*,\dots,X_n:\Gamma_n\rat*\mid\Gamma_2'\vdash C:\Gamma_2\rat*$}
+     \AxiomC{$X_1:\Gamma_1\rat*,\dots,X_n:\Gamma_n\rat*\mid\Gamma'\vdash C:\Gamma\rat*$}
      \AxiomC{$\Gamma_i,x:A_i\vdash t_i:B_i$}
-     \BinaryInfC{$\Gamma_2',\Gamma_2,x:\widehat{C}(\vv{A})\vdash\widehat{C}(\vv{t}):\widehat{C}(\vv{B}) $}
+     \BinaryInfC{$\Gamma',\Gamma,x:\widehat{C}(\vv{A})\vdash\widehat{C}(\vv{t}):\widehat{C}(\vv{B}) $}
    \end{prooftree}
-   Then we gonna show it by Induction on $C$
-   + $C=\top:$
+   Then we gonna show it by Induction on the derivation $\mathcal{D}$ of $C$
+   +
+     #+begin_export latex
+       $\mathcal{D}$ =
+         \AxiomC{}
+         \topI{$\top:*$}
+         \DisplayProof
+     #+end_export
 
      Then the type actions got calculated as follows
      \begin{align*}
-       &\widehat{\top}(A) = \top[(\Gamma_1).A/X] = \top\\
-       &\widehat{\top}(t) = \widehat{\top}() = x\\
-       &\widehat{\top}(B) = \top[(\Gamma_1).B/X] = \top
+       &\widehat{\top}(\vv{A}) = \widehat{\top}() = \top\\
+       &\widehat{\top}(\vv{t}) = \widehat{\top}() = x\\
+       &\widehat{\top}(\vv{B}) = \widehat{\top}() = \top
      \end{align*}
      We than got the following prooftree
      \begin{prooftree}
-       \AxiomC{$X:\Gamma_1\rat* \mid \Gamma_2'\vdash\top:*$}
-       \RightLabel{\textbf{(TyVarWeak)}}
-       \UnaryInfC{$\Gamma_2'\vdash\top:*$}
+       \AxiomC{$\vdash\top:*$}
        \RightLabel{\textbf{(Proj)}}
-       \UnaryInfC{$\Gamma_2',x:\top\vdash x:\top$}
+       \UnaryInfC{$x:\top\vdash x:\top$}
      \end{prooftree}
-   + $C=X_i$:
+   +
+     #+begin_export latex
+       $\mathcal{D}$ =
+         \Di{1}
+         \UnaryInfC{$X_1:\Gamma_1\rat*,\dots,X_{n-1}:\Gamma_{n-1}$\TyCtx}
+         \Di{2}
+         \UnaryInfC{$\Gamma_n$\Ctx}
+         \TyVarI{$X_1:\Gamma_1\rat*,\dots,X_n:\Gamma_n\rat*\mid\emptyset\vdash X_n:\Gamma_n\rat*$}
+         \DisplayProof
+     #+end_export
 
      Again we calculate the type actions
      \begin{align*}
-       &\widehat{X_i}(A_i) = \top[(\Gamma_1).A_i/X] = (\Gamma_i).A_i@\id{\Gamma_1}\\
-       &\widehat{X_i}(\vv{t}) = t_i\\
-       &\widehat{X_i}(B_i) = \top[(\Gamma_1).B/X] = (\Gamma_i).B_i@\id{\Gamma_1}
+       &\widehat{X_n}(\vv{A}) = X_n[\vv{(\Gamma_i).A}/\vv{X}]@\id{\Gamma_n}= X_n[(\Gamma_n).A_n/X_n]@\id{\Gamma_n} = (\Gamma_n).A_n@\id{\Gamma_n}\\
+       &\widehat{X_n}(\vv{t}) = t_n\\
+       &\widehat{X_n}(\vv{B}) = X_n[\vv{(\Gamma_i).B}/\vv{X}]@\id{\Gamma_n}= X_n[(\Gamma_n).B_n/X_n]@\id{\Gamma_n} = (\Gamma_n).B_n@\id{\Gamma_n}\\
      \end{align*}
-     We know from the first premise that $\Gamma_1=\Gamma_2$
+     We know from the first premise that $\Gamma=\Gamma_n$ and $\Gamma'=\emptyset$
 
      Here we got the prooftree
      \begin{prooftree}
-     \AxiomC{$\Gamma_2,x:A\vdash t:B$}
-     \UnaryInfC{$\Gamma_2',\Gamma_2,x:A\vdash t:B$}
+     \AxiomC{$\Gamma_n,x:A\vdash t:B$}
      \AxiomC{}
      \RightLabel{Thrm. \ref{abstrid}}
-     \UnaryInfC{$A\longleftrightarrow_T(\Gamma_1).A@\id{\Gamma_1}$}
+     \UnaryInfC{$A\longleftrightarrow_T(\Gamma_n).A@\id{\Gamma_n}$}
      \RightLabel{Thrm. \ref{ctxconv}}
-     \BinaryInfC{$\Gamma_2',\Gamma_2,x:(\Gamma_1).A@\id{\Gamma_1}\vdash t:B$}
+     \BinaryInfC{$\Gamma_n,x:(\Gamma_n).A@\id{\Gamma_n}\vdash t:B$}
      \AxiomC{}
      \RightLabel{Thrm. \ref{abstrid}}
-     \UnaryInfC{$B\longleftrightarrow_T(\Gamma_1).B@\id{\Gamma_1}$}
+     \UnaryInfC{$B\longleftrightarrow_T(\Gamma_n).B@\id{\Gamma_n}$}
      \RightLabel{Conv}
-     \BinaryInfC{$\Gamma_2',\Gamma_2,x:(\Gamma_1).A@\id{\Gamma_1}\vdash t:(\Gamma_1).B@\id{\Gamma_1}$}
+     \BinaryInfC{$\Gamma_n,x:(\Gamma_n).A@\id{\Gamma_n}\vdash t_n:(\Gamma_n).B@\id{\Gamma_1}$}
      \end{prooftree}
-   + $C=Y$ with $Y\neq X$:
 
-     The first premise doesn't hold
-   + $C=C'@s$:
+   +
+     #+begin_export latex
+     $\mathcal{D}$ =
+       \Di{1}
+       \UnaryInfC{$X_1:\Gamma_1\rat*,\dots,X_n:\Gamma_n\mid\Gamma'\vdash C:\Gamma\rat*$}
+       \Di{2}
+       \UnaryInfC{$\Gamma_n$\Ctx}
+       \TyVarWeak{$X_1:\Gamma_1\rat*,\dots,X_{n+1}:\Gamma_{n+1}\rat*\mid\Gamma'\vdash C:\Gamma\rat*$}
+       \DisplayProof
+     #+end_export
 
-     $C'$ has to be of type $(y:D,\Gamma_2)\rat *$ for some $y$ and $D$
-     where $s:D$
+     Here we got the prooftree
+     \begin{prooftree}
+       \AxiomC{$X_1:\Gamma_1\rat*,\dots,X_{n+1}:\Gamma_{n+1}\rat*\mid\Gamma'\vdash C:\Gamma\rat*$}
+       \RightLabel{(*)}
+       \UnaryInfC{$X_1:\Gamma_1\rat*,\dots,X_n:\Gamma_n\rat*\mid\Gamma'\vdash C:\Gamma\rat*$}
+       \AxiomC{$\Gamma_i,x:A_i\vdash t_i:B_i$}
+       \RightLabel{IdH.}
+       \BinaryInfC{$\Gamma',\Gamma,x:\underbrace{\widehat{C}(\vv{A})}_{\overset{(**)}{=}\widehat{C}(\vv{A},A_{n+1})}\vdash\underbrace{\widehat{C}(\vv{t})}_{\overset{(***)}{=}\widehat{C}(\vv{t},t_{n+1})}:\underbrace{\widehat{C}(\vv{B})}_{\overset{(**)}{=}\widehat{C}(\vv{B},B_{n+1})} $}
+     \end{prooftree}
+
+     (=*=) Here we undo *(TyVar-Weak)*
+
+     (=**=) $X_{n+1}$ doesn't occur free in C, otherwise $\mathcal{D}_1$ wouldn't be possible
+
+     (=***=) Case for *(TyVar-Weak)* of type actions on terms
+
+   +
+     #+begin_export latex
+     $\mathcal{D}$ =
+       \Di{1}
+       \UnaryInfC{$X_1:\Gamma_1\rat*,\dots,X_n:\Gamma_n\mid\Gamma'\vdash C:\Gamma\rat*$}
+       \Di{2}
+       \UnaryInfC{$X_1:\Gamma_1\rat*,\dots,X_n:\Gamma_n\mid\Gamma'\vdash D:*$}
+       \TyWeak{$X_1:\Gamma_1\rat*,\dots,X_n:\Gamma_n\rat*\mid\Gamma',y:D\vdash C:\Gamma\rat*$}
+       \DisplayProof
+     #+end_export
+
+     Here we got the prooftree
+     \begin{scprooftree}{0.6}
+       \AxiomC{$X_1:\Gamma_1\rat*,\dots,X_n:\Gamma_n\rat*\mid\Gamma',y:D\vdash C:\Gamma\rat*$}
+       \RightLabel{(*)}
+       \UnaryInfC{$X_1:\Gamma_1\rat*,\dots,X_n:\Gamma_n\rat*\mid\Gamma'\vdash C:\Gamma\rat*$}
+       \AxiomC{$\Gamma_i,x:A_i\vdash t_i:B_i$}
+       \RightLabel{IdH.}
+       \BinaryInfC{$\Gamma',\Gamma,x:\widehat{C}(\vv{A})\vdash\widehat{C}(\vv{t}):\widehat{C}(\vv{B})$}
+       \AxiomC{$X_1:\Gamma_1\rat*,\dots,X_n:\Gamma_n\mid\Gamma'\vdash D:*$}
+       \TermWeak{$\Gamma',\Gamma,x:\widehat{C}(\vv{A})y\vdash\widehat{C}(\vv{t}):\widehat{C}(\vv{B})$}
+     \end{scprooftree}
+
+     (=*=) Here we undo *(Ty-Weak)*
+
+   +
+     #+begin_export latex
+     $\mathcal{D}= $
+     \AxiomC{$X_1:\Gamma_1,\ldots,X_n:\Gamma_n\mid\Gamma'\vdash C':(y:D,\Gamma)\rat* $}
+     \AxiomC{$\Gamma'\vdash s: D$}
+     \TyInst{$X_1:\Gamma_1,\ldots,X_n:\Gamma_n\mid\Gamma'\vdash C'@s:\Gamma\rat* $}
+     \DisplayProof
+     #+end_export
 
      Then we got the following induction hypothesis
      \begin{prooftree}
-       \AxiomC{$X_1:\Gamma_1\rat*,\dots,X_n:\Gamma_n\rat*\mid\Gamma_2'\vdash C':(y:D,\Gamma_2)\rat*$}
+       \AxiomC{$X_1:\Gamma_1\rat*,\dots,X_n:\Gamma_n\rat*\mid\Gamma'\vdash C':(y:D,\Gamma)\rat*$}
        \AxiomC{$\Gamma_i,x:A_i\vdash t_i:B_i$}
-       \BinaryInfC{$\Gamma_2',y:D,\Gamma_2,x:\widehat{C'}(\vv{A})\vdash\widehat{C'}(\vv{t}):\widehat{C'}(\vv{B}) $}
+       \BinaryInfC{$\Gamma',y:D,\Gamma,x:\widehat{C'}(\vv{A})\vdash\widehat{C'}(\vv{t}):\widehat{C'}(\vv{B}) $}
      \end{prooftree}
 
      Calculated type actions:
      \begin{align*}
-       &\widehat{C'@s}(\vv{A})=C'@s[\vv{(\Gamma_i).A}/\vv{X}]@\id{\Gamma_2}=C'[\vv{(\Gamma_i).A}/\vv{X}]@s@\id{\Gamma_2}
+       &\widehat{C'@s}(\vv{A})=C'@s[\vv{(\Gamma_i).A}/\vv{X}]@\id{\Gamma}=C'[\vv{(\Gamma_i).A}/\vv{X}]@s@\id{\Gamma}
        =\widehat{C'}(\vv{A})[s/y]\\
        &\widehat{C'@s}(\vv{t})=\widehat{C'}(\vv{t})[s/y]\\
-       &\widehat{C'@s}(\vv{B})=C'@s[\vv{(\Gamma_i).B}/\vv{X}]@\id{\Gamma_2}=C'[\vv{(\Gamma_i).B}/\vv{X}]@s@\id{\Gamma_2}
+       &\widehat{C'@s}(\vv{B})=C'@s[\vv{(\Gamma_i).B}/\vv{X}]@\id{\Gamma}=C'[\vv{(\Gamma_i).B}/\vv{X}]@s@\id{\Gamma}
        =\widehat{C'}(\vv{B})[s/y]\\
      \end{align*}
 
@@ -1702,78 +1771,92 @@
        \BinaryInfC{$\Gamma_2',y:D,\Gamma_2,x:\widehat{C'}(\vv{A})\vdash\widehat{C'}(\vv{t}):\widehat{C'}(\vv{B}) $}
        \UnaryInfC{$\Gamma_2',\Gamma_2[s/y],x:\widehat{C'}(\vv{A})[s/y]\vdash\widehat{C'}(\vv{t})[s/y]:\widehat{C'}(\vv{B})[s/y] $}
      \end{prooftree}
-     (=*=) This is the reverse of *(Ty-Inst)*.  We can do this because without the Conclusion as premise
-     we can't infer the premise
+     (=*=) This is the reverse of *(Ty-Inst)*.
 
-   + $C=(y).C'$:
+   +
+     #+begin_export latex
+     $\mathcal{D}= $
+     \AxiomC{$X_1:\Gamma_1,\ldots,X_n:\Gamma_n\mid\Gamma',y:D\vdash C':\Gamma\rat* $}
+     \ParamAbstr{$X_1:\Gamma_1,\ldots,X_n:\Gamma_n\mid\Gamma'\vdash (y).C':(y:D,\Gamma)\rat* $}
+     \DisplayProof
+
+     #+end_export
 
      Calculated type actions:
      \begin{align*}
-       \widehat{(y).C'}(\vv{A})&=(y).C'[\vv{(\Gamma_i.A)}/\vv{X}]@\id{\Gamma_2}\\
-                          &=(y).(C'[\vv{(\Gamma_i.A)}/\vv{X}])@y@\id{\Gamma_2}\\
-                          &\longleftrightarrow_T(C'[\vv{(\Gamma_i.A)}/\vv{X}])@\id{\Gamma_2}\\
+       \widehat{(y).C'}(\vv{A})&=(y).C'[\vv{(\Gamma_i.A)}/\vv{X}]@\id{\Gamma}\\
+                          &=(y).(C'[\vv{(\Gamma_i.A)}/\vv{X}])@y@\id{\Gamma}\\
+                          &\longleftrightarrow_T(C'[\vv{(\Gamma_i.A)}/\vv{X}])@\id{\Gamma}\\
                           &=\widehat{C'}(\vv{A})\\
        \widehat{(y).C'}(\vv{t})&=\widehat{C'}(\vv{t})\\
-       \widehat{(y).C'}(\vv{B})&=(y).C'[\vv{(\Gamma_i.B)}/\vv{X}]@\id{\Gamma_2}\\
-                          &=(y).(C'[\vv{(\Gamma_i.B)}/\vv{X}])@y@\id{\Gamma_2}\\
-                          &\longleftrightarrow_T(C'[\vv{(\Gamma_i.B)}/\vv{X}])@\id{\Gamma_2}\\
+       \widehat{(y).C'}(\vv{B})&=(y).C'[\vv{(\Gamma_i.B)}/\vv{X}]@\id{\Gamma}\\
+                          &=(y).(C'[\vv{(\Gamma_i.B)}/\vv{X}])@y@\id{\Gamma}\\
+                          &\longleftrightarrow_T(C'[\vv{(\Gamma_i.B)}/\vv{X}])@\id{\Gamma}\\
                           &=\widehat{C'}(\vv{B})\\
      \end{align*}
 
-     We have to prove the following
+     The prooftree then becomes the following
      \begin{prooftree}
-       \AxiomC{$X_1:\Gamma_1\rat*,\dots,X_n:\Gamma_n\rat*\mid\Gamma_2'\vdash (y).C':(y:D,\Gamma_2)\rat*$}
+       \AxiomC{$X_1:\Gamma_1\rat*,\dots,X_n:\Gamma_n\rat*\mid\Gamma'\vdash (y).C':(y:D,\Gamma)\rat*$}
        \RightLabel{(*)}
-       \UnaryInfC{$X_1:\Gamma_1\rat*,\dots,X_n:\Gamma_n\rat*\mid\Gamma_2'\vdash C':\Gamma_2\rat*$}
+       \UnaryInfC{$X_1:\Gamma_1\rat*,\dots,X_n:\Gamma_n\rat*\mid y:D,\Gamma'\vdash C':\Gamma\rat*$}
        \AxiomC{$\Gamma_i,x:A_i\vdash t_i:B_i$}
        \RightLabel{IdH.}
-       \BinaryInfC{$\Gamma_2',\Gamma_2,x:\widehat{C'}(\vv{A})\vdash\widehat{C'}(\vv{t}):\widehat{C'}(\vv{B})$}
+       \BinaryInfC{$y:D,\Gamma',\Gamma,x:\widehat{C'}(\vv{A})\vdash\widehat{C'}(\vv{t}):\widehat{C'}(\vv{B})$}
      \end{prooftree}
-     (=*=) This is the reverse of *(Abstr)*.  We can do this because without the Conclusion as premise
-     we can't infer the premise
+     (=*=) This is the reverse of *(Param-Abstr)*.
 
-   + $C=\mu(Y:\Gamma_2\rat*;\vv{\sigma};\vv{D})$:
+   +
+      $\mathcal{D}$ =
+              \begin{prooftree}
+                  \Di{1}
+                  \UnaryInfC{$\sigma_k:\Delta_k\triangleright\Gamma$}
+                  \Di{2}
+                  \UnaryInfC{$X_1:\Gamma_1\rat*,\dots,X_n\rat*,X:\Gamma\rat*\vdash A_k:*$}
+                  \FPTy
+                  \BinaryInfC{$\mu(Y:\Gamma_2\rat*;\vv{\sigma};\vv{D}):\Gamma\rat*$}
+              \end{prooftree}
 
-     Calculated type actions:
-     \begin{align*}
-       &\widehat{\mu(Y:\Gamma_2\rat*;\vv{\sigma};\vv{D})}(\vv{A})\\
-       &=\mu(Y:\Gamma_2\rat*;\vv{\sigma};\vv{D})[\vv{(\Gamma_1).A}/\vv{X}]@\id{\Gamma_2}\\
-       &=\mu(Y:\Gamma_2\rat*;\vv{\sigma};\vv{D}[\vv{(\Gamma_1).A}/\vv{X}])@\id{\Gamma_2}\\
-       &\widehat{\mu(Y:\Gamma_2\rat*;\vv{\sigma};\vv{D})}(\vv{t})\\
-       &=\text{rec}^{\mu(Y:\Gamma_2\rat*;\vv{\sigma};\vv{D}[(\Gamma_1).A/X])}\vv{(\Delta_k,x).\alpha_k@\id{\Delta_k}@\widehat{D_k}(\vv{t},x)}@\id{\Gamma_2}@x\\
-       &\widehat{\mu(Y:\Gamma_2\rat*;\vv{\sigma};\vv{D})}(\vv{B})\\
-       &=\mu(Y:\Gamma_2\rat*;\vv{\sigma};\vv{D})[\vv{(\Gamma_1).B}/\vv{X}]@\id{\Gamma_2}\\
-       &=\mu(Y:\Gamma_2\rat*;\vv{\sigma};\vv{D}[\vv{(\Gamma_1).B}/\vv{X}])@\id{\Gamma_2}
-     \end{align*}
+          Calculated type actions:
+          \begin{align*}
+            &\widehat{\mu(Y:\Gamma_2\rat*;\vv{\sigma};\vv{D})}(\vv{A})\\
+            &=\mu(Y:\Gamma_2\rat*;\vv{\sigma};\vv{D})[\vv{(\Gamma_1).A}/\vv{X}]@\id{\Gamma_2}\\
+            &=\mu(Y:\Gamma_2\rat*;\vv{\sigma};\vv{D}[\vv{(\Gamma_1).A}/\vv{X}])@\id{\Gamma_2}\\
+            &\widehat{\mu(Y:\Gamma_2\rat*;\vv{\sigma};\vv{D})}(\vv{t})\\
+            &=\text{rec}^{\mu(Y:\Gamma_2\rat*;\vv{\sigma};\vv{D}[(\Gamma_1).A/X])}\vv{(\Delta_k,x).\alpha_k@\id{\Delta_k}@\widehat{D_k}(\vv{t},x)}@\id{\Gamma_2}@x\\
+            &\widehat{\mu(Y:\Gamma_2\rat*;\vv{\sigma};\vv{D})}(\vv{B})\\
+            &=\mu(Y:\Gamma_2\rat*;\vv{\sigma};\vv{D})[\vv{(\Gamma_1).B}/\vv{X}]@\id{\Gamma_2}\\
+            &=\mu(Y:\Gamma_2\rat*;\vv{\sigma};\vv{D}[\vv{(\Gamma_1).B}/\vv{X}])@\id{\Gamma_2}
+          \end{align*}
 
-    From the assumptions
-     \begin{align*}
-     &X_1:\Gamma_1\rat*,\dots,X_n:\Gamma_n\rat*\mid\Gamma_2'\vdash \mu(Y:\Gamma_2\rat*;\vv{\sigma};\vv{D}):\Gamma_2\rat*\\
-     &\Gamma_i,x:A_i\vdash t_i:B_i
-     \end{align*}
-    We have to proof that in *Ctx*
-    \begin{equation*}
-     \Gamma_2',\Gamma_2,x:\mu(Y:\Gamma_2\rat*;\vv{\sigma};\vv{D}[(\Gamma_1).A/X])@\id{\Gamma_2}
-    \end{equation*}
-    the expression
-    \begin{equation*}
-     \text{rec}^{\mu(Y:\Gamma_2\rat*;\vv{\sigma};\vv{D}[\vv{(\Gamma_i).A}/\vv{X}])}\vv{(\Delta_k,y).\alpha_k@\id{\Delta_k}@\widehat{D_k}(t,y)}@\id{\Gamma_2}@x
-    \end{equation*}
-    has type
-    \begin{equation*}
-    \mu(Y:\Gamma_2\rat*;\vv{\sigma};\vv{D}[\vv{(\Gamma_i).B}/\vv{X}])@\id{\Gamma_2}
-    \end{equation*}
-    We can use the induction hypothesis
-    \begin{prooftree}
-      \AxiomC{$X_1:\Gamma_1\rat*,\dots,X_n:\Gamma_n\rat*,Y:\Gamma_{n+1}\rat*\mid\Delta_k\vdash D_k:*$}
-      \AxiomC{$\Gamma_i,x:A_i\vdash t_i:B_i$}
-      \BinaryInfC{$\Delta_k,x:\widehat{D_k}(\vv{A},A_{n+1})\vdash\widehat{D_k}(\vv{t},y):\widehat{D_k}(\vv{B},B_{n+1}) $}
-    \end{prooftree}
+         From the assumptions
+          \begin{align*}
+          &X_1:\Gamma_1\rat*,\dots,X_n:\Gamma_n\rat*\mid\emptyset\vdash \mu(Y:\Gamma_2\rat*;\vv{\sigma};\vv{D}):\Gamma_2\rat*\\
+          &\Gamma_i,x:A_i\vdash t_i:B_i
+          \end{align*}
+         We have to proof that in *Ctx*
+         \begin{equation*}
+          \Gamma_2,x:\mu(Y:\Gamma_2\rat*;\vv{\sigma};\vv{D}[(\Gamma_1).A/X])@\id{\Gamma_2}
+         \end{equation*}
+         the expression
+         \begin{equation*}
+          \text{rec}^{\mu(Y:\Gamma_2\rat*;\vv{\sigma};\vv{D}[\vv{(\Gamma_i).A}/\vv{X}])}\vv{(\Delta_k,y).\alpha_k@\id{\Delta_k}@\widehat{D_k}(t,y)}@\id{\Gamma_2}@x
+         \end{equation*}
+         has type
+         \begin{equation*}
+         \mu(Y:\Gamma_2\rat*;\vv{\sigma};\vv{D}[\vv{(\Gamma_i).B}/\vv{X}])@\id{\Gamma_2}
+         \end{equation*}
+         We can use the induction hypothesis
+         \begin{prooftree}
+           \AxiomC{$X_1:\Gamma_1\rat*,\dots,X_n:\Gamma_n\rat*,Y:\Gamma_{n+1}\rat*\mid\Delta_k\vdash D_k:*$}
+           \AxiomC{$\Gamma_i,x:A_i\vdash t_i:B_i$}
+           \BinaryInfC{$\Delta_k,x:\widehat{D_k}(\vv{A},A_{n+1})\vdash\widehat{D_k}(\vv{t},y):\widehat{D_k}(\vv{B},B_{n+1}) $}
+         \end{prooftree}
     We than got the following proof
     \begin{prooftree}
-     \AxiomC{$\Gamma_2',\Gamma_2,x:\widehat{C}(\vv{A}),\Delta_k,y_k:D_k[\mu/X]\vdash\widehat{D_k}(\vv{t},y):D_k[\vv{(\Gamma_i).B}/\vv{X}][(\Gamma_{n+1}).B_{n+1}/Y]$}
-     \UnaryInfC{$\Gamma_2',\Gamma_2,x:\widehat{C}(\vv{A}),\Delta_k,y_k:D_k[\mu/X]\vdash\alpha_k@\id{\Delta_k}@\widehat{D_k}(\vv{t},y):\mu@\sigma_k$}
-     \UnaryInfC{$\Gamma_2',\Gamma_2,x:\widehat{C}(\vv{A})\vdash\widehat{C}(t):\widehat{C}(\vv{B})$}
+     \AxiomC{$\Gamma_2,x:\widehat{C}(\vv{A}),\Delta_k,y_k:D_k[\mu/X]\vdash\widehat{D_k}(\vv{t},y):D_k[\vv{(\Gamma_i).B}/\vv{X}][(\Gamma_{n+1}).B_{n+1}/Y]$}
+     \UnaryInfC{$\Gamma_2,x:\widehat{C}(\vv{A}),\Delta_k,y_k:D_k[\mu/X]\vdash\alpha_k@\id{\Delta_k}@\widehat{D_k}(\vv{t},y):\mu@\sigma_k$}
+     \UnaryInfC{$\Gamma_2,x:\widehat{C}(\vv{A})\vdash\widehat{C}(t):\widehat{C}(\vv{B})$}
     \end{prooftree}
 
    + $C=\nu(Y:\Gamma\rat*;\vv{\sigma};\vv{D})$:
