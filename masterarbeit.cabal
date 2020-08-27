@@ -77,6 +77,10 @@ test-suite tests
                       List.Definition,
                       List.Examples,
                       List.Functions
+                      Stream
+                      Stream.Definition,
+                      Stream.Examples,
+                      Stream.Functions
   hs-source-dirs:     tests
   type:               exitcode-stdio-1.0
   -- other-modules:    

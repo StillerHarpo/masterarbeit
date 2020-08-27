@@ -25,6 +25,7 @@ import qualified Maybe
 import qualified Pair
 import qualified Conat
 import qualified List
+import qualified Stream
 
 pShow :: Show a => a -> T.Text
 pShow = T.pack . show
@@ -38,6 +39,7 @@ main = hspec $ do
   Pair.tests
   Conat.tests
   List.tests
+  Stream.tests
   describe "Parser works" $ do
     it "parses the unit expression" $
       parse parseProgram "" "()" `shouldParse` [Expression UnitExpr]
