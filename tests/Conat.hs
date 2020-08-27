@@ -10,3 +10,4 @@ tests :: Spec
 tests = describe "Conats:" $ do
   conatTest
   conatExTests
+  isZeroTests
