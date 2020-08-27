@@ -23,6 +23,7 @@ import qualified Nat
 import qualified Packed
 import qualified Maybe
 import qualified Pair
+import qualified Conat
 import qualified List
 
 pShow :: Show a => a -> T.Text
@@ -34,8 +35,9 @@ main = hspec $ do
   Nat.tests
   Packed.tests
   Maybe.tests
-  List.tests
   Pair.tests
+  Conat.tests
+  List.tests
   describe "Parser works" $ do
     it "parses the unit expression" $
       parse parseProgram "" "()" `shouldParse` [Expression UnitExpr]
