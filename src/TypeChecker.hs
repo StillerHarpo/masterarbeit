@@ -113,8 +113,8 @@ inferType tyExpr = catchError (inferType' tyExpr)
           betaeq b b'
           pure $ substCtx 0 t gamma2
     inferType' (Abstr tyX b) = (tyX:) <$> local (ctx %~ (tyX:)) (inferType b)
-    inferType' (In d) = inferTypeDuctive d
-    inferType' (Coin d) = inferTypeDuctive d
+    inferType' (In d) = local (ctx .~ []) (inferTypeDuctive d)
+    inferType' (Coin d) = local (ctx .~ []) (inferTypeDuctive d)
 
 inferTypeDuctive :: Ductive -> TI ann Kind
 inferTypeDuctive Ductive{..} = do
@@ -568,7 +568,7 @@ lookupDefKindTI t pars = view defCtx >>= lookupDefKindTI'
     lookupDefKindTI' [] = throwError $ "Variable" <+> pretty t <+> "not defined"
     lookupDefKindTI' (TypeDef{..}:stmts)
       | t == name = do
-          parsKinds <- mapM inferType pars
+          parsKinds <- mapM (local (ctx .~ []) . inferType) pars
           catchError (betaeqTyCtx parsKinds parameterCtx)
                      (throwError . (<> "\n while looking up variable "
                                     <+> pretty t
