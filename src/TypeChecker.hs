@@ -427,7 +427,7 @@ substTypes n (v:vs) e = substTypes (n+1) vs (substType n v e)
 
 substDuctiveTypeExpr :: Int -> TypeExpr -> Ductive -> Ductive
 substDuctiveTypeExpr i r1 dOld@Ductive{..} =
-  let dNew =  dOld { as = map (substType (i+1) r1) as
+  let dNew =  dOld { as = map (substType (i+1) (shiftFreeTypeVars 1 0 r1)) as
                    , nameDuc = "???" }
   in if dNew == dOld then dOld else dNew
 
@@ -618,6 +618,27 @@ shiftFreeVarsTypeExpr j k (GlobalTypeVar n vars) =
 shiftFreeVarsTypeExpr j k (Abstr ty body) =
   Abstr (shiftFreeVarsTypeExpr j k ty) (shiftFreeVarsTypeExpr j (k+1) body)
 shiftFreeVarsTypeExpr _ _ e = e
+
+shiftFreeTypeVars :: Int -- ^ how much should they be shifted
+                  -> Int -- ^ offset for free vars
+                  -> TypeExpr -> TypeExpr
+shiftFreeTypeVars j k v@(LocalTypeVar i n)
+  | i < k = v
+  | otherwise = LocalTypeVar (i+j) n
+shiftFreeTypeVars j k (e1 :@ e2) = shiftFreeTypeVars j k e1 :@ e2
+shiftFreeTypeVars j k (GlobalTypeVar n vars) =
+  GlobalTypeVar n $ map (shiftFreeTypeVars j k) vars
+shiftFreeTypeVars j k (Abstr ty body) =
+  Abstr (shiftFreeTypeVars j k ty) (shiftFreeTypeVars j k body)
+shiftFreeTypeVars j k (In d) = In $ shiftFreeTypeVarsDuc j k d
+shiftFreeTypeVars j k (Coin d) = Coin $ shiftFreeTypeVarsDuc j k d
+shiftFreeTypeVars _ _ e = e
+
+
+shiftFreeTypeVarsDuc :: Int -- ^ how much should they be shifted
+                     -> Int -- ^ offset for free vars
+                     -> Ductive -> Ductive
+shiftFreeTypeVarsDuc j k d = d { as = map (shiftFreeTypeVars j (k+1)) (as d) }
 
 shiftFreeVarsExpr :: Int -- ^ how much should they be shifted
                   -> Int -- ^ offset for free vars
