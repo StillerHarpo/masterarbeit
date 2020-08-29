@@ -12,4 +12,5 @@ tests = describe "Lists:" $ do
   listTest
   listExTest
   lengthTest
+  headTests
 
