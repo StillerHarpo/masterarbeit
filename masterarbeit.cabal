@@ -69,6 +69,7 @@ test-suite tests
                       Pair
                       Pair.Definition,
                       Pair.Examples,
+                      Pair.Functions,
                       Conat
                       Conat.Definition,
                       Conat.Examples,
