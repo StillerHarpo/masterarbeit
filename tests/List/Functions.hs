@@ -7,6 +7,7 @@ import qualified Data.Text as T
 import Data.Text(Text)
 
 import AbstractSyntaxTree
+import           TypeChecker
 
 import Lib
 import Nat.Definition
@@ -15,6 +16,8 @@ import Maybe.Definition
 import Pair.Definition
 import List.Definition
 import List.Examples
+import           Packed.Definition
+import           Pair.Examples
 
 lengthD :: Text -> Text
 lengthD ty = T.unlines
@@ -103,4 +106,144 @@ headTests = do
   it "Evaluates head on one element list to Just ()" $
     shouldEvalWithDefs [maybeD, listEx1DR] (headExpr :@: listEx2Expr)
       (Constructor (maybeDuc UnitType) 1 :@: UnitExpr)
+
+appD :: Text -> Text
+appD ty = T.unlines
+  [ "app = rec<Pair<List<" <> ty <> ">,List<" <> ty <> ">>> Packed to List<" <> ty <> "> where"
+  , "        Pack x = (rec<" <> ty <> "> List to List<" <> ty <> "> where"
+  , "                    { Nil n = Second<List<" <> ty <> ">,List<" <> ty <> ">> @ x"
+  , "                    ; Cons n = Cons<" <> ty <> "> @ n}) @ (First<List<" <> ty <> ">,List<" <> ty <> ">> @ x)"
+  ]
+
+appExpr :: TypeExpr -> Expr
+appExpr ty = WithParameters [GlobalTypeVar "Pair" [ GlobalTypeVar "List" [ty]
+                                                  , GlobalTypeVar "List" [ty]]] $
+  Rec { fromRec = packedDucA
+      , toRec = GlobalTypeVar "List" [ty]
+      , matches =
+          [WithParameters [ty]
+             (Rec { fromRec = listDucA
+                  , toRec = GlobalTypeVar "List" [ty]
+                  , matches = [ WithParameters [ GlobalTypeVar "List" [ty]
+                                               , GlobalTypeVar "List" [ty] ]
+                                               (Destructor pairDucAB 1)
+                                :@: LocalExprVar 1 "x"
+                               , WithParameters [ty] (Constructor listDucA 1)
+                                 :@: LocalExprVar 0 "n"]})
+              :@: (WithParameters [ GlobalTypeVar "List" [ty]
+                                  , GlobalTypeVar "List" [ty]]
+                                  (Destructor pairDucAB 0)
+                   :@: LocalExprVar 0 "x")]}
+
+appTests :: Spec
+appTests = do
+  it "Parses app<Unit>" $
+    shouldParseWithDefs [packedD, pairD, listD] (appD "Unit")
+      [ ExprDef { name = "app"
+                , expr = appExpr UnitType
+                , ty = Nothing}]
+  it "Type checks app<Unit> to (List<Unit> x List<Unit>) -> List<Unit>" $
+    shouldCheckWithDefs [packedD, pairD, listD] (appExpr UnitType)
+      ([packedExpr (GlobalTypeVar "Pair" [ GlobalTypeVar "List" [UnitType]
+                                         , GlobalTypeVar "List" [UnitType]])]
+      , GlobalTypeVar "List" [UnitType])
+  let listPair x y ty =
+        {-
+        TODO This type checks but doesn't evaluate
+        Constructor (packedDuc (GlobalTypeVar "Pair"
+                                               [ GlobalTypeVar "List" [ty]
+                                               , GlobalTypeVar "List" [ty]]))
+                    0
+        -}
+        WithParameters [GlobalTypeVar "Pair"
+                                      [ GlobalTypeVar "List" [ty]
+                                      , GlobalTypeVar "List" [ty]]]
+                       (Constructor packedDucA 0)
+         :@: mkPairExpr (GlobalTypeVar "List" [ty])
+                        (GlobalTypeVar "List" [ty])
+                        x y
+      listPairExD = T.unlines
+        [ "app @ (Pack<Pair<List<Unit>,List<Unit>>>"
+        , "       @ (corec<List<Unit>,List<Unit>> Unit to Pair where"
+        , "            { First x = Nil<Unit> @ ()"
+        , "            ; Second x = Nil<Unit> @ () } @ ()))"]
+  it "Parses app<Unit> on [] x []" $
+    shouldParseWithDefs [packedD, pairD, listD, appD "Unit"] listPairExD
+      [Expression (GlobalExprVar "app"
+                   :@: listPair listEx1Expr listEx1Expr UnitType)]
+  it "expr var app evaluates to the same as expr app" $
+    shouldEvalSameWithDefs [packedD, pairD, listD, appD "Unit"]
+      (GlobalExprVar "app") (appExpr UnitType)
+  it "Type checks app<Unit> on [] x [] to List (as expr var)" $
+    shouldCheckWithDefs [packedD, pairD, listD, appD "Unit"]
+                        (GlobalExprVar "app"
+                         :@: listPair listEx1Expr listEx1Expr UnitType)
+      ([], GlobalTypeVar "List" [UnitType])
+  it "Type checks app<Unit> on [] x [] to List (as expr)" $
+    shouldCheckWithDefs [packedD, pairD, listD, appD "Unit"] (appExpr UnitType
+                                                              :@: listPair listEx1Expr listEx1Expr UnitType)
+      ([], GlobalTypeVar "List" [UnitType])
+  it "Type checks Evaluation of app on [] x [] to zero (as expr var)" $
+    shouldRunWithDefs [packedD, pairD, listD, appD "Unit"]
+                      (evalExpr (GlobalExprVar "app"
+                                 :@: listPair listEx1Expr
+                                              listEx1Expr
+                                              UnitType)
+                       >>= inferTerm)
+      ([], listExpr UnitType)
+  it "Type checks Evaluation of app on [] x [] to zero (as expr)" $
+    shouldRunWithDefs [packedD, pairD, listD, appD "Unit"]
+                      (evalExpr (appExpr UnitType
+                                 :@: listPair listEx1Expr
+                                              listEx1Expr
+                                              UnitType)
+                       >>= inferTerm)
+      ([], listExpr UnitType)
+  it "Evaluates length on app on [] x [] to zero" $
+    shouldEvalWithDefs [packedD, pairD, listD]
+                       (lengthExpr UnitType
+                        :@: (appExpr UnitType
+                             :@: listPair listEx1Expr
+                                          listEx1Expr
+                                          UnitType))
+      zeroExpr
+  it "Type checks app on [] x [()] to List" $
+    shouldCheckWithDefs [packedD, listEx1DR]
+                        (appExpr UnitType
+                         :@: listPair listEx1Expr listEx2Expr UnitType)
+      ([], GlobalTypeVar "List" [UnitType])
+  it "Evaluates length on app on [] x [()] to one" $
+    shouldEvalWithDefs [packedD, natD, listEx1DR]
+                       (lengthExpr UnitType
+                        :@: (appExpr UnitType
+                             :@: listPair listEx1Expr
+                                          listEx2Expr
+                                          UnitType))
+      oneExprI
+  it "Type checks app on [()] x [] to List" $
+    shouldCheckWithDefs [packedD, listEx1DR]
+                        (appExpr UnitType
+                         :@: listPair listEx2Expr listEx1Expr UnitType)
+      ([], GlobalTypeVar "List" [UnitType])
+  it "Evaluates length on app on [()] x [] to one" $
+    shouldEvalWithDefs [packedD, natD, listEx1DR]
+                       (lengthExpr UnitType
+                        :@: (appExpr UnitType
+                             :@: listPair listEx2Expr
+                                          listEx1Expr
+                                          UnitType))
+      oneExprI
+  it "Type checks app on [()] x [()] to List" $
+    shouldCheckWithDefs [packedD, listEx1DR]
+                        (appExpr UnitType
+                         :@: listPair listEx2Expr listEx2Expr UnitType)
+      ([], GlobalTypeVar "List" [UnitType])
+  it "Evaluates length on app on [()] x [()] to two" $
+    shouldEvalWithDefs [packedD, natD, listEx1DR]
+                       (lengthExpr UnitType
+                        :@: (appExpr UnitType
+                             :@: listPair listEx2Expr
+                                          listEx2Expr
+                                          UnitType))
+      twoExprI
 

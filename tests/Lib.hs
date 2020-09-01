@@ -152,3 +152,22 @@ shouldEvalWithDefsP :: (HasCallStack, MonadTest m, MonadIO m)
                     -> Expr -- ^ expected expression
                     -> m ()
 shouldEvalWithDefsP = shouldEvalWithDefs' (===)
+
+-- | first parses definition then check if evaluating the expression
+--   matches the expected one in the parsed context
+shouldEvalSameWithDefs :: HasCallStack
+                       => [Text] -- ^ definitions to parse
+                       -> Expr  -- ^ expression to evaluate
+                       -> Expr -- ^ expected expression
+                       -> Expectation
+shouldEvalSameWithDefs defs input1 input2 =
+   case parse parseProgram "" (unlines defs) of
+    Left err -> liftIO $ error . show $ errorBundlePretty err
+    Right defCtx' ->
+      let typedDefCtx =
+            execState (runExceptT $ checkProgramPTI defCtx') []
+          stateTI = set defCtx typedDefCtx emptyCtx
+          val1 = first show (runTI (evalExpr input1) stateTI)
+          val2 = first show (runTI (evalExpr input2) stateTI)
+      in val1 `shouldBe` val2
+

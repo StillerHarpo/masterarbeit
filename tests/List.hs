@@ -13,4 +13,5 @@ tests = describe "Lists:" $ do
   listExTest
   lengthTest
   headTests
+  appTests
 

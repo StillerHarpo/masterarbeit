@@ -340,7 +340,7 @@ evalExpr (f :@: arg) = do
                                                               recEval))
     _ -> pure $ valF :@: valArg
 evalExpr (GlobalExprVar v) = lookupDefExprTI v >>= evalExpr
-evalExpr (WithParameters pars expr) = pure $ substTypesInExpr 0 (reverse pars) expr
+evalExpr (WithParameters pars expr) = evalExpr $ substTypesInExpr 0 (reverse pars) expr
 evalExpr atom = pure atom
 
 substExpr :: Int -> Expr -> Expr -> Expr
