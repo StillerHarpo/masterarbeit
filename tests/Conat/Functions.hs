@@ -51,7 +51,7 @@ isZeroTests = do
   it "Type checks isZero on zero to Bool" $
     shouldCheckWithDefs [packedD, conatDR, boolD] (isZeroExpr :@: (packConat :@: zeroExpr))
       ([], GlobalTypeVar "Bool" [])
-  it "Evaluates id on zero to true" $
+  it "Evaluates isZero on zero to true" $
     shouldEvalWithDefs [packedD, conatDR, boolD] (isZeroExpr :@: (packConat :@: zeroExpr))
       trueExpr
   it "Type checks isZero on one to Bool" $
