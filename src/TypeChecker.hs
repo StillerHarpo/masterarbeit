@@ -55,20 +55,20 @@ checkProgram = flip evalPTI [] . checkProgramPTI
 checkProgramPTI :: [Statement] -> PTI ann [TypedExpr]
 checkProgramPTI [] = pure []
 checkProgramPTI (ExprDef{..} : stmts) = do
-  ty <- Just <$> tiInPTI (inferTerm expr)
+  ty <- Just <$> tiInPTI (inferTerm expr >>= evalType)
   expr <- tiInPTI $ evalExpr expr
   modify (ExprDef{..} :)
   checkProgramPTI stmts
 checkProgramPTI (TypeDef{..} : stmts) = do
   tiInPTI $ checkTyCtx parameterCtx
   kind <- Just <$> tiInPTI (local (set tyCtx parameterCtx)
-                                  (inferType typeExpr))
+                                  (inferType typeExpr >>= evalCtx))
   typeExpr <- tiInPTI $ evalTypeExpr typeExpr
   modify (TypeDef{..} :)
   checkProgramPTI stmts
 checkProgramPTI (Expression expr : stmts) =
   (:) <$> (TypedExpr <$> tiInPTI (evalExpr expr)
-                     <*> tiInPTI (inferTerm expr))
+                     <*> tiInPTI (inferTerm expr >>= evalType))
       <*> checkProgramPTI stmts
 tiInPTI :: TI ann a -> PTI ann a
 tiInPTI ti = do
@@ -291,6 +291,9 @@ evalTypeExpr atom = pure atom
 
 evalCtx :: Ctx -> TI ann Ctx
 evalCtx = mapM evalTypeExpr
+
+evalType :: Type -> TI ann Type
+evalType (ctx', tyExpr) = (,) <$> evalCtx ctx' <*> evalTypeExpr tyExpr
 
 evalDuctive :: Ductive -> TI ann Ductive
 evalDuctive Ductive{..} = do
