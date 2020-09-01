@@ -312,7 +312,8 @@ evalExpr (f :@: arg) = do
   valArg <- evalExpr arg
   case (valF, valArg) of
     -- TODO Should we check if _ = sigma_k\circ \tau
-    ( getExprArgs -> (r@Rec{..}, _), getExprArgs -> (Constructor _ i, constrArgs)) -> do
+    (getExprArgs -> (r@Rec{..}, sigmaktau), getExprArgs -> (Constructor _ i, constrArgs))
+      | length sigmaktau == length (gamma fromRec) -> do
       let gamma1 = gamma1s fromRec !! i
       recEval <- typeAction (as fromRec !! i)
                             [applyExprArgs (r, idCtx (gamma fromRec))
@@ -325,7 +326,8 @@ evalExpr (f :@: arg) = do
                                    (substExprs 0 (reverse constrArgs)
                                                  (substExpr 0 recEval
                                                               (matches !! i)))
-    (getExprArgs -> (Destructor ductive i, tau) , getExprArgs -> (c@Corec{..}, args)) -> do
+    (getExprArgs -> (Destructor ductive i, tau) , getExprArgs -> (c@Corec{..}, args))
+      | length tau == length (gamma1s toCorec !! i) -> do
       let gamma1 = gamma1s toCorec !! i
       recEval <- typeAction (as toCorec !! i)
                             [applyExprArgs (c, idCtx (gamma toCorec))
