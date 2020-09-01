@@ -1,23 +1,26 @@
 {-# language OverloadedStrings#-}
 module List.Functions where
 
-import Test.Hspec
+import qualified Hedgehog.Gen           as Gen
+import qualified Hedgehog.Range         as Range
+import           Test.Hspec
+import           Test.Hspec.Hedgehog    (forAll, hedgehog, modifyMaxSuccess)
 
-import qualified Data.Text as T
-import Data.Text(Text)
+import qualified Data.Text              as T
+import           Data.Text(Text)
 
-import AbstractSyntaxTree
+import           AbstractSyntaxTree
 import           TypeChecker
 
-import Lib
-import Nat.Definition
-import Nat.Examples
-import Maybe.Definition
-import Pair.Definition
-import List.Definition
-import List.Examples
+import           Lib
+import           Nat.Definition
+import           Nat.Examples
 import           Packed.Definition
+import           Maybe.Definition
+import           Pair.Definition
 import           Pair.Examples
+import           List.Definition
+import           List.Examples
 
 lengthD :: Text -> Text
 lengthD ty = T.unlines
@@ -70,42 +73,55 @@ lengthTest = do
   it "Evaluates length<Nat> on two element list to inlined two" $
     shouldEvalWithDefs [listEx4DR, twoD] (lengthExpr (GlobalTypeVar "Nat" []) :@: listEx5Expr)
       twoExprI
+  modifyMaxSuccess (const 10) $ it "Evaluates length on any list" $ hedgehog $ do
+      xs <- forAll $ Gen.list (Range.linear 0 5) (Gen.integral (Range.linear 0 5))
+      shouldEvalWithDefsP [pairD, natD, listD] (lengthExpr (GlobalTypeVar "Nat" [])
+                                                :@: genListExpr (GlobalTypeVar "Nat" []) (map genNatExpr xs))
+        (genNatExpr (length xs))
 
 
-headD :: Text
-headD = T.unlines
-  [ "head = rec<Unit> List to Maybe<Unit> where"
-  , "         Nil n = Nothing<Unit> @ ()"
-  , "         Cons n = Just<Unit> @ (First<Unit,Maybe<Unit>> @ n)"]
 
-headExpr :: Expr
-headExpr = WithParameters [UnitType]
+headD :: Text -> Text
+headD ty = T.unlines
+  [ "head = rec<" <> ty <> "> List to Maybe<Unit> where"
+  , "         Nil n = Nothing<" <> ty <> "> @ ()"
+  , "         Cons n = Just<" <> ty <> "> @ (First<" <> ty <> ",Maybe<" <> ty <> ">> @ n)"]
+
+headExpr :: TypeExpr -> Expr
+headExpr ty = WithParameters [ty]
   Rec { fromRec = listDucA
-      , toRec = GlobalTypeVar "Maybe" [UnitType]
-      , matches = [ WithParameters [UnitType] (Constructor maybeDucA 0)
+      , toRec = GlobalTypeVar "Maybe" [ty]
+      , matches = [ WithParameters [ty] (Constructor maybeDucA 0)
                     :@: UnitExpr
-                  , WithParameters [UnitType] (Constructor maybeDucA 1)
-                    :@: (WithParameters [ UnitType
-                                        , GlobalTypeVar "Maybe" [UnitType]]
-                                        (Destructor pairDucAB 0)
+                  , WithParameters [ty] (Constructor maybeDucA 1)
+                    :@: (WithParameters [ ty
+                                        , GlobalTypeVar "Maybe" [ty]]
+                                         (Destructor pairDucAB 0)
                         :@: LocalExprVar 0 "n")]}
 
 headTests :: Spec
 headTests = do
   it "Parses head" $
-    shouldParseWithDefs [maybeD, listDR] headD
+    shouldParseWithDefs [maybeD, listDR] (headD "Unit")
       [ ExprDef { name = "head"
-                , expr = headExpr
+                , expr = headExpr UnitType
                 , ty = Nothing}]
   it "Type checks head to (List<Unit>) -> Maybe<Unit>" $
-    shouldCheckWithDefs [maybeD, listDR] headExpr
+    shouldCheckWithDefs [maybeD, listDR] (headExpr UnitType)
       ([listExpr UnitType], GlobalTypeVar "Maybe" [UnitType])
   it "Evaluates head on empty list to Nothing" $
-    shouldEvalWithDefs [natD, listDR] (headExpr :@: listEx1Expr)
+    shouldEvalWithDefs [natD, listDR] (headExpr UnitType :@: listEx1Expr)
       (Constructor (maybeDuc UnitType) 0 :@: UnitExpr)
   it "Evaluates head on one element list to Just ()" $
-    shouldEvalWithDefs [maybeD, listEx1DR] (headExpr :@: listEx2Expr)
+    shouldEvalWithDefs [maybeD, listEx1DR] (headExpr UnitType :@: listEx2Expr)
       (Constructor (maybeDuc UnitType) 1 :@: UnitExpr)
+  modifyMaxSuccess (const 10) $ it "Evaluates head on any list" $ hedgehog $ do
+      x <- forAll $ Gen.integral (Range.linear 0 5)
+      xs <- forAll $ Gen.list (Range.linear 0 5) (Gen.integral (Range.linear 0 5))
+      shouldEvalWithDefsP [pairD, natD, listD] (headExpr (GlobalTypeVar "Nat" [])
+                                                 :@: genListExpr (GlobalTypeVar "Nat" [])
+                                                                 (map genNatExpr (x:xs)))
+        (Constructor (maybeDuc (GlobalTypeVar "Nat" [])) 1 :@: genNatExpr x)
 
 appD :: Text -> Text
 appD ty = T.unlines
