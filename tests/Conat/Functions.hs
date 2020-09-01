@@ -33,8 +33,8 @@ isZeroExpr = WithParameters [GlobalTypeVar "Conat" []] $
       , toRec = GlobalTypeVar "Bool" []
       , matches = [ WithParameters [GlobalTypeVar "Conat" []]
                       (Rec { fromRec = maybeDucA
-                          , toRec = GlobalTypeVar "Bool" []
-                          , matches = [ trueExpr, falseExpr]})
+                           , toRec = GlobalTypeVar "Bool" []
+                           , matches = [ trueExpr, falseExpr]})
                    :@: (Destructor conatDuc 0 :@: LocalExprVar 0 "x")]}
 
 isZeroTests :: Spec
