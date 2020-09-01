@@ -94,6 +94,8 @@ test-suite tests
                     , text
                     , microlens-platform
                     , masterarbeit
+                    , hedgehog
+                    , hspec-hedgehog
   build-tools:        hspec-discover   >= 2.0 && < 3.0
   default-language:   Haskell2010
 

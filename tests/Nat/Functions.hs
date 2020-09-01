@@ -1,10 +1,13 @@
 {-# language OverloadedStrings#-}
 module Nat.Functions where
 
-import Test.Hspec
+import qualified Hedgehog.Gen           as Gen
+import qualified Hedgehog.Range         as Range
+import           Test.Hspec
+import           Test.Hspec.Hedgehog    (forAll, hedgehog)
 
-import qualified Data.Text as T
-import Data.Text(Text)
+import qualified Data.Text              as T
+import           Data.Text              (Text)
 
 import AbstractSyntaxTree
 
@@ -59,6 +62,10 @@ idTests = do
   it "Evaluates id on inlined two to inlined two" $
     shouldEvalWithDefs [natD] (idExpr :@: twoExprI)
       twoExprI
+  it "id works for any number" $ hedgehog $ do
+      n <- forAll $ Gen.integral (Range.linear 0 1000)
+      shouldEvalWithDefsP [packedD, pairD, zeroDR] (idExpr :@: (genNatExpr n))
+        (genNatExpr n)
 
 plusD :: Text
 plusD = T.unlines
@@ -135,3 +142,10 @@ plusTests = do
     shouldEvalWithDefs [packedD, pairD, zeroDR] (plusExpr
                                                 :@: natPair oneExpr oneExpr)
       twoExprI
+  it "plus works for any number" $ hedgehog $ do
+      n <- forAll $ Gen.integral (Range.linear 0 1000)
+      m <- forAll $ Gen.integral (Range.linear 0 1000)
+      shouldEvalWithDefsP [packedD, pairD, zeroDR] (plusExpr
+                                                    :@: natPair (genNatExpr n)
+                                                                (genNatExpr m))
+        (genNatExpr (n+m))

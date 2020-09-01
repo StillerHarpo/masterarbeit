@@ -1,19 +1,22 @@
 {-# language OverloadedStrings#-}
 module List.Examples where
 
-import Test.Hspec
+import qualified Hedgehog.Gen           as Gen
+import qualified Hedgehog.Range         as Range
+import           Test.Hspec
+import           Test.Hspec.Hedgehog    (forAll, hedgehog)
 
-import qualified Data.Text as T
-import Data.Text(Text)
+import qualified Data.Text              as T
+import           Data.Text              (Text)
 
-import AbstractSyntaxTree
+import           AbstractSyntaxTree
 
-import Lib
-import Nat.Definition
-import Nat.Examples
-import Pair.Definition
-import Pair.Examples
-import List.Definition
+import           Lib
+import           Nat.Definition
+import           Nat.Examples
+import           Pair.Definition
+import           Pair.Examples
+import           List.Definition
 
 listEx1D, listEx1DR, listEx2D, listEx2DR :: Text
 listEx3D, listEx3DR, listEx4D, listEx4DR :: Text
@@ -58,6 +61,12 @@ listEx5Expr = WithParameters [GlobalTypeVar "Nat" []]
                              (GlobalExprVar "two")
                              (GlobalExprVar "list4")
 
+genListExpr :: TypeExpr -> [Expr] -> Expr
+genListExpr ty [] = WithParameters [ty] (Constructor listDucA 0)
+                   :@: UnitExpr
+genListExpr ty (x:xs) = WithParameters [ty] (Constructor listDucA 1)
+                       :@: mkPairExpr ty (GlobalTypeVar "List" [ty]) x (genListExpr ty xs)
+
 listExTest :: Spec
 listExTest = do
   it "Parses a empty list of units" $
@@ -100,5 +109,9 @@ listExTest = do
   it "Type checks a list with one number one to List<Nat>" $
     shouldCheckWithDefs [listEx4DR, twoD] listEx5Expr
       ([], listExpr (GlobalTypeVar "Nat" []))
+  it "Type checks any list of nats to list of nats" $ hedgehog $ do
+      xs <- forAll $ Gen.list (Range.linear 0 1000) (Gen.integral (Range.linear 0 1000))
+      shouldCheckWithDefsP [pairD, natD, listD] (genListExpr (GlobalTypeVar "Nat" []) (map genNatExpr xs))
+        ([], listExpr (GlobalTypeVar "Nat" []))
 
 

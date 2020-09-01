@@ -1,5 +1,5 @@
-{ mkDerivation, base, containers, hspec, hspec-discover
-, hspec-expectations, hspec-megaparsec, megaparsec
+{ mkDerivation, base, containers, hedgehog, hspec, hspec-discover
+, hspec-expectations, hspec-hedgehog, hspec-megaparsec, megaparsec
 , microlens-platform, mtl, parser-combinators, prettyprinter
 , prettyprinter-ansi-terminal, stdenv, text
 }:
@@ -17,8 +17,8 @@ mkDerivation {
     base megaparsec prettyprinter prettyprinter-ansi-terminal text
   ];
   testHaskellDepends = [
-    base containers hspec hspec-expectations hspec-megaparsec
-    megaparsec microlens-platform mtl text
+    base containers hedgehog hspec hspec-expectations hspec-hedgehog
+    hspec-megaparsec megaparsec microlens-platform mtl text
   ];
   testToolDepends = [ hspec-discover ];
   description = "inductive coinductive dependent types interpreter";
