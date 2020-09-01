@@ -63,12 +63,12 @@ isZeroTests = do
   it "Type checks isZero on two to Bool" $
     shouldCheckWithDefs [packedD, oneDR, boolD] (isZeroExpr :@: (packConat :@: twoExpr))
       ([], GlobalTypeVar "Bool" [])
-  it "Evaluates id on two to false" $
+  it "Evaluates isZero on two to false" $
     shouldEvalWithDefs [packedD, oneDR, boolD] (isZeroExpr :@: (packConat :@: twoExpr))
       falseExpr
   it "Type checks isZero on infinity to Bool" $
     shouldCheckWithDefs [packedD, zeroDR, boolD] (isZeroExpr :@: (packConat :@: infinityExpr))
       ([], GlobalTypeVar "Bool" [])
-  it "Evaluates id on infinity to false" $
+  it "Evaluates isZero on infinity to false" $
     shouldEvalWithDefs [packedD, zeroDR, boolD] (isZeroExpr :@: (packConat :@: infinityExpr))
       falseExpr
