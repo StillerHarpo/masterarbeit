@@ -24,7 +24,7 @@ packedDuc x = Ductive { gamma = []
                       , strNames = [ "Pack" ]}
 
 packedDucA :: Ductive
-packedDucA = packedDuc (LocalTypeVar 1 "A")
+packedDucA = packedDuc (Parameter 0 "A")
 
 packedExpr :: TypeExpr -> TypeExpr
 packedExpr = In . packedDuc

@@ -26,7 +26,7 @@ streamDuc x = Ductive { gamma = []
                       , strNames = ["Head", "Tail"]}
 
 streamDucA :: Ductive
-streamDucA = streamDuc (LocalTypeVar 1 "A")
+streamDucA = streamDuc (Parameter 0 "A")
 
 streamExpr :: TypeExpr -> TypeExpr
 streamExpr = Coin . streamDuc

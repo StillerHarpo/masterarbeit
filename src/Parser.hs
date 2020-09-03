@@ -51,11 +51,12 @@ data ParserState = ParserState {
   , _destructorDefs :: Set Text
   , _localExprVars :: [Text]
   , _localTypeVars :: [Text]
+  , _parameters :: [Text]
   }
 $(makeLenses ''ParserState)
 
 emptyState :: ParserState
-emptyState = ParserState Nothing Set.empty Set.empty [] Set.empty Set.empty [] []
+emptyState = ParserState Nothing Set.empty Set.empty [] Set.empty Set.empty [] [] []
 
 -- | a parser with a space consumer state for line folding
 type Parser = StateT ParserState (Parsec Void Text)
@@ -151,14 +152,14 @@ parseDestructorDef name = parseStructorDef $ (,)
 parseDataHeader :: Parser (Text, CtxP, TyCtxP)
 parseDataHeader = do
   name <- lexeme parseTypeStrVarT
-  parameters <- lexeme parseTyCtx
-  localTypeVars .= map fst parameters
+  pars <- lexeme parseTyCtx
+  parameters .= map fst pars
   void $ symbol ":"
   gammaP <- lexeme parseCtx
   void $ if null gammaP
          then symbols ["Set", "where"]
          else symbols ["->", "Set", "where"]
-  pure (name, gammaP, parameters)
+  pure (name, gammaP, pars)
 
 parseStructorDef :: Parser (a,b) -> Parser (Text, Ctx,a,b)
 parseStructorDef p = do
@@ -242,12 +243,18 @@ parseTypeVar = do
            pure $ LocalTypeVar (length _localTypeVars - idx - 1)
                                var
          Nothing  ->
-           fancyFailure $ Set.singleton $ ErrorFail "Name not defined"
+           -- TODO maybe name shadowing could be a problem
+           case elemIndex var _parameters of
+             Just idx ->
+               pure $ Parameter (length _parameters - idx - 1)
+                                var
+             Nothing  ->
+               fancyFailure $ Set.singleton $ ErrorFail "Name not defined"
 
 parseStrVar :: Parser Expr
 parseStrVar = do
   var <- parseTypeStrVarT
-  parameters <- parseParameters
+  pars <- parseParameters
   let nameStr = var
       lookupStr [] = singleFailure "Con/Destrunctor not defined"
       lookupStr ((_,(inOrCoin,ductive@Ductive{..})):ductives) =
@@ -255,7 +262,7 @@ parseStrVar = do
           (Just num, InTag) -> pure $ Constructor{..}
           (Just num, CoinTag) -> pure $ Destructor{..}
           (Nothing, _) -> lookupStr ductives
-  withParameters parameters <$> ((view defDuctives <$> get) >>= lookupStr)
+  withParameters pars <$> ((view defDuctives <$> get) >>= lookupStr)
 
 parseUnitType :: Parser TypeExpr
 parseUnitType = UnitType <$ string "Unit"
@@ -279,9 +286,9 @@ parseRec = parseBlock ((,,)
                        <*> lexeme parseTypeExpr
                        <* symbol "where")
                       (const parseMatch)
-                      (\(parameters, from,toRec) matches -> do
+                      (\(pars, from,toRec) matches -> do
                           (fromRec,matches) <- orderMatches from matches
-                          pure (withParameters parameters Rec{..}))
+                          pure (withParameters pars Rec{..}))
 
 parseCorec :: Parser Expr
 parseCorec = parseBlock ((,,)
@@ -292,9 +299,9 @@ parseCorec = parseBlock ((,,)
                          <*> lexeme parseTypeStrVarT
                          <* symbol "where")
                          (const parseMatch)
-                         (\(parameters, fromCorec,to) matches -> do
+                         (\(pars, fromCorec,to) matches -> do
                              (toCorec,matches) <- orderMatches to matches
-                             pure (withParameters parameters Corec{..}))
+                             pure (withParameters pars Corec{..}))
 
 orderMatches :: Text -> [(Text,Expr)] -> Parser (Ductive,[Expr])
 orderMatches name matches = do

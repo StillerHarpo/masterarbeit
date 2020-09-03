@@ -27,7 +27,7 @@ maybeDuc x = Ductive { gamma = []
                      , strNames = ["Nothing", "Just"]}
 
 maybeDucA :: Ductive
-maybeDucA = maybeDuc (LocalTypeVar 1 "A")
+maybeDucA = maybeDuc (Parameter 0 "A")
 
 maybeExpr :: TypeExpr -> TypeExpr
 maybeExpr = In . maybeDuc

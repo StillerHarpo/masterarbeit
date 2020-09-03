@@ -30,6 +30,7 @@ import PrettyPrinter
 
 data ContextTI = ContextTI { _ctx :: Ctx
                            , _tyCtx :: TyCtx
+                           , _parCtx :: TyCtx
                            , _defCtx :: [Statement]
                            }
 $(makeLenses ''ContextTI)
@@ -47,6 +48,7 @@ evalPTI pti = evalState (runExceptT pti)
 emptyCtx :: ContextTI
 emptyCtx = ContextTI { _ctx = []
                      , _tyCtx = []
+                     , _parCtx = []
                      , _defCtx = []}
 
 checkProgram :: [Statement] -> Either (Doc ann) [TypedExpr]
@@ -61,7 +63,7 @@ checkProgramPTI (ExprDef{..} : stmts) = do
   checkProgramPTI stmts
 checkProgramPTI (TypeDef{..} : stmts) = do
   tiInPTI $ checkTyCtx parameterCtx
-  kind <- Just <$> tiInPTI (local (set tyCtx parameterCtx)
+  kind <- Just <$> tiInPTI (local (set parCtx parameterCtx)
                                   (inferType typeExpr >>= evalCtx))
   typeExpr <- tiInPTI $ evalTypeExpr typeExpr
   modify (TypeDef{..} :)
@@ -102,6 +104,10 @@ inferType tyExpr = catchError (inferType' tyExpr)
     inferType' UnitType = pure []
     inferType' v@(LocalTypeVar idx _) = do
       ty <- view tyCtx >>= lookupLocalVarTI idx (T.pack $ show v)
+      view ctx >>= checkCtx
+      pure ty
+    inferType' v@(Parameter idx _) = do
+      ty <- view parCtx >>= lookupLocalVarTI idx (T.pack $ show v)
       view ctx >>= checkCtx
       pure ty
     inferType' (GlobalTypeVar n pars) = lookupDefKindTI n pars
@@ -204,7 +210,7 @@ inferTerm expr = catchError (inferTerm' expr)
       pure ( gamma ++ [applyTypeExprArgs (valFrom, idCtx gamma)]
            , applyTypeExprArgs (Coin valTo
                                , map (shiftFreeVarsExpr 1 0) (idCtx gamma)))
-    inferTerm' (WithParameters ps e) = inferTerm $ substTypesInExpr 0 (reverse ps) e
+    inferTerm' (WithParameters ps e) = inferTerm $ substParsInExpr 0 (reverse ps) e
 
 betaeq :: TypeExpr -> TypeExpr -> TI ann ()
 betaeq e1 e2 = do
@@ -345,7 +351,7 @@ evalExpr (f :@: arg) = do
                                                               recEval))
     _ -> pure $ valF :@: valArg
 evalExpr (GlobalExprVar v) = lookupDefExprTI v >>= evalExpr
-evalExpr (WithParameters pars expr) = evalExpr $ substTypesInExpr 0 (reverse pars) expr
+evalExpr (WithParameters pars expr) = evalExpr $ substParsInExpr 0 (reverse pars) expr
 evalExpr atom = pure atom
 
 substExpr :: Int -> Expr -> Expr -> Expr
@@ -446,15 +452,64 @@ substTypeInExpr i r re@Rec{..} = re { fromRec = substDuctiveTypeExpr i r fromRec
 substTypeInExpr i r c@Corec{..} = c { fromCorec = substType i r fromCorec
                                     , toCorec = substDuctiveTypeExpr i r toCorec
                                     }
-substTypeInExpr i r (WithParameters ps e) = substTypeInExpr (i+length ps) r e
+substTypeInExpr i r (WithParameters ps e) = WithParameters (map (substType i r) ps)
+                                                           (substTypeInExpr i r e)
 substTypeInExpr _ _ atom = atom
 
 substTypesInExpr :: Int -> [TypeExpr] -> Expr -> Expr
 substTypesInExpr _ [] e = e
 substTypesInExpr n (v:vs) e = substTypesInExpr (n+1) vs (substTypeInExpr n v e)
 
+
+substPar :: Int -> TypeExpr -> TypeExpr -> TypeExpr
+substPar i r v@(Parameter j _)
+  | i == j = r
+  | otherwise = v
+substPar i r (GlobalTypeVar n vars) = GlobalTypeVar n $ map (substPar i r) vars
+substPar i r1 (Abstr t r2) = Abstr (substPar i r1 t) (substPar i r1 r2)
+substPar i r (In d) = In $ substDuctivePar i r d
+substPar i r (Coin d) = Coin $ substDuctivePar i r d
+substPar i r (e1 :@ e2) = substPar i r e1 :@ substParInExpr i r e2
+substPar _ _ e = e
+
+substPars :: Int -> [TypeExpr] -> TypeExpr -> TypeExpr
+substPars _ [] e = e
+substPars n (v:vs) e = substPars (n+1) vs (substPar n v e)
+
+substDuctivePar :: Int -> TypeExpr -> Ductive -> Ductive
+substDuctivePar i r1 dOld@Ductive{..} =
+  let dNew =  dOld { as = map (substPar i (shiftFreeTypeVars 1 0 r1)) as
+                   , gamma =  substParInCtx i r1 gamma
+                   , sigmas = map (map $ substParInExpr i (shiftFreeTypeVars 1 0 r1)) sigmas
+                   , gamma1s = map (substParInCtx i r1) gamma1s
+                   , nameDuc = "???" }
+  in if dNew == dOld then dOld else dNew
+
+substParInExpr :: Int -> TypeExpr -> Expr -> Expr
+substParInExpr i r (e1 :@: e2) = substParInExpr i r e1 :@: substParInExpr i r e2
+substParInExpr i r c@Constructor{..} = c {ductive = substDuctivePar i r ductive }
+substParInExpr i r d@Destructor{..} = d {ductive = substDuctivePar i r ductive }
+substParInExpr i r re@Rec{..} = re { fromRec = substDuctivePar i r fromRec
+                                   , toRec = substPar i r toRec
+                                   }
+substParInExpr i r c@Corec{..} = c { fromCorec = substPar i r fromCorec
+                                   , toCorec = substDuctivePar i r toCorec
+                                   }
+substParInExpr i r (WithParameters ps e) = substParInExpr (i+length ps) r e
+substParInExpr _ _ atom = atom
+
+substParsInExpr :: Int -> [TypeExpr] -> Expr -> Expr
+substParsInExpr _ [] e = e
+substParsInExpr n (v:vs) e = substParsInExpr (n+1) vs (substParInExpr n v e)
+
+substParInCtx :: Int -> TypeExpr -> Ctx -> Ctx
+substParInCtx i r = map (substPar i r)
+
 typeAction :: TypeExpr -> [Expr] -> [Ctx] -> [TypeExpr] -> [TypeExpr] -> TI ann Expr
-typeAction (LocalTypeVar n _) terms _ _ _ = pure $ terms !! n
+typeAction (LocalTypeVar n _) terms _ _ _ = do
+   l <- length <$> view parCtx
+   pure $ terms !! (n + l)
+typeAction (Parameter n _) terms _ _ _ = pure $ terms !! n
 typeAction (GlobalTypeVar n vars) terms gammas as' bs  = do
   tyExpr <- lookupDefTypeExprTI n vars
   typeAction tyExpr terms gammas as' bs
@@ -601,7 +656,7 @@ lookupDefTypeExprTI t pars = view defCtx >>= lookupDefTypeExprTI'
 --         Are this tests really not necessary?
 --        parsKinds <- mapM inferType pars
 --        betaeqTyCtx parsKinds parameterCtx
-          pure $ substTypes 0 (reverse pars) typeExpr
+          pure $ substPars 0 (reverse pars) typeExpr
       | otherwise = lookupDefTypeExprTI' stmts
     lookupDefTypeExprTI' (_:stmts) = lookupDefTypeExprTI' stmts
 

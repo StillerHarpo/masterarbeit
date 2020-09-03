@@ -224,7 +224,7 @@ main = hspec $ do
       `shouldParse`
       let duc = Ductive { gamma = []
                         , sigmas = [[]]
-                        , as = [LocalTypeVar 1 "B"]
+                        , as = [Parameter 0 "B"]
                         , gamma1s = [[]]
                         , nameDuc = "A"
                         , strNames = ["C"]}
@@ -243,7 +243,7 @@ main = hspec $ do
       `shouldParse`
       let duc = Ductive { gamma = []
                         , sigmas = [[]]
-                        , as = [LocalTypeVar 1 "B"]
+                        , as = [Parameter 0 "B"]
                         , gamma1s = [[]]
                         , nameDuc = "A"
                         , strNames = ["C"]}
@@ -360,7 +360,7 @@ main = hspec $ do
                  , "  Second : Copair -> B" ]
         copairDuc = Ductive { gamma = []
                              , sigmas = [[], []]
-                             , as = [ LocalTypeVar 2 "A", LocalTypeVar 1 "B" ]
+                             , as = [ Parameter 1 "A", Parameter 0 "B" ]
                              , gamma1s = [ [], [] ]
                              , nameDuc = "Copair"
                              , strNames = ["First", "Second"]}
@@ -442,7 +442,7 @@ main = hspec $ do
                            UnitType
     let tyC = TypeDef { name = "C"
                       , parameterCtx = [[]]
-                      , typeExpr = LocalTypeVar 0 "X"
+                      , typeExpr = Parameter 0 "X"
                       , kind = Nothing}
     it "inlines parameterized Global Var" $
       shouldCheckInGlobCtx [tyC]

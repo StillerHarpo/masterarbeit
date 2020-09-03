@@ -26,7 +26,7 @@ pairDuc x y = Ductive { gamma = []
                       , strNames = [ "First" , "Second"]}
 
 pairDucAB :: Ductive
-pairDucAB = pairDuc (LocalTypeVar 2 "A") (LocalTypeVar 1 "B")
+pairDucAB = pairDuc (Parameter 1 "A") (Parameter 0 "B")
 
 pairExpr :: TypeExpr -> TypeExpr -> TypeExpr
 pairExpr x y = Coin $ pairDuc x y

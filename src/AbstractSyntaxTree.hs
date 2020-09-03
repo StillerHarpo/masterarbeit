@@ -32,6 +32,7 @@ data TypeExpr = UnitType -- verum type
               -- same
               -- TODO Maybe throw error if this is not the case
               | LocalTypeVar Int Text
+              | Parameter Int Text
               | GlobalTypeVar Text [TypeExpr]
               | Abstr TypeExpr TypeExpr
               | In Ductive
@@ -42,6 +43,7 @@ instance Eq TypeExpr where
   UnitType              == UnitType              = True
   (tE1 :@ e1)           == (tE2 :@ e2)           = tE1 == tE2 && e1 == e2
   (LocalTypeVar i1 _)   == (LocalTypeVar i2 _)   = i1 == i2
+  (Parameter i1 _)      == (Parameter i2 _)      = i1 == i2
   (GlobalTypeVar n1 p1) == (GlobalTypeVar n2 p2) = n1 == n2 && p1 == p2
   (Abstr ty1 e1)        == (Abstr ty2 e2)        = ty1 == ty2 && e1 == e2
   (In d1)               == (In d2)               = d1 == d2

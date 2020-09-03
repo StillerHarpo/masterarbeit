@@ -30,7 +30,7 @@ listDuc x = Ductive { gamma = []
                     , strNames = ["Nil", "Cons"]}
 
 listDucA :: Ductive
-listDucA = listDuc (LocalTypeVar 1 "A")
+listDucA = listDuc (Parameter 0 "A")
 
 listExpr :: TypeExpr -> TypeExpr
 listExpr = In . listDuc

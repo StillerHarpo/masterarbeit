@@ -39,6 +39,8 @@ instance PrettyPresc TypeExpr where
                                            <+> prettyParens e2
   prettyPresc _ (LocalTypeVar i "") = "?Ty" <> pretty i
   prettyPresc _ (LocalTypeVar i n) = pretty n <> "[" <> pretty i <> "]"
+  prettyPresc _ (Parameter i "") = "?Par" <> pretty i
+  prettyPresc _ (Parameter i n) = pretty n <> "[" <> pretty i <> "]"
   prettyPresc _ (GlobalTypeVar n []) = pretty n
   prettyPresc _ (GlobalTypeVar n par) = pretty n <> angles (hsep . punctuate comma $ map pretty par)
   -- TODO find name of variable if defined

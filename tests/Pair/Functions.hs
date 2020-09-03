@@ -43,6 +43,16 @@ destructorTests = do
                                               UnitType)
                        >>= inferTerm)
       ([], listExpr UnitType)
+  it "Type checks Evaluation of First of ([()],[]) to [Unit]" $
+    shouldRunWithDefs [listEx1DR]
+                      (evalExpr (WithParameters [ UnitType , UnitType]
+                                                (Destructor pairDucAB 0)
+                                 :@: listPair listEx2Expr
+                                              listEx1Expr
+                                              UnitType
+                                              UnitType)
+                       >>= inferTerm)
+      ([], listExpr UnitType)
   it "Type checks Evaluation of First of ([1,2],[()]) to [Nat]" $
     shouldRunWithDefs [listEx4DR, listEx1D, twoD]
                       (evalExpr (WithParameters [ GlobalTypeVar "List" [GlobalTypeVar "Nat" []]
