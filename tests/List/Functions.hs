@@ -45,6 +45,8 @@ lengthTest = do
   it "Parses length<Unit>" $
     shouldParseWithDefs [natD, listDR] (lengthD "Unit")
       [ ExprDef { name = "length"
+                , tyParameterCtx = []
+                , exprParameterCtx = []
                 , expr = lengthExpr UnitType
                 , ty = Nothing}]
   it "Type checks length<Unit> to (List<Unit>) -> Nat" $
@@ -59,6 +61,8 @@ lengthTest = do
   it "Parses length<Nat>" $
     shouldParseWithDefs [natD, listDR] (lengthD "Nat")
       [ ExprDef { name = "length"
+                , tyParameterCtx = []
+                , exprParameterCtx = []
                 , expr = lengthExpr (GlobalTypeVar "Nat" [])
                 , ty = Nothing}]
   it "Type checks length<Nat> to (List<Nat>) -> Nat" $
@@ -104,6 +108,8 @@ headTests = do
   it "Parses head" $
     shouldParseWithDefs [maybeD, listDR] (headD "Unit")
       [ ExprDef { name = "head"
+                , tyParameterCtx = []
+                , exprParameterCtx = []
                 , expr = headExpr UnitType
                 , ty = Nothing}]
   it "Type checks head to (List<Unit>) -> Maybe<Unit>" $
@@ -156,6 +162,8 @@ appTests = do
   it "Parses app<Unit>" $
     shouldParseWithDefs [packedD, pairD, listD] (appD "Unit")
       [ ExprDef { name = "app"
+                , tyParameterCtx = []
+                , exprParameterCtx = []
                 , expr = appExpr UnitType
                 , ty = Nothing}]
   it "Type checks app<Unit> to (List<Unit> x List<Unit>) -> List<Unit>" $
@@ -185,14 +193,14 @@ appTests = do
         , "            ; Second x = Nil<Unit> @ () } @ ()))"]
   it "Parses app<Unit> on [] x []" $
     shouldParseWithDefs [packedD, pairD, listD, appD "Unit"] listPairExD
-      [Expression (GlobalExprVar "app"
+      [Expression (GlobalExprVar "app" [] []
                    :@: listPair listEx1Expr listEx1Expr UnitType)]
   it "expr var app evaluates to the same as expr app" $
     shouldEvalSameWithDefs [packedD, pairD, listD, appD "Unit"]
-      (GlobalExprVar "app") (appExpr UnitType)
+      (GlobalExprVar "app" [] []) (appExpr UnitType)
   it "Type checks app<Unit> on [] x [] to List (as expr var)" $
     shouldCheckWithDefs [packedD, pairD, listD, appD "Unit"]
-                        (GlobalExprVar "app"
+                        (GlobalExprVar "app" [] []
                          :@: listPair listEx1Expr listEx1Expr UnitType)
       ([], GlobalTypeVar "List" [UnitType])
   it "Type checks app<Unit> on [] x [] to List (as expr)" $
@@ -201,7 +209,7 @@ appTests = do
       ([], GlobalTypeVar "List" [UnitType])
   it "Type checks Evaluation of app on [] x [] to zero (as expr var)" $
     shouldRunWithDefs [packedD, pairD, listD, appD "Unit"]
-                      (evalExpr (GlobalExprVar "app"
+                      (evalExpr (GlobalExprVar "app" [] []
                                  :@: listPair listEx1Expr
                                               listEx1Expr
                                               UnitType)

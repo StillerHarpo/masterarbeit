@@ -42,7 +42,7 @@ listEx2Expr = WithParameters [UnitType] (Constructor listDucA 1)
               :@: mkPairExpr UnitType
                              (GlobalTypeVar "List" [UnitType])
                              UnitExpr
-                             (GlobalExprVar "list1")
+                             (GlobalExprVar "list1" [] [])
 listEx3Expr = WithParameters [GlobalTypeVar "Nat" []]
                              (Constructor listDucA 0)
               :@: UnitExpr
@@ -51,15 +51,15 @@ listEx4Expr = WithParameters [GlobalTypeVar "Nat" []]
               :@: mkPairExpr (GlobalTypeVar "Nat" [])
                              (GlobalTypeVar "List"
                                             [GlobalTypeVar "Nat" []])
-                             (GlobalExprVar "one")
-                             (GlobalExprVar "list3")
+                             (GlobalExprVar "one" [] [])
+                             (GlobalExprVar "list3" [] [])
 listEx5Expr = WithParameters [GlobalTypeVar "Nat" []]
                              (Constructor listDucA 1)
               :@: mkPairExpr (GlobalTypeVar "Nat" [])
                              (GlobalTypeVar "List"
                                             [GlobalTypeVar "Nat" []])
-                             (GlobalExprVar "two")
-                             (GlobalExprVar "list4")
+                             (GlobalExprVar "two" [] [])
+                             (GlobalExprVar "list4" [] [])
 
 genListExpr :: TypeExpr -> [Expr] -> Expr
 genListExpr ty [] = WithParameters [ty] (Constructor listDucA 0)
@@ -72,6 +72,8 @@ listExTest = do
   it "Parses a empty list of units" $
     shouldParseWithDefs [listDR] listEx1D
       [ ExprDef { name = "list1"
+                , tyParameterCtx = []
+                , exprParameterCtx = []
                 , expr = listEx1Expr
                 , ty = Nothing}]
   it "Type checks a empty list of units to List<Unit>" $
@@ -80,6 +82,8 @@ listExTest = do
   it "Parses a list with one unit" $
     shouldParseWithDefs [listEx1DR] listEx2D
       [ ExprDef { name = "list2"
+                , tyParameterCtx = []
+                , exprParameterCtx = []
                 , expr = listEx2Expr
                 , ty = Nothing}]
   it "Type checks a list with one unit to List<Unit>" $
@@ -88,6 +92,8 @@ listExTest = do
   it "Parses a empty list of nats" $
     shouldParseWithDefs [natD, listDR] listEx3D
       [ ExprDef { name = "list3"
+                , tyParameterCtx = []
+                , exprParameterCtx = []
                 , expr = listEx3Expr
                 , ty = Nothing}]
   it "Type checks a empty list of nats to List<Nat>" $
@@ -96,6 +102,8 @@ listExTest = do
   it "Parses a list with one number one" $
     shouldParseWithDefs [listEx3DR, zeroD, oneD] listEx4D
       [ ExprDef { name = "list4"
+                , tyParameterCtx = []
+                , exprParameterCtx = []
                 , expr = listEx4Expr
                 , ty = Nothing}]
   it "Type checks a list with one number one to List<Nat>" $
@@ -104,6 +112,8 @@ listExTest = do
   it "Parses a list with numbers one and two" $
     shouldParseWithDefs [listEx4DR, twoD] listEx5D
       [ ExprDef { name = "list5"
+                , tyParameterCtx = []
+                , exprParameterCtx = []
                 , expr = listEx5Expr
                 , ty = Nothing}]
   it "Type checks a list with one number one to List<Nat>" $

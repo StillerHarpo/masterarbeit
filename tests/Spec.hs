@@ -47,9 +47,11 @@ main = hspec $ do
       parse parseProgram "" (T.unlines [ "x = ()" , "x"])
       `shouldParse`
       [ ExprDef { name = "x"
+                , tyParameterCtx = []
+                , exprParameterCtx = []
                 , expr = UnitExpr
                 , ty = Nothing }
-      , Expression $  GlobalExprVar "x"]
+      , Expression $  GlobalExprVar "x" [] []]
     it "parses a application" $
       parse parseProgram "" "() @ ()"
       `shouldParse`
@@ -99,7 +101,7 @@ main = hspec $ do
     it "parses definitions" $
       parse parseProgram "" "x = ()"
       `shouldParse`
-      [ExprDef "x" UnitExpr Nothing]
+      [ExprDef "x" [] [] UnitExpr Nothing]
     let c = Ductive { gamma = []
                     , sigmas = [[]]
                     , as = [LocalTypeVar 0 "C"]
@@ -128,15 +130,15 @@ main = hspec $ do
     it "parses multiline program" $
       parse parseProgram "" "y = (); y"
       `shouldParse`
-      [ ExprDef "y" UnitExpr Nothing
-      , Expression $ GlobalExprVar "y"]
+      [ ExprDef "y" [] [] UnitExpr Nothing
+      , Expression $ GlobalExprVar "y" [] []]
     it "parses a statement with line folding" $
       parse parseProgram "" (T.unlines [ "x ="
                                        , "  ()"
                                        , "   @"
                                        , "    ()"])
       `shouldParse`
-       [ ExprDef "x" (UnitExpr :@: UnitExpr) Nothing]
+       [ ExprDef "x" [] [] (UnitExpr :@: UnitExpr) Nothing]
     it "parses indented data definition" $
       parse parseProgram "" (T.unlines [ "data C : (y:Unit) -> Set where"
                                        , "  C1 : (C @ ()) -> C ()"
@@ -165,9 +167,13 @@ main = hspec $ do
                                        , "x @ z"])
       `shouldParse`
       [ ExprDef { name = "x"
+                , tyParameterCtx = []
+                , exprParameterCtx = []
                 , expr = UnitExpr :@: UnitExpr
                 , ty = Nothing}
       , ExprDef { name = "z"
+                , tyParameterCtx = []
+                , exprParameterCtx = []
                 , expr = UnitExpr
                 , ty = Nothing}
       , TypeDef { name = "A"
@@ -183,7 +189,7 @@ main = hspec $ do
                     nameDuc = "",
                     strNames = ["C1", "C2"]}
                 , kind = Nothing}
-      , Expression $ GlobalExprVar "x" :@: GlobalExprVar "z" ]
+      , Expression $ GlobalExprVar "x" [] [] :@: GlobalExprVar "z" [] []]
     it "parses a rec programm" $
       parse parseProgram "" (T.unlines [ "data A : Set where"
                                        , "  C : A -> A"
@@ -346,6 +352,8 @@ main = hspec $ do
                              , strNames = ["MkPair"]}
        in [ natRes
           , ExprDef { name = "one"
+                    , tyParameterCtx = []
+                    , exprParameterCtx = []
                     , expr = Constructor natDuc 1
                              :@: (Constructor natDuc 0
                                   :@: UnitExpr)
@@ -354,7 +362,7 @@ main = hspec $ do
                     , parameterCtx = []
                     , typeExpr = In pairDuc
                     , kind = Nothing }
-          , Expression (Constructor pairDuc 0 :@: GlobalExprVar "one" :@: GlobalExprVar "one")])
+          , Expression (Constructor pairDuc 0 :@: GlobalExprVar "one" [] [] :@: GlobalExprVar "one" [] [])])
     let copair = [ "codata Copair<A : Set,B : Set> : Set where"
                  , "  First : Copair -> A"
                  , "  Second : Copair -> B" ]
@@ -449,11 +457,13 @@ main = hspec $ do
                            (inlineTypeExpr $ GlobalTypeVar "C" [UnitType])
                            UnitType
     let a = ExprDef { name = "a"
+                    , tyParameterCtx = []
+                    , exprParameterCtx = []
                     , expr = UnitExpr
                     , ty = Nothing}
     it "inlines Global var with unit expr" $
       shouldCheckInGlobCtx [a]
-                           (inlineExpr $ GlobalExprVar "a")
+                           (inlineExpr $ GlobalExprVar "a" [] [])
                            UnitExpr
 
   describe "Type Checker works" $ do

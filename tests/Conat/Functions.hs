@@ -42,6 +42,8 @@ isZeroTests = do
   it "Parses isZero" $
     shouldParseWithDefs [packedD, conatDR, boolD] isZeroD
       [ ExprDef { name = "isZero"
+                , tyParameterCtx = []
+                , exprParameterCtx = []
                 , expr = isZeroExpr
                 , ty = Nothing}]
   it "Type checks isZero to (Conat) -> Bool" $

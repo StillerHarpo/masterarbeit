@@ -40,26 +40,28 @@ oneExpr = Corec { fromCorec = GlobalTypeVar "Conat" []
                 , toCorec = conatDuc
                 , matches = [ WithParameters [GlobalTypeVar "Conat" []]
                                              (Constructor maybeDucA 1)
-                              :@: GlobalExprVar "zero"]}
-          :@: GlobalExprVar "zero"
+                              :@: GlobalExprVar "zero" [] []]}
+          :@: GlobalExprVar "zero" [] []
 twoExpr = Corec { fromCorec = GlobalTypeVar "Conat" []
                 , toCorec = conatDuc
                 , matches = [ WithParameters [GlobalTypeVar "Conat" []]
                                              (Constructor maybeDucA 1)
-                              :@: GlobalExprVar "one"]}
-          :@: GlobalExprVar "one"
+                              :@: GlobalExprVar "one" [] [] ]}
+          :@: GlobalExprVar "one" [] []
 infinityExpr = Corec { fromCorec = GlobalTypeVar "Conat" []
                      , toCorec = conatDuc
                      , matches = [ WithParameters [GlobalTypeVar "Conat" []]
                                                   (Constructor maybeDucA 1)
                                    :@: LocalExprVar 0 "x"]}
-          :@: GlobalExprVar "zero"
+          :@: GlobalExprVar "zero" [] []
 
 conatExTests :: Spec
 conatExTests = do
   it "Parses zero" $
     shouldParseWithDefs [conatDR] zeroD
       [ ExprDef { name = "zero"
+                , tyParameterCtx = []
+                , exprParameterCtx = []
                 , expr = zeroExpr
                 , ty = Nothing}]
   it "Type checks zero to conat" $
@@ -68,6 +70,8 @@ conatExTests = do
   it "Parses one" $
     shouldParseWithDefs [zeroDR] oneD
       [ ExprDef { name = "one"
+                , tyParameterCtx = []
+                , exprParameterCtx = []
                 , expr = oneExpr
                 , ty = Nothing}]
   it "Type checks one to conat" $
@@ -76,6 +80,8 @@ conatExTests = do
   it "Parses two" $
     shouldParseWithDefs [oneDR] twoD
       [ ExprDef { name = "two"
+                , tyParameterCtx = []
+                , exprParameterCtx = []
                 , expr = twoExpr
                 , ty = Nothing}]
   it "Type checks two to conat" $
@@ -84,6 +90,8 @@ conatExTests = do
   it "Parses infinity" $
     shouldParseWithDefs [zeroDR] infinityD
       [ ExprDef { name = "infinity"
+                , tyParameterCtx = []
+                , exprParameterCtx = []
                 , expr = infinityExpr
                 , ty = Nothing}]
   it "Type checks infinity to conat" $

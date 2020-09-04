@@ -26,6 +26,8 @@ boolExTests = do
   it "Parses true" $
     shouldParseWithDefs [boolD] trueD
       [ ExprDef { name = "true"
+                , tyParameterCtx = []
+                , exprParameterCtx = []
                 , expr = trueExpr
                 , ty = Nothing}]
   it "Type checks true to bool" $
@@ -34,6 +36,8 @@ boolExTests = do
   it "Parses false" $
     shouldParseWithDefs [boolD] falseD
       [ ExprDef { name = "false"
+                , tyParameterCtx = []
+                , exprParameterCtx = []
                 , expr = falseExpr
                 , ty = Nothing}]
   it "Type checks false to bool" $

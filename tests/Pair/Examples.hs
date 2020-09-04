@@ -36,19 +36,21 @@ pairEx4D = "pair4 = " <> mkPairD "Nat" "Nat" "one" "two"
 pairEx1Expr, pairEx2Expr, pairEx3Expr, pairEx4Expr :: Expr
 pairEx1Expr = mkPairExpr UnitType UnitType UnitExpr UnitExpr
 pairEx2Expr = mkPairExpr UnitType (GlobalTypeVar "Nat" [])
-                         UnitExpr (GlobalExprVar "one")
+                         UnitExpr (GlobalExprVar "one" [] [])
 pairEx3Expr = mkPairExpr (GlobalTypeVar "Nat" []) UnitType
-                         (GlobalExprVar "one") UnitExpr
+                         (GlobalExprVar "one" [] []) UnitExpr
 pairEx4Expr = mkPairExpr (GlobalTypeVar "Nat" [])
                          (GlobalTypeVar "Nat" [])
-                         (GlobalExprVar "one")
-                         (GlobalExprVar "two")
+                         (GlobalExprVar "one" [] [])
+                         (GlobalExprVar "two" [] [])
 
 pairExTest :: Spec
 pairExTest = do
   it "Parses pair of units" $
     shouldParseWithDefs [pairD] pairEx1D
       [ ExprDef { name = "pair1"
+                , tyParameterCtx = []
+                , exprParameterCtx = []
                 , expr = pairEx1Expr
                 , ty = Nothing}]
   it "Type checks a pair of units to Pair<Unit,Unit>" $
@@ -57,6 +59,8 @@ pairExTest = do
   it "Parses pair of unit and one" $
     shouldParseWithDefs [oneDR, pairD] pairEx2D
       [ ExprDef { name = "pair2"
+                , tyParameterCtx = []
+                , exprParameterCtx = []
                 , expr = pairEx2Expr
                 , ty = Nothing}]
   it "Type checks a pair of unit and one to Pair<Unit,Nat>" $
@@ -65,6 +69,8 @@ pairExTest = do
   it "Parses pair of one and unit" $
     shouldParseWithDefs [oneDR, pairD] pairEx3D
       [ ExprDef { name = "pair3"
+                , tyParameterCtx = []
+                , exprParameterCtx = []
                 , expr = pairEx3Expr
                 , ty = Nothing}]
   it "Type checks a pair of one and unit to Pair<Nat,Unit>" $
@@ -73,6 +79,8 @@ pairExTest = do
   it "Parses pair of one and two" $
     shouldParseWithDefs [twoDR, pairD] pairEx4D
       [ ExprDef { name = "pair4"
+                , tyParameterCtx = []
+                , exprParameterCtx = []
                 , expr = pairEx4Expr
                 , ty = Nothing}]
   it "Type checks a pair of one and two to Pair<Nat,Nat>" $

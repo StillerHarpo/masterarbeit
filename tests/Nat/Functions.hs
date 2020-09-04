@@ -36,6 +36,8 @@ idTests = do
   it "Parses id" $
     shouldParseWithDefs [natD] idD
       [ ExprDef { name = "id"
+                , tyParameterCtx = []
+                , exprParameterCtx = []
                 , expr = idExpr
                 , ty = Nothing}]
   it "Type checks id to (Nat) -> Nat" $
@@ -97,6 +99,8 @@ plusTests = do
   it "Parses plus" $
     shouldParseWithDefs [packedD, pairD, natD] plusD
       [ ExprDef { name = "plus"
+                , tyParameterCtx = []
+                , exprParameterCtx = []
                 , expr = plusExpr
                 , ty = Nothing}]
   it "Type checks plus to (Nat x Nat) -> Nat" $

@@ -15,6 +15,8 @@ data TypedExpr = TypedExpr Expr Type
 type StrCtx = [(Text,Type)]
 
 data Statement = ExprDef { name :: Text
+                         , tyParameterCtx :: TyCtx
+                         , exprParameterCtx :: Ctx
                          , expr :: Expr
                          , ty :: Maybe Type
                          }
@@ -68,7 +70,7 @@ data Expr = UnitExpr -- verum value
           -- same
           -- TODO Maybe throw error if this is not the case
           | LocalExprVar Int Text -- Ctx-- term variables
-          | GlobalExprVar Text
+          | GlobalExprVar Text [TypeExpr] [Expr]
           | Expr :@: Expr
           | Constructor { ductive :: Ductive
                         , num :: Int
@@ -90,7 +92,9 @@ data Expr = UnitExpr -- verum value
 instance Eq Expr where
   UnitExpr                == UnitExpr                = True
   (LocalExprVar i _)      == (LocalExprVar j _)      = i == j
-  (GlobalExprVar n)       == (GlobalExprVar m)       = n == m
+  (GlobalExprVar n p1 pe1) == (GlobalExprVar m p2 pe2) = n == m
+                                                        && p1 == p2
+                                                        && pe1 ==pe2
   (e1 :@: e2)             == (e3 :@: e4)             = e1 == e3 && e2 == e4
   (Constructor d1 i1)     == (Constructor d2 i2)     = d1 == d2 && i1 == i2
   (Destructor d1 i1)      == (Destructor d2 i2)      = d1 == d2 && i1 == i2

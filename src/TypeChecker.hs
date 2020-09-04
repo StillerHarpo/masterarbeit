@@ -57,7 +57,11 @@ checkProgram = flip evalPTI [] . checkProgramPTI
 checkProgramPTI :: [Statement] -> PTI ann [TypedExpr]
 checkProgramPTI [] = pure []
 checkProgramPTI (ExprDef{..} : stmts) = do
-  ty <- Just <$> tiInPTI (inferTerm expr >>= evalType)
+  tiInPTI $ checkTyCtx tyParameterCtx
+  tiInPTI $ local (set parCtx tyParameterCtx) $ checkCtx exprParameterCtx
+  ty <- Just <$> tiInPTI (local (set parCtx tyParameterCtx
+                                 . set ctx exprParameterCtx)
+                                (inferTerm expr >>= evalType))
   expr <- tiInPTI $ evalExpr expr
   modify (ExprDef{..} :)
   checkProgramPTI stmts
@@ -159,7 +163,7 @@ inferTerm expr = catchError (inferTerm' expr)
     inferTerm' v@(LocalExprVar idx _) =
       ([],) . shiftFreeVarsTypeExpr (idx + 1) 0
       <$> (view ctx >>= lookupLocalVarTI idx (T.pack $ show v))
-    inferTerm' (GlobalExprVar x) = lookupDefTypeTI x
+    inferTerm' (GlobalExprVar x tyPars exprPars) = lookupDefTypeTI x tyPars exprPars
     inferTerm' (t :@: s) = inferTerm t >>= \case
       ([],_) -> throwError "Can't apply something to a term with a empty context"
       (a:ctx2,b) -> do
@@ -256,7 +260,8 @@ inlineDuctive Ductive{..} = do
   pure $ Ductive{..}
 
 inlineExpr :: Expr -> TI ann Expr
-inlineExpr (GlobalExprVar n) = lookupDefExprTI n >>= inlineExpr
+inlineExpr (GlobalExprVar n tyPars exprPars) = lookupDefExprTI n tyPars exprPars
+  >>= inlineExpr
 inlineExpr (e1 :@: e2) = (:@:) <$> inlineExpr e1 <*> inlineExpr e2
 inlineExpr Constructor{..} = do
   ductive <- inlineDuctive ductive
@@ -350,7 +355,8 @@ evalExpr (f :@: arg) = do
                                                  (substExpr 0 (matches !! i)
                                                               recEval))
     _ -> pure $ valF :@: valArg
-evalExpr (GlobalExprVar v) = lookupDefExprTI v >>= evalExpr
+evalExpr (GlobalExprVar v tyPars exprPars) =
+  lookupDefExprTI v tyPars exprPars >>= evalExpr
 evalExpr (WithParameters pars expr) = evalExpr $ substParsInExpr 0 (reverse pars) expr
 evalExpr atom = pure atom
 
@@ -358,7 +364,9 @@ substExpr :: Int -> Expr -> Expr -> Expr
 substExpr i r v@(LocalExprVar j _)
   | i == j = r
   | otherwise = v
-substExpr i r var@(GlobalExprVar _) = var
+substExpr i r (GlobalExprVar n tyPars exprPars) =
+  GlobalExprVar n (map (substTypeExpr i r) tyPars)
+                  (map (substExpr i r) exprPars)
 substExpr i r (e1 :@: e2) = substExpr i r e1 :@: substExpr i r e2
 substExpr i r re@Rec{..} = let Ductive{..} = fromRec
                                newMatches  = zipWith (\i m -> substExpr i (shiftFreeVarsExpr i 0 r) m)
@@ -599,23 +607,60 @@ lookupLocalVarTI i t ctx = lookupLocalVarTI' i (reverse ctx)
       | n < 0 = error "internal error negative variable lookup"
       | otherwise = lookupLocalVarTI' (n-1) xs
 
-lookupDefTypeTI :: Text -> TI ann Type
-lookupDefTypeTI t = view defCtx >>= lookupDefTypeTI'
+lookupDefTypeTI :: Text -- ^ name of expr var
+                -> [TypeExpr] -- ^ type parameters to check
+                -> [Expr] -- ^ expr parameters to check
+                -> TI ann Type
+lookupDefTypeTI t tyPars exprPars = view defCtx >>= lookupDefTypeTI'
   where
     lookupDefTypeTI' :: [Statement] -> TI ann Type
     lookupDefTypeTI' [] = throwError $ "Variable" <+> pretty t <+> "not defined"
     lookupDefTypeTI' (ExprDef{..}:stmts)
-      | t == name = pure $ fromJust ty
+      | t == name = do
+          parsKinds <- mapM inferType tyPars
+          catchError (betaeqTyCtx parsKinds tyParameterCtx)
+                     (throwError . (<> "\n while looking up variable "
+                                    <+> pretty t
+                                    <+> "with type parameters"
+                                    <+> pretty tyPars))
+          parsTypes <- mapM inferTerm exprPars
+          assert (all (null . fst) parsTypes)
+                 "types expression parameters should have empty ctxts"
+          catchError (betaeqCtx (map snd parsTypes)
+                                (map (substPars 0 (reverse tyPars))
+                                      exprParameterCtx))
+                     (throwError . (<> "\n while looking up variable "
+                                    <+> pretty t
+                                    <+> "with expr parameters"
+                                    <+> pretty exprPars))
+          let (ctx',res) = fromJust ty
+          pure ( map (substPars 0 (reverse tyPars)) ctx'
+               , substPars 0 (reverse tyPars) res)
       | otherwise = lookupDefTypeTI' stmts
     lookupDefTypeTI' (_:stmts) = lookupDefTypeTI' stmts
 
-lookupDefExprTI :: Text -> TI ann Expr
-lookupDefExprTI t = view defCtx >>= lookupDefExprTI'
+lookupDefExprTI :: Text -- ^ name of expr var
+                -> [TypeExpr] -- ^ type parameters to check
+                -> [Expr] -- ^ expr parameters to check
+                -> TI ann Expr
+lookupDefExprTI t tyPars exprPars = view defCtx >>= lookupDefExprTI'
   where
     lookupDefExprTI' :: [Statement] -> TI ann Expr
     lookupDefExprTI' [] = throwError $ "Variable" <+> pretty t <> "not defined"
     lookupDefExprTI' (ExprDef{..}:stmts)
-      | t == name = pure expr
+      | t == name = do
+          assert (length tyPars == length tyParameterCtx)
+                 ("parameters to type variables have to be complete"
+                 <> "\n while looking up" <+> pretty t
+                 <> "\n with parameters" <+> pretty tyPars
+                 <> "\n and parameter context" <+> pretty tyParameterCtx)
+          assert (length exprPars == length exprParameterCtx)
+                 ("parameters to type variables have to be complete"
+                 <> "\n while looking up" <+> pretty t
+                 <> "\n with parameters" <+> pretty exprPars
+                 <> "\n and parameter context" <+> pretty exprParameterCtx)
+          pure $ substParsInExpr 0 (reverse tyPars)
+               $ substExprs 0 (reverse exprPars) expr
       | otherwise = lookupDefExprTI' stmts
     lookupDefExprTI' (_:stmts) = lookupDefExprTI' stmts
 

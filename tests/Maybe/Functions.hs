@@ -33,6 +33,8 @@ idTests = do
   it "Parses id" $
     shouldParseWithDefs [maybeD] idD
       [ ExprDef { name = "id"
+                , tyParameterCtx = []
+                , exprParameterCtx = []
                 , expr = idExpr
                 , ty = Nothing}]
   it "Type checks id to (Maybe<Unit>) -> Maybe<Unit>" $

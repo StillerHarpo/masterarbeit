@@ -38,7 +38,7 @@ maybeEx3Expr = WithParameters [GlobalTypeVar "Nat" []]
 maybeEx3ExprI = Constructor (maybeDuc natExpr) 0 :@: UnitExpr
 maybeEx4Expr = WithParameters [GlobalTypeVar "Nat" []]
                              (Constructor maybeDucA 1)
-              :@: GlobalExprVar "one"
+              :@: GlobalExprVar "one" [] []
 maybeEx4ExprI = Constructor (maybeDuc natExpr) 1 :@: oneExprI
 
 maybeExTests :: Spec
@@ -46,6 +46,8 @@ maybeExTests = do
   it "Parses Nothing of units" $
     shouldParseWithDefs [maybeD] maybeEx1D
       [ ExprDef { name = "maybe1"
+                , tyParameterCtx = []
+                , exprParameterCtx = []
                 , expr = maybeEx1Expr
                 , ty = Nothing}]
   it "Type checks Nothing of units to Maybe<Unit>" $
@@ -54,6 +56,8 @@ maybeExTests = do
   it "Parses a maybe with one unit" $
     shouldParseWithDefs [maybeEx1DR] maybeEx2D
       [ ExprDef { name = "maybe2"
+                , tyParameterCtx = []
+                , exprParameterCtx = []
                 , expr = maybeEx2Expr
                 , ty = Nothing}]
   it "Type checks a maybe with one unit to Maybe<Unit>" $
@@ -62,6 +66,8 @@ maybeExTests = do
   it "Parses a empty maybe of nats" $
     shouldParseWithDefs [natD, maybeD] maybeEx3D
       [ ExprDef { name = "maybe3"
+                , tyParameterCtx = []
+                , exprParameterCtx = []
                 , expr = maybeEx3Expr
                 , ty = Nothing}]
   it "Type checks a empty maybe of nats to Maybe<Nat>" $
@@ -70,6 +76,8 @@ maybeExTests = do
   it "Parses a maybe with one number one" $
     shouldParseWithDefs [maybeEx3DR, zeroD, oneD] maybeEx4D
       [ ExprDef { name = "maybe4"
+                , tyParameterCtx = []
+                , exprParameterCtx = []
                 , expr = maybeEx4Expr
                 , ty = Nothing}]
   it "Type checks a maybe with one number one to Maybe<Nat>" $

@@ -30,6 +30,8 @@ idTests = do
   it "Parses id<Unit>" $
     shouldParseWithDefs [packedD] (idD "Unit")
       [ ExprDef { name = "id"
+                , tyParameterCtx = []
+                , exprParameterCtx = []
                 , expr = idExpr UnitType
                 , ty = Nothing}]
   it "Type checks id<Unit> to (Packed<Unit>) -> Packed<Unit>" $

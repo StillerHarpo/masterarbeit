@@ -46,19 +46,19 @@ unitStreamExpr = WithParameters [UnitType]
 zeroStreamExpr = WithParameters [GlobalTypeVar "Nat" []]
                                 (Corec { fromCorec = UnitType
                                        , toCorec = streamDucA
-                                       , matches = [ GlobalExprVar "zero"
+                                       , matches = [ GlobalExprVar "zero" [] []
                                                    , UnitExpr]})
                  :@: UnitExpr
 oneStreamExpr = WithParameters [GlobalTypeVar "Nat" []]
                                 (Corec { fromCorec = UnitType
                                        , toCorec = streamDucA
-                                       , matches = [ GlobalExprVar "one"
+                                       , matches = [ GlobalExprVar "one" [] []
                                                    , UnitExpr]})
                  :@: UnitExpr
 twoStreamExpr = WithParameters [GlobalTypeVar "Nat" []]
                                 (Corec { fromCorec = UnitType
                                        , toCorec = streamDucA
-                                       , matches = [ GlobalExprVar "two"
+                                       , matches = [ GlobalExprVar "two" [] []
                                                    , UnitExpr]})
                  :@: UnitExpr
 
@@ -67,6 +67,8 @@ streamExTests = do
   it "Parses a stream of units" $
     shouldParseWithDefs [streamD] unitStreamD
       [ ExprDef { name = "unitStream"
+                , tyParameterCtx = []
+                , exprParameterCtx = []
                 , expr = unitStreamExpr
                 , ty = Nothing}]
   it "Type checks a stream of units to Stream<Unit>" $
@@ -75,6 +77,8 @@ streamExTests = do
   it "Parses a stream of zeros" $
     shouldParseWithDefs [zeroDR, streamD] zeroStreamD
       [ ExprDef { name = "zeroStream"
+                , tyParameterCtx = []
+                , exprParameterCtx = []
                 , expr = zeroStreamExpr
                 , ty = Nothing}]
   it "Type checks a stream of zeros to Stream<Unit>" $
@@ -83,6 +87,8 @@ streamExTests = do
   it "Parses a stream of ones" $
     shouldParseWithDefs [oneDR, streamD] oneStreamD
       [ ExprDef { name = "oneStream"
+                , tyParameterCtx = []
+                , exprParameterCtx = []
                 , expr = oneStreamExpr
                 , ty = Nothing}]
   it "Type checks a stream of ones to Stream<Nat>" $
@@ -91,6 +97,8 @@ streamExTests = do
   it "Parses a stream of twos" $
     shouldParseWithDefs [twoDR, streamD] twoStreamD
       [ ExprDef { name = "twoStream"
+                , tyParameterCtx = []
+                , exprParameterCtx = []
                 , expr = twoStreamExpr
                 , ty = Nothing}]
   it "Type checks a stream of twos to Stream<Nat>" $

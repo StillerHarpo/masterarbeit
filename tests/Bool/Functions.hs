@@ -33,6 +33,8 @@ idTests = do
   it "Parses id" $
     shouldParseWithDefs [boolD] idD
       [ ExprDef { name = "id"
+                , tyParameterCtx = []
+                , exprParameterCtx = []
                 , expr = idExpr
                 , ty = Nothing}]
   it "Type checks id to (Bool) -> Bool" $
@@ -69,6 +71,8 @@ negTests = do
   it "Parses neg" $
     shouldParseWithDefs [boolD] negD
       [ ExprDef { name = "neg"
+                , tyParameterCtx = []
+                , exprParameterCtx = []
                 , expr = negExpr
                 , ty = Nothing}]
   it "Type checks neg to (Bool) -> Bool" $
@@ -117,6 +121,8 @@ orTests = do
   it "Parses or" $
     shouldParseWithDefs [packedD, pairD, boolD] orD
       [ ExprDef { name = "or"
+                , tyParameterCtx = []
+                , exprParameterCtx = []
                 , expr = orExpr
                 , ty = Nothing}]
   it "Type checks or to (Bool x Bool) -> Bool" $

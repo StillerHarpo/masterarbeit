@@ -78,11 +78,17 @@ parseStatement = nonIndented $ choice
 parseDefinition :: Parser Statement
 parseDefinition = lineFold $ do
   name <- lexeme parseExprVarT
+  tyCtxP <- lexeme parseTyCtx
+  ctxP <- lexeme parseCtx
+  parameters .= map fst tyCtxP
+  localExprVars .= map fst ctxP
   void $ symbol "="
   expr <- parseExpr
   checkName name
   exprDefs %= Set.insert name
   let ty = Nothing
+      tyParameterCtx = map (map snd . snd) tyCtxP
+      exprParameterCtx = map snd ctxP
   pure ExprDef{..}
 
 parseData :: Parser Statement
@@ -217,7 +223,8 @@ parseExprVar = do
   var <- lexeme parseExprVarT
   ParserState{..} <- get
   if var `Set.member` _exprDefs
-  then pure $ GlobalExprVar var
+  then GlobalExprVar var <$> parseParameters
+                         <*> parseExprParameters
   else case elemIndex var _localExprVars of
          Just idx ->
            pure $ LocalExprVar (length _localExprVars - idx - 1)
@@ -374,6 +381,19 @@ parseParametersNE = symbol "<" *> parseParametersRest
 
 parseParameters :: Parser [TypeExpr]
 parseParameters = try parseParametersNE <|> pure []
+
+parseExprParametersNE :: Parser [Expr]
+parseExprParametersNE = symbol "(" *> parseParametersRest
+  where parseParametersRest = do
+          expr <- lexeme parseExpr
+          c <- symbol "," <|> symbol ")"
+          if c == ","
+          then (expr:) <$> parseParametersRest
+          else pure [expr]
+
+parseExprParameters :: Parser [Expr]
+parseExprParameters = try parseExprParametersNE <|> pure []
+
 
 withParameters :: [TypeExpr] -> Expr -> Expr
 withParameters [] = id

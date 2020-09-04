@@ -67,7 +67,14 @@ instance PrettyPresc Expr where
   prettyPresc _ UnitExpr                       = "<>"
   prettyPresc _ (LocalExprVar i "")            = "?" <> pretty i
   prettyPresc _ (LocalExprVar i n)             = pretty n <> "{" <> pretty i <> "}"
-  prettyPresc _ (GlobalExprVar n)              = pretty n
+  prettyPresc _ (GlobalExprVar n [] [])        = pretty n
+  prettyPresc _ (GlobalExprVar n tyPars [])    =
+    pretty n <> angles (hsep . punctuate comma $ map pretty tyPars)
+  prettyPresc _ (GlobalExprVar n [] exprPars)  =
+    pretty n <> parens (hsep . punctuate comma $ map pretty exprPars)
+  prettyPresc _ (GlobalExprVar n tyPars exprPars) =
+    pretty n <> angles (hsep . punctuate comma $ map pretty tyPars)
+             <> parens (hsep . punctuate comma $ map pretty exprPars)
   prettyPresc p (e1 :@: e2)                    =
     parensIf p $ pretty e1 <+> "@" <+> prettyPresc True e2
   prettyPresc _ (Constructor d@Ductive{..}  i) =

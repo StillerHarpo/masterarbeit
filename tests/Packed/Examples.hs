@@ -26,7 +26,7 @@ packedEx1Expr = WithParameters [UnitType] (Constructor packedDucA 0)
 packedEx1ExprI = Constructor (packedDuc UnitType) 0 :@: UnitExpr
 packedEx2Expr = WithParameters [GlobalTypeVar "Nat" []]
                              (Constructor packedDucA 0)
-                :@: GlobalExprVar "one"
+                :@: GlobalExprVar "one" [] []
 packedEx2ExprI = Constructor (packedDuc natExpr) 0 :@: oneExprI
 
 packedExTests :: Spec
@@ -34,6 +34,8 @@ packedExTests = do
   it "Parses a packed unit" $
     shouldParseWithDefs [packedD] packedEx1D
       [ ExprDef { name = "packed1"
+                , tyParameterCtx = []
+                , exprParameterCtx = []
                 , expr = packedEx1Expr
                 , ty = Nothing}]
   it "Type checks a packed unit to Packed<Unit>" $
@@ -42,6 +44,8 @@ packedExTests = do
   it "Parses a packed one" $
     shouldParseWithDefs [oneDR, packedD] packedEx2D
       [ ExprDef { name = "packed2"
+                , tyParameterCtx = []
+                , exprParameterCtx = []
                 , expr = packedEx2Expr
                 , ty = Nothing}]
   it "Type checks a packed one to Packed<Nat>" $
