@@ -140,7 +140,7 @@ inferType tyExpr = catchError (inferType' tyExpr)
 
 inferTypeDuctive :: Ductive -> TI ann Kind
 inferTypeDuctive Ductive{..} = do
-  -- in sigmas shouldn't be variables wich refer to unittype
+  -- in sigmas shouldn't be variables which refer to unittype
   zipWithM_ (\sigma gamma1 -> checkContextMorph sigma gamma1 gamma) sigmas gamma1s
   zipWithM_ (\gamma1 a ->
               local (over tyCtx (++[gamma]) . set ctx gamma1) (checkType a []))
