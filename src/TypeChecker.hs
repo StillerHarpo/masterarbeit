@@ -218,8 +218,8 @@ inferTerm expr = catchError (inferTerm' expr)
 
 betaeq :: TypeExpr -> TypeExpr -> TI ann ()
 betaeq e1 e2 = do
-  ee1 <- evalTypeExpr e1 >>= inlineTypeExpr
-  ee2 <- evalTypeExpr e2 >>= inlineTypeExpr
+  ee1 <- inlineTypeExpr e1 >>= evalTypeExpr
+  ee2 <- inlineTypeExpr e2 >>= evalTypeExpr
   if ee1 == ee2
   then pure ()
   else throwError $ "couldn't match type"
