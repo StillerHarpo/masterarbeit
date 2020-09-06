@@ -743,7 +743,7 @@ shiftFreeVarsCtx j k (ty:tys) =
 shiftFreeVarsTypeExpr :: Int -- ^ how much should they be shifted
                       -> Int -- ^ offset for free vars
                       -> TypeExpr -> TypeExpr
-shiftFreeVarsTypeExpr j k (e1 :@ e2) = e1 :@ shiftFreeVarsExpr j k e2
+shiftFreeVarsTypeExpr j k (e1 :@ e2) = shiftFreeVarsTypeExpr j k e1 :@ shiftFreeVarsExpr j k e2
 shiftFreeVarsTypeExpr j k (GlobalTypeVar n vars) =
   GlobalTypeVar n $ map (shiftFreeVarsTypeExpr j k) vars
 shiftFreeVarsTypeExpr j k (Abstr ty body) =
