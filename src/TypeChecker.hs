@@ -57,7 +57,7 @@ checkProgram = flip evalPTI [] . checkProgramPTI
 checkProgramPTI :: [Statement] -> PTI ann [TypedExpr]
 checkProgramPTI [] = pure []
 checkProgramPTI (ExprDef{..} : stmts) = do
-  tiInPTI $ checkTyCtx tyParameterCtx
+  tiInPTI $ checkParCtx tyParameterCtx
   tiInPTI $ local (set parCtx tyParameterCtx) $ checkCtx exprParameterCtx
   ty <- Just <$> tiInPTI (local (set parCtx tyParameterCtx
                                  . set ctx exprParameterCtx)
@@ -66,7 +66,7 @@ checkProgramPTI (ExprDef{..} : stmts) = do
   modify (ExprDef{..} :)
   checkProgramPTI stmts
 checkProgramPTI (TypeDef{..} : stmts) = do
-  tiInPTI $ checkTyCtx parameterCtx
+  tiInPTI $ checkParCtx parameterCtx
   kind <- Just <$> tiInPTI (local (set parCtx parameterCtx)
                                   (inferType typeExpr >>= evalCtx))
   typeExpr <- tiInPTI $ evalTypeExpr typeExpr
@@ -85,6 +85,17 @@ tiInPTI ti = do
 
 checkTyCtx :: TyCtx -> TI ann ()
 checkTyCtx = mapM_ checkCtx
+
+checkParCtx :: TyCtx -> TI ann ()
+checkParCtx parCtx' =
+  catchError (checkParCtx' parCtx')
+             (throwError . (<> "\n in parameter context"
+                           <+> pretty parCtx'))
+    where
+      checkParCtx' [] = pure ()
+      checkParCtx' (ctx':parCtx') =
+        checkCtx ctx'
+        >> local (over parCtx (ctx':)) (checkParCtx parCtx')
 
 checkCtx :: Ctx -> TI ann ()
 checkCtx ctx' = catchError (checkCtx' ctx')
