@@ -78,18 +78,18 @@ parseStatement = nonIndented $ choice
 parseDefinition :: Parser Statement
 parseDefinition = lineFold $ do
   name <- lexeme parseExprVarT
-  tyCtxP <- lexeme parseTyCtx
-  ctxP <- lexeme parseCtx
-  parameters .= map fst tyCtxP
-  localExprVars .= map fst ctxP
-  void $ symbol "="
-  expr <- parseExpr
-  checkName name
-  exprDefs %= Set.insert name
-  let ty = Nothing
-      tyParameterCtx = map (map snd . snd) tyCtxP
-      exprParameterCtx = map snd ctxP
-  pure ExprDef{..}
+  tyCtxP <- lexeme parseParCtx
+  withParVars (map fst tyCtxP) $ do
+    ctxP <- lexeme parseCtx
+    withLocalExprVars (map fst ctxP) $ do
+      void $ symbol "="
+      expr <- parseExpr
+      checkName name
+      exprDefs %= Set.insert name
+      let ty = Nothing
+          tyParameterCtx = map (map snd . snd) tyCtxP
+          exprParameterCtx = map snd ctxP
+      pure ExprDef{..}
 
 parseData :: Parser Statement
 parseData = nonIndented $ parseBlock
@@ -111,6 +111,7 @@ parseData = nonIndented $ parseBlock
      constructorDefs %= Set.union (Set.fromList strs)
      let typeExpr = In Ductive{..}
          kind = Nothing
+     parameters .= []
      pure $ TypeDef{..})
 
 parseCodata :: Parser Statement
@@ -133,6 +134,7 @@ parseCodata = nonIndented $ parseBlock
      destructorDefs %= Set.union (Set.fromList strs)
      let typeExpr = Coin Ductive{..}
          kind = Nothing
+     parameters .= []
      pure TypeDef{..})
 
 parseConstructorDef :: Text -> Parser (Text, Ctx, TypeExpr, [Expr])
@@ -158,7 +160,8 @@ parseDestructorDef name = parseStructorDef $ (,)
 parseDataHeader :: Parser (Text, CtxP, TyCtxP)
 parseDataHeader = do
   name <- lexeme parseTypeStrVarT
-  pars <- lexeme parseTyCtx
+  parameters .= []
+  pars <- lexeme parseParCtx
   parameters .= map fst pars
   void $ symbol ":"
   gammaP <- lexeme parseCtx
@@ -352,9 +355,9 @@ parseCtxNE = symbol "(" *> parseCtxRest
 parseCtx :: Parser CtxP
 parseCtx = try parseCtxNE <|> pure []
 
-parseTyCtxNE :: Parser TyCtxP
-parseTyCtxNE = symbol "<" *> parseTyCtxRest
-  where parseTyCtxRest = do
+parseParCtxNE :: Parser TyCtxP
+parseParCtxNE = symbol "<" *> parseParCtxRest
+  where parseParCtxRest = do
           var <- lexeme parseTypeStrVarT
           checkName var
           void $ symbol ":"
@@ -364,11 +367,11 @@ parseTyCtxNE = symbol "<" *> parseTyCtxRest
                  else symbols ["->", "Set"]
           c <- symbol "," <|> symbol ">"
           if c == ","
-          then ((var,ctx):) <$> withLocalTypeVar var parseTyCtxRest
+          then ((var,ctx):) <$> withParVars [var] parseParCtxRest
           else pure [(var,ctx)]
 
-parseTyCtx :: Parser TyCtxP
-parseTyCtx = try parseTyCtxNE <|> pure []
+parseParCtx :: Parser TyCtxP
+parseParCtx = try parseParCtxNE <|> pure []
 
 parseParametersNE :: Parser [TypeExpr]
 parseParametersNE = symbol "<" *> parseParametersRest
@@ -410,6 +413,13 @@ withLocalTypeVar var p =
   (localTypeVars %= (++ [var]))
   *> p
   <* (localTypeVars %= \allVars -> take (length allVars - 1) allVars)
+
+withParVars :: [Text] -> Parser a -> Parser a
+withParVars vars p =
+  (parameters %= (++ vars))
+  *> p
+  <* (parameters %= \allVars -> take (length allVars - length vars) allVars)
+
 
 -- | checks if name is already used.  We forbid name shadowing for now
 checkName :: Text -- ^ name
