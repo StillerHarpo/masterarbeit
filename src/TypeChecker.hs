@@ -288,6 +288,8 @@ inlineCtx :: Ctx -> TI ann Ctx
 inlineCtx = mapM inlineTypeExpr
 
 evalTypeExpr :: TypeExpr -> TI ann TypeExpr
+evalTypeExpr (GlobalTypeVar n tyExprs) = GlobalTypeVar n
+                                         <$> mapM evalTypeExpr tyExprs
 evalTypeExpr (Abstr ty expr) = Abstr <$> evalTypeExpr ty
                                      <*> evalTypeExpr expr
 evalTypeExpr (f :@ arg) = do
