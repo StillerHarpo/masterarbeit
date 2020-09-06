@@ -515,6 +515,11 @@ substParsInExpr n (v:vs) e = substParsInExpr (n+1) vs (substParInExpr n v e)
 substParInCtx :: Int -> TypeExpr -> Ctx -> Ctx
 substParInCtx i r = map (substPar i r)
 
+substParInParCtx :: Int -> TypeExpr -> TyCtx -> TyCtx
+substParInParCtx i r []          = []
+substParInParCtx i r (ctx':ctxs) =
+  substParInCtx i r ctx' : substParInParCtx (i+1) r ctxs
+
 typeAction :: TypeExpr -> [Expr] -> [Ctx] -> [TypeExpr] -> [TypeExpr] -> TI ann Expr
 typeAction (LocalTypeVar n _) terms _ _ _ = do
    l <- length <$> view parCtx
@@ -675,8 +680,7 @@ lookupDefKindTI t pars = view defCtx >>= lookupDefKindTI'
     lookupDefKindTI' [] = throwError $ "Variable" <+> pretty t <+> "not defined"
     lookupDefKindTI' (TypeDef{..}:stmts)
       | t == name = do
-          parsKinds <- mapM (local (ctx .~ []) . inferType) pars
-          catchError (betaeqTyCtx parsKinds parameterCtx)
+          catchError (checkParKinds pars parameterCtx)
                      (throwError . (<> "\n while looking up variable "
                                     <+> pretty t
                                     <+> "with parameters"
@@ -684,6 +688,14 @@ lookupDefKindTI t pars = view defCtx >>= lookupDefKindTI'
           pure (fromJust kind)
       | otherwise = lookupDefKindTI' stmts
     lookupDefKindTI' (_:stmts) = lookupDefKindTI' stmts
+
+checkParKinds :: [TypeExpr] -> TyCtx -> TI ann ()
+checkParKinds [] [] = pure ()
+checkParKinds (par:pars) (ctx':ctxs) = do
+  kind <- local (ctx .~ []) $ inferType par
+  betaeqCtx ctx' kind
+  checkParKinds pars (substParInParCtx 0 par ctxs)
+checkParKinds _ _ = throwError "number of parameters doesn't match the expected one"
 
 lookupDefTypeExprTI :: Text -- ^ name of type var
                     -> [TypeExpr] -- ^ parameters to check
