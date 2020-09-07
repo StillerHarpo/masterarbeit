@@ -15,6 +15,9 @@ import Lens.Micro.Platform
 
 import Parser
 import TypeChecker
+import TypeAction
+import Subst
+import Eval
 import AbstractSyntaxTree
 
 import Lib

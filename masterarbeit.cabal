@@ -42,6 +42,10 @@ library
                        prettyprinter-ansi-terminal
   exposed-modules:     AbstractSyntaxTree,
                        Parser,
+                       ShiftFreeVars,
+                       Subst,
+                       TypeAction,
+                       Eval,
                        TypeChecker,
                        PrettyPrinter
   other-modules:       Lib

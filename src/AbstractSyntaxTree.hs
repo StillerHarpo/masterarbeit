@@ -1,10 +1,13 @@
 {-# language TypeOperators #-}
+{-# language RecordWildCards #-}
 
 module AbstractSyntaxTree where
 
 import Data.Text (Text)
 import qualified Data.Text as T
 import Data.Map (Map)
+
+import Control.Monad.Identity
 
 type Type = (Ctx,TypeExpr)
 type Kind = Ctx
@@ -110,3 +113,84 @@ type Ctx = [TypeExpr]
 
 -- | TyCtx contains only inductive coninductive types for now
 type TyCtx = [Ctx]
+
+overTypeExpr :: (TypeExpr -> TypeExpr)
+             -> (Ductive -> Ductive)
+             -> (Expr -> Expr)
+             -> TypeExpr -> TypeExpr
+overTypeExpr fTyExpr fDuc fExpr =
+  runIdentity . overTypeExprM (pure . fTyExpr)
+                              (pure . fDuc)
+                              (pure . fExpr)
+
+overTypeExprM :: Monad m
+              => (TypeExpr -> m TypeExpr)
+              -> (Ductive -> m Ductive)
+              -> (Expr -> m Expr)
+              -> TypeExpr -> m TypeExpr
+overTypeExprM fTyExpr _ fExpr (tyExpr :@ expr) =
+  (:@) <$> fTyExpr tyExpr <*> fExpr expr
+overTypeExprM fTyExpr _ _ (GlobalTypeVar n tyExprs) =
+  GlobalTypeVar n <$> mapM fTyExpr tyExprs
+overTypeExprM fTyExpr _ _ (Abstr tyExpr1 tyExpr2) =
+  Abstr <$> fTyExpr tyExpr1 <*> fTyExpr tyExpr2
+overTypeExprM _ fDuc _ (In duc) = In <$> fDuc duc
+overTypeExprM _ fDuc _ (Coin duc) = Coin <$> fDuc duc
+overTypeExprM fTyExpr _ _ atom = fTyExpr atom
+
+overDuctive :: (TypeExpr -> TypeExpr)
+             -> (Expr -> Expr)
+             -> Ductive -> Ductive
+overDuctive fTyExpr fExpr =
+  runIdentity . overDuctiveM (pure . fTyExpr) (pure . fExpr)
+
+overDuctiveM :: Monad m
+             => (TypeExpr -> m TypeExpr)
+             -> (Expr -> m Expr)
+             -> Ductive -> m Ductive
+overDuctiveM fTyExpr fExpr Ductive{..} = do
+  gamma <- overTypeExprInCtxM fTyExpr gamma
+  sigmas <- mapM (mapM fExpr) sigmas
+  as <- mapM fTyExpr as
+  gamma1s <- mapM (overTypeExprInCtxM fTyExpr) gamma1s
+  pure Ductive{..}
+
+overTypeExprInCtxM :: Monad m => (TypeExpr -> m TypeExpr) -> Ctx -> m Ctx
+overTypeExprInCtxM = mapM
+
+overExpr :: (TypeExpr -> TypeExpr)
+         -> (Ductive -> Ductive)
+         -> (Expr -> Expr)
+         -> Expr -> Expr
+overExpr fTyExpr fDuc fExpr =
+  runIdentity . overExprM (pure . fTyExpr)
+                          (pure . fDuc)
+                          (pure . fExpr)
+
+overExprM :: Monad m
+          => (TypeExpr -> m TypeExpr)
+          -> (Ductive -> m Ductive)
+          -> (Expr -> m Expr)
+          -> Expr -> m Expr
+overExprM fTyExpr _ fExpr (GlobalExprVar n tyExprs exprs) =
+  GlobalExprVar n <$> mapM fTyExpr tyExprs <*> mapM fExpr exprs
+overExprM _ _ fExpr (expr1 :@: expr2) = (:@:) <$> fExpr expr1
+                                              <*> fExpr expr2
+overExprM _ fDuc _ Constructor{..} = do
+  ductive <- fDuc ductive
+  pure Constructor{..}
+overExprM _ fDuc _ Destructor{..} = do
+  ductive <- fDuc ductive
+  pure Destructor{..}
+overExprM fTyExpr fDuc fExpr Rec{..} = do
+  fromRec <- fDuc fromRec
+  toRec <- fTyExpr toRec
+  matches <- mapM fExpr matches
+  pure Rec{..}
+overExprM fTyExpr fDuc fExpr Corec{..} = do
+  fromCorec <- fTyExpr fromCorec
+  toCorec <- fDuc toCorec
+  matches <- mapM fExpr matches
+  pure Corec{..}
+overExprM fTyExpr _ fExpr (WithParameters pars expr) =
+  WithParameters <$> mapM fTyExpr pars <*> fExpr expr

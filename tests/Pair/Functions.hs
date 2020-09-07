@@ -8,6 +8,7 @@ import Data.Text(Text)
 
 import AbstractSyntaxTree
 import TypeChecker
+import Eval
 
 import Lib
 import Nat.Definition

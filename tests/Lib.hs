@@ -10,6 +10,8 @@ import qualified Control.Monad.State.Strict as Strict
 import AbstractSyntaxTree
 import Parser
 import TypeChecker
+import TypeAction
+import Eval
 
 import Data.Text
 import Data.Bifunctor (first)
