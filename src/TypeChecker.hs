@@ -544,7 +544,7 @@ typeAction (c :@ s) terms gammas as' bs = flip (substExpr 0) s
                                           <$> typeAction c terms gammas as' bs
 typeAction (Abstr _ c) terms gammas as' bs = typeAction c terms gammas as' bs
 typeAction (In d) terms gammas as' bs = do
-  let idDeltas = map idCtx (gamma1s d)
+  let idDeltas = map (map (shiftFreeVarsExpr 1 0) . idCtx) (gamma1s d)
       newAs = (map (substTypes 1 (zipWith abstrArgs as' gammas)) (as d))
       fromRec = d { as = newAs
                   , nameDuc = if newAs == as d
@@ -565,7 +565,7 @@ typeAction (In d) terms gammas as' bs = do
                                   idDeltas (as d)  [0..]
   pure$  applyExprArgs (Rec {..}  , idCtx (gamma d)) :@: LocalExprVar 0 ""
 typeAction (Coin d) terms gammas as' bs = do
-  let idDeltas = map idCtx (gamma1s d)
+  let idDeltas = map (map (shiftFreeVarsExpr 1 0) . idCtx) (gamma1s d)
       newAs = map (substTypes 1 (zipWith abstrArgs bs gammas)) (as d)
       toCorec = d { as = newAs
                   , nameDuc = if newAs == as d
