@@ -14,19 +14,13 @@ import Subst
 import TypeAction
 
 evalTypeExpr :: TypeExpr -> TI ann TypeExpr
-evalTypeExpr (GlobalTypeVar n tyExprs) = GlobalTypeVar n
-                                         <$> mapM evalTypeExpr tyExprs
-evalTypeExpr (Abstr ty expr) = Abstr <$> evalTypeExpr ty
-                                     <*> evalTypeExpr expr
 evalTypeExpr (f :@ arg) = do
   valF <- evalTypeExpr f
   valArg <- evalExpr arg
   case (valF, valArg) of
     (Abstr _ expr,_) -> evalTypeExpr $ substTypeExpr 0 valArg expr
     _ -> pure $ valF :@ valArg
-evalTypeExpr (In d) = In <$> evalDuctive d
-evalTypeExpr (Coin d) = Coin <$> evalDuctive d
-evalTypeExpr atom = pure atom
+evalTypeExpr e = overTypeExprM evalTypeExpr evalDuctive evalExpr e
 
 evalCtx :: Ctx -> TI ann Ctx
 evalCtx = mapM evalTypeExpr
@@ -35,25 +29,12 @@ evalType :: Type -> TI ann Type
 evalType (ctx', tyExpr) = (,) <$> evalCtx ctx' <*> evalTypeExpr tyExpr
 
 evalDuctive :: Ductive -> TI ann Ductive
-evalDuctive Ductive{..} = do
-  gamma <- evalCtx gamma
-  let evalStrDef :: StrDef -> TI ann StrDef
-      evalStrDef StrDef{..} = do
-        sigmas <- mapM evalExpr sigma
-        a <- local (over tyCtx (++[gamma])) $ evalTypeExpr a
-        gamma1 <- evalCtx gamma1
-        pure StrDef{..}
-  strDefs <- mapM evalStrDef strDefs
-  pure Ductive{..}
+evalDuctive = overDuctiveM evalTypeExpr evalExpr evalStrDef
 
+evalStrDef :: StrDef -> TI ann StrDef
+evalStrDef = overStrDefM evalTypeExpr evalExpr
 
 evalExpr :: Expr -> TI ann Expr
-evalExpr r@Rec{..} = Rec <$> evalDuctive fromRec
-                         <*> evalTypeExpr toRec
-                         <*> mapM evalExpr matches
-evalExpr r@Corec{..} = Corec <$> evalTypeExpr fromCorec
-                             <*> evalDuctive toCorec
-                             <*> mapM evalExpr matches
 evalExpr (f :@: arg) = do
   valF <- evalExpr f
   valArg <- evalExpr arg
@@ -91,5 +72,4 @@ evalExpr (f :@: arg) = do
 evalExpr (GlobalExprVar v tyPars exprPars) =
   lookupDefExprTI v tyPars exprPars >>= evalExpr
 evalExpr (WithParameters pars expr) = evalExpr $ substParsInExpr 0 (reverse pars) expr
-evalExpr atom = pure atom
-
+evalExpr e = overExprM evalTypeExpr evalDuctive evalExpr e

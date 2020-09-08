@@ -120,7 +120,7 @@ listExTest = do
     shouldCheckWithDefs [listEx4DR, twoD] listEx5Expr
       ([], listExpr (GlobalTypeVar "Nat" []))
   it "Type checks any list of nats to list of nats" $ hedgehog $ do
-      xs <- forAll $ Gen.list (Range.linear 0 1000) (Gen.integral (Range.linear 0 1000))
+      xs <- forAll $ Gen.list (Range.linear 0 100) (Gen.integral (Range.linear 0 100))
       shouldCheckWithDefsP [pairD, natD, listD] (genListExpr (GlobalTypeVar "Nat" []) (map genNatExpr xs))
         ([], listExpr (GlobalTypeVar "Nat" []))
 

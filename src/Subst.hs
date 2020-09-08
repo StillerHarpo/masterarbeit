@@ -10,10 +10,6 @@ substExpr :: Int -> Expr -> Expr -> Expr
 substExpr i r v@(LocalExprVar j _)
   | i == j = r
   | otherwise = v
-substExpr i r (GlobalExprVar n tyPars exprPars) =
-  GlobalExprVar n (map (substTypeExpr i r) tyPars)
-                  (map (substExpr i r) exprPars)
-substExpr i r (e1 :@: e2) = substExpr i r e1 :@: substExpr i r e2
 substExpr i r re@Rec{..} = let Ductive{..} = fromRec
                                newMatches  = zipWith (\i m -> substExpr i (shiftFreeVarsExpr i 0 r) m)
                                                      (map ((+1) . (+i) . length . gamma1) strDefs)
@@ -24,17 +20,19 @@ substExpr i r c@Corec{..} = let Ductive{..} = toCorec
                                                       (map ((+1) . (+i) . length . gamma1) strDefs)
                                                       matches
                             in c { matches = newMatches }
-substExpr _ _ e = e
+substExpr i r e = overExpr (substTypeExpr i r)
+                           (substDuctiveExpr i r)
+                           (substExpr i r)
+                           e
 
 substTypeExpr :: Int -> Expr -> TypeExpr -> TypeExpr
-substTypeExpr i r (GlobalTypeVar n pars) = GlobalTypeVar n $ map (substTypeExpr i r) pars
 substTypeExpr i r1 (Abstr t r2) =
   Abstr (substTypeExpr i r1 t)
         (substTypeExpr (i+1) (shiftFreeVarsExpr 0 1 r1) r2)
-substTypeExpr i r1 (In d) = In $ substDuctiveExpr i r1 d
-substTypeExpr i r1 (Coin d) = Coin $ substDuctiveExpr i r1 d
-substTypeExpr i r (e1 :@ e2) = substTypeExpr i r e1 :@ substExpr i r e2
-substTypeExpr _ _ e = e
+substTypeExpr i r e = overTypeExpr (substTypeExpr i r)
+                                   (substDuctiveExpr i r)
+                                   (substExpr i r)
+                                   e
 
 substDuctiveExpr :: Int -> Expr -> Ductive -> Ductive
 substDuctiveExpr i r1 dIn@Ductive{..} =
@@ -76,12 +74,10 @@ substType :: Int -> TypeExpr -> TypeExpr -> TypeExpr
 substType i r v@(LocalTypeVar j _)
   | i == j = r
   | otherwise = v
-substType i r (GlobalTypeVar n vars) = GlobalTypeVar n $ map (substType i r) vars
-substType i r1 (Abstr t r2) = Abstr (substType i r1 t) (substType i r1 r2)
-substType i r (In d) = In $ substDuctiveTypeExpr i r d
-substType i r (Coin d) = Coin $ substDuctiveTypeExpr i r d
-substType i r (e1 :@ e2) = substType i r e1 :@ e2
-substType _ _ e = e
+substType i r e = overTypeExpr (substType i r)
+                               (substDuctiveTypeExpr i r)
+                               (substTypeInExpr i r)
+                               e
 
 substTypes :: Int -> [TypeExpr] -> TypeExpr -> TypeExpr
 substTypes _ [] e = e
@@ -97,34 +93,22 @@ substStrDefTypeExpr i r strDef@StrDef{..} =
   strDef { a = substType (i+1) (shiftFreeTypeVars 1 0 r) a }
 
 substTypeInExpr :: Int -> TypeExpr -> Expr -> Expr
-substTypeInExpr i r (e1 :@: e2) = substTypeInExpr i r e1 :@: substTypeInExpr i r e2
-substTypeInExpr i r c@Constructor{..} = c {ductive = substDuctiveTypeExpr i r ductive }
-substTypeInExpr i r d@Destructor{..} = d {ductive = substDuctiveTypeExpr i r ductive }
-substTypeInExpr i r re@Rec{..} = re { fromRec = substDuctiveTypeExpr i r fromRec
-                                    , toRec = substType i r toRec
-                                    }
-substTypeInExpr i r c@Corec{..} = c { fromCorec = substType i r fromCorec
-                                    , toCorec = substDuctiveTypeExpr i r toCorec
-                                    }
-substTypeInExpr i r (WithParameters ps e) = WithParameters (map (substType i r) ps)
-                                                           (substTypeInExpr i r e)
-substTypeInExpr _ _ atom = atom
+substTypeInExpr i r = overExpr (substType i r)
+                               (substDuctiveTypeExpr i r)
+                               (substTypeInExpr i r)
 
 substTypesInExpr :: Int -> [TypeExpr] -> Expr -> Expr
 substTypesInExpr _ [] e = e
 substTypesInExpr n (v:vs) e = substTypesInExpr (n+1) vs (substTypeInExpr n v e)
 
-
 substPar :: Int -> TypeExpr -> TypeExpr -> TypeExpr
 substPar i r v@(Parameter j _)
   | i == j = r
   | otherwise = v
-substPar i r (GlobalTypeVar n vars) = GlobalTypeVar n $ map (substPar i r) vars
-substPar i r1 (Abstr t r2) = Abstr (substPar i r1 t) (substPar i r1 r2)
-substPar i r (In d) = In $ substDuctivePar i r d
-substPar i r (Coin d) = Coin $ substDuctivePar i r d
-substPar i r (e1 :@ e2) = substPar i r e1 :@ substParInExpr i r e2
-substPar _ _ e = e
+substPar i r e = overTypeExpr (substPar i r)
+                              (substDuctivePar i r)
+                              (substParInExpr i r)
+                              e
 
 substPars :: Int -> [TypeExpr] -> TypeExpr -> TypeExpr
 substPars _ [] e = e
@@ -142,17 +126,12 @@ substStrDefPar i r strDef@StrDef{..} =
          , gamma1 = substParInCtx i r gamma1 }
 
 substParInExpr :: Int -> TypeExpr -> Expr -> Expr
-substParInExpr i r (e1 :@: e2) = substParInExpr i r e1 :@: substParInExpr i r e2
-substParInExpr i r c@Constructor{..} = c {ductive = substDuctivePar i r ductive }
-substParInExpr i r d@Destructor{..} = d {ductive = substDuctivePar i r ductive }
-substParInExpr i r re@Rec{..} = re { fromRec = substDuctivePar i r fromRec
-                                   , toRec = substPar i r toRec
-                                   }
-substParInExpr i r c@Corec{..} = c { fromCorec = substPar i r fromCorec
-                                   , toCorec = substDuctivePar i r toCorec
-                                   }
-substParInExpr i r (WithParameters ps e) = substParInExpr (i+length ps) r e
-substParInExpr _ _ atom = atom
+substParInExpr i r (WithParameters ps e) =
+  WithParameters ps $ substParInExpr (i+length ps) r e
+substParInExpr i r e = overExpr (substPar i r)
+                                (substDuctivePar i r)
+                                (substParInExpr i r)
+                                e
 
 substParsInExpr :: Int -> [TypeExpr] -> Expr -> Expr
 substParsInExpr _ [] e = e

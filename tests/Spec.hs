@@ -351,6 +351,10 @@ main = hspec $ do
                            (inlineExpr $ GlobalExprVar "a" [] [])
                            UnitExpr
 
+  let emptyDuc = Ductive { gamma = []
+                         , strDefs = []
+                         , nameDuc = ""}
+
   describe "Shifting of free variables works" $ do
     it "shift free vars doesn't change UnitType" $ hedgehog $ do
       n <- forAll $ Gen.integral (Range.linear 0 100)
@@ -378,9 +382,6 @@ main = hspec $ do
       inferType (Abstr UnitType UnitType :@ UnitExpr)
       `shouldCheck`
       []
-    let emptyDuc = Ductive { gamma = []
-                           , strDefs = []
-                           , nameDuc = ""}
     it "type checks mu" $
       inferType (In emptyDuc)
       `shouldCheck`
@@ -408,10 +409,10 @@ main = hspec $ do
 
   -- Complete programs
   Bool.tests
-  Nat.tests
   Packed.tests
   Maybe.tests
   Pair.tests
+  Nat.tests
   Conat.tests
   List.tests
   Stream.tests
