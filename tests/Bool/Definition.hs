@@ -20,11 +20,15 @@ boolD = T.unlines
 
 boolDuc :: Ductive
 boolDuc = Ductive { gamma = []
-                  , sigmas = [[],[]]
-                  , as = [ UnitType, UnitType]
-                  , gamma1s = [[],[]]
-                  , nameDuc = "Bool"
-                  , strNames = ["True", "False"]}
+                  , strDefs = [ StrDef { sigma = []
+                                       , a = UnitType
+                                       , gamma1 = []
+                                       , strName = "True"}
+                              , StrDef { sigma = []
+                                       , a = UnitType
+                                       , gamma1 = []
+                                       , strName = "False"}]
+                  , nameDuc = "Bool" }
 
 boolExpr = In boolDuc
 

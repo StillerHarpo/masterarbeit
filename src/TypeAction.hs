@@ -44,12 +44,15 @@ typeAction (c :@ s) terms gammas as' bs = flip (substExpr 0) s
                                           <$> typeAction c terms gammas as' bs
 typeAction (Abstr _ c) terms gammas as' bs = typeAction c terms gammas as' bs
 typeAction (In d) terms gammas as' bs = do
-  let idDeltas = map (map (shiftFreeVarsExpr 1 0) . idCtx) (gamma1s d)
-      newAs = (map (substTypes 1 (zipWith abstrArgs as' gammas)) (as d))
-      fromRec = d { as = newAs
-                  , nameDuc = if newAs == as d
-                              then nameDuc d
-                              else "???"} -- R_a in paper
+  let idDeltas = map (map (shiftFreeVarsExpr 1 0) . idCtx . gamma1)
+                     (strDefs d)
+      fromRec = d { strDefs =
+                      map (\strDef@StrDef{..} ->
+                           strDef { a = substTypes 1 (zipWith abstrArgs
+                                                               as'
+                                                               gammas)
+                                                       a })
+                           (strDefs d) } -- R_a in paper
       toRec = In fromRec
       rb = applyDuctiveCtx IsIn fromRec
   matches <- sequence $ zipWith3 (\idDelta dk k -> do
@@ -62,15 +65,18 @@ typeAction (In d) terms gammas as' bs = do
                          (rb : bs )
     pure $ applyExprArgs (Constructor fromRec k, idDelta)
                           :@: recEval) -- g_k in paper
-                                  idDeltas (as d)  [0..]
+                                  idDeltas (map a (strDefs d))  [0..]
   pure$  applyExprArgs (Rec {..}  , idCtx (gamma d)) :@: LocalExprVar 0 ""
 typeAction (Coin d) terms gammas as' bs = do
-  let idDeltas = map (map (shiftFreeVarsExpr 1 0) . idCtx) (gamma1s d)
-      newAs = map (substTypes 1 (zipWith abstrArgs bs gammas)) (as d)
-      toCorec = d { as = newAs
-                  , nameDuc = if newAs == as d
-                              then nameDuc d
-                              else "???"} -- R_a in paper
+  let idDeltas = map (map (shiftFreeVarsExpr 1 0) . idCtx . gamma1)
+                     (strDefs d)
+      toCorec = d { strDefs =
+                      map (\strDef@StrDef{..} ->
+                            strDef { a = substTypes 1 (zipWith abstrArgs
+                                                               bs
+                                                               gammas)
+                                                       a})
+                          (strDefs d)}
       fromCorec = Coin toCorec
       rb = applyDuctiveCtx IsCoin toCorec
       -- g_k in paper
@@ -86,7 +92,7 @@ typeAction (Coin d) terms gammas as' bs = do
                                       , idDelta)
                         :@: LocalExprVar 0 "")
                        recEval)
-                                 idDeltas (as d) [0..]
+                                 idDeltas (map a (strDefs d)) [0..]
   pure $ applyExprArgs (Corec {..}  ,idCtx (gamma d)) :@: LocalExprVar 0 ""
 typeAction _ _ _ _ _ = pure $ LocalExprVar 0 ""
 

@@ -18,12 +18,17 @@ streamD = T.unlines
   ]
 
 streamDuc :: TypeExpr -> Ductive
-streamDuc x = Ductive { gamma = []
-                      , sigmas = [[],[]]
-                      , as = [ x , LocalTypeVar 0 "Stream"]
-                      , gamma1s = [[],[]]
-                      , nameDuc = "Stream"
-                      , strNames = ["Head", "Tail"]}
+streamDuc x =
+  Ductive { gamma = []
+          , strDefs = [ StrDef { sigma = []
+                               , a = x
+                               , gamma1 = []
+                               , strName = "Head"}
+                      , StrDef { sigma = []
+                               , a = LocalTypeVar 0 "Stream"
+                               , gamma1 = []
+                               , strName = "Head"}]
+          , nameDuc = "Stream" }
 
 streamDucA :: Ductive
 streamDucA = streamDuc (Parameter 0 "A")

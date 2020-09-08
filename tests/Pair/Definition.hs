@@ -19,11 +19,15 @@ pairD = T.unlines
 
 pairDuc :: TypeExpr -> TypeExpr -> Ductive
 pairDuc x y = Ductive { gamma = []
-                      , sigmas = [[],[]]
-                      , as = [ x , y]
-                      , gamma1s = [[],[]]
-                      , nameDuc = "Pair"
-                      , strNames = [ "First" , "Second"]}
+                      , strDefs = [ StrDef { sigma = []
+                                           , a = x
+                                           , gamma1 = []
+                                           , strName = "First"}
+                                  , StrDef { sigma = []
+                                           , a = y
+                                           , gamma1 = []
+                                           , strName = "Second"}]
+                      , nameDuc = "Pair" }
 
 pairDucAB :: Ductive
 pairDucAB = pairDuc (Parameter 1 "A") (Parameter 0 "B")

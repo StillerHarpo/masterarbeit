@@ -22,11 +22,11 @@ conatDR = T.unlines [maybeD, conatD]
 
 conatDuc :: Ductive
 conatDuc = Ductive { gamma = []
-                   , sigmas = [[]]
-                   , as = [ GlobalTypeVar "Maybe" [LocalTypeVar 0 "Conat"]]
-                   , gamma1s = [[]]
-                   , nameDuc = "Conat"
-                   , strNames = ["Prev"]}
+                   , strDefs = [ StrDef { sigma = []
+                                        , a = GlobalTypeVar "Maybe" [LocalTypeVar 0 "Conat"]
+                                        , gamma1 = []
+                                        , strName = "Prev"}]
+                   , nameDuc = "Conat" }
 
 conatExpr = Coin conatDuc
 

@@ -20,11 +20,15 @@ natD = T.unlines
 
 natDuc :: Ductive
 natDuc = Ductive { gamma = []
-                 , sigmas = [[],[]]
-                 , as = [ UnitType, LocalTypeVar 0 "Nat"]
-                 , gamma1s = [[],[]]
-                 , nameDuc = "Nat"
-                 , strNames = ["Zero", "Suc"]}
+                 , strDefs = [ StrDef { sigma = []
+                                      , a = UnitType
+                                      , gamma1 = []
+                                      , strName = "Zero"}
+                             , StrDef { sigma = []
+                                      , a = LocalTypeVar 0 "Nat"
+                                      , gamma1 = []
+                                      , strName = "Suc"}]
+                 , nameDuc = "Nat"}
 
 natExpr = In natDuc
 

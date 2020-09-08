@@ -20,11 +20,15 @@ maybeD = T.unlines
 
 maybeDuc :: TypeExpr -> Ductive
 maybeDuc x = Ductive { gamma = []
-                     , sigmas = [[],[]]
-                     , as = [ UnitType, x]
-                     , gamma1s = [[],[]]
-                     , nameDuc = "Maybe"
-                     , strNames = ["Nothing", "Just"]}
+                      , strDefs = [ StrDef { sigma = []
+                                           , a = UnitType
+                                           , gamma1 = []
+                                           , strName = "Nothing"}
+                                  , StrDef { sigma = []
+                                           , a = x
+                                           , gamma1 = []
+                                           , strName = "Just"}]
+                     , nameDuc = "Maybe"}
 
 maybeDucA :: Ductive
 maybeDucA = maybeDuc (Parameter 0 "A")

@@ -21,13 +21,19 @@ listD = T.unlines
 listDR = T.unlines [pairD, listD]
 
 listDuc :: TypeExpr -> Ductive
-listDuc x = Ductive { gamma = []
-                    , sigmas = [[],[]]
-                    , as = [ UnitType
-                           , GlobalTypeVar "Pair" [ x , LocalTypeVar 0 "List"]]
-                    , gamma1s = [[],[]]
-                    , nameDuc = "List"
-                    , strNames = ["Nil", "Cons"]}
+listDuc x =
+  Ductive { gamma = []
+          , strDefs =
+              [ StrDef { sigma = []
+                       , a = UnitType
+                       , gamma1 = []
+                       , strName = "Nil" }
+              , StrDef { sigma = []
+                       , a = GlobalTypeVar "Pair" [ x
+                                                  , LocalTypeVar 0 "List"]
+                       , gamma1 = []
+                       , strName = "Cons"}]
+          , nameDuc = "List"}
 
 listDucA :: Ductive
 listDucA = listDuc (Parameter 0 "A")

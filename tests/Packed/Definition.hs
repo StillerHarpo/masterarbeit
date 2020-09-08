@@ -17,11 +17,11 @@ packedD = T.unlines
 
 packedDuc :: TypeExpr -> Ductive
 packedDuc x = Ductive { gamma = []
-                      , sigmas = [[]]
-                      , as = [ x ]
-                      , gamma1s = [[]]
-                      , nameDuc = "Packed"
-                      , strNames = [ "Pack" ]}
+                      , strDefs = [ StrDef { sigma = []
+                                           , a = x
+                                           , gamma1 = []
+                                           , strName = "Pack"}]
+                      , nameDuc = "Packed"}
 
 packedDucA :: Ductive
 packedDucA = packedDuc (Parameter 0 "A")

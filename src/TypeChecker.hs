@@ -128,13 +128,12 @@ inferType tyExpr = catchError (inferType' tyExpr)
     inferType' (Coin d) = local (ctx .~ []) (inferTypeDuctive d)
 
 inferTypeDuctive :: Ductive -> TI ann Kind
-inferTypeDuctive Ductive{..} = do
-  -- in sigmas shouldn't be variables which refer to unittype
-  zipWithM_ (\sigma gamma1 -> checkContextMorph sigma gamma1 gamma) sigmas gamma1s
-  zipWithM_ (\gamma1 a ->
-              local (over tyCtx (++[gamma]) . set ctx gamma1) (checkType a []))
-            gamma1s as
-  pure gamma
+inferTypeDuctive Ductive{..} = mapM_ checkStrDef strDefs >> pure gamma
+  where
+    checkStrDef :: StrDef -> TI ann ()
+    checkStrDef StrDef{..} =
+      checkContextMorph sigma gamma1 gamma
+      >> local (over tyCtx (++[gamma]) . set ctx gamma1) (checkType a [])
 
 checkContextMorph :: [Expr] -> Ctx -> Ctx -> TI ann ()
 checkContextMorph exprs gamma1 gamma2 =
@@ -183,22 +182,25 @@ inferTerm expr = catchError (inferTerm' expr)
                                  b))
     inferTerm' (Constructor d@Ductive{..} i) =
       inferTypeDuctive d
-      >> pure (gamma1s !! i ++ [substType 0 (In d) (as !! i)]
-              , shiftFreeVarsTypeExpr 1 0 $ applyTypeExprArgs (In d, sigmas !! i))
+      >> pure (let StrDef{..} = strDefs !! i
+               in ( gamma1 ++ [substType 0 (In d) a]
+                  , shiftFreeVarsTypeExpr 1 0
+                    $ applyTypeExprArgs (In d , sigma)))
     inferTerm' (Destructor d@Ductive{..} i) =
       inferTypeDuctive d
-      >> pure ( gamma1s !! i ++ [applyTypeExprArgs (Coin d, sigmas !! i)]
-              , shiftFreeVarsTypeExpr 1 0 $ substType 0 (Coin d) (as !! i) )
+      >> pure (let StrDef{..} = strDefs !! i
+               in ( gamma1 ++ [applyTypeExprArgs (Coin d, sigma)]
+                  , shiftFreeVarsTypeExpr 1 0 $ substType 0 (Coin d) a))
     inferTerm' Rec{..} = do
       valTo <- evalTypeExpr toRec
       valFrom <- evalDuctive fromRec
       gamma' <- inferType valTo
       let Ductive{..} = valFrom
       betaeqCtx gamma' gamma
-      sequence_ $ zipWith4 (\ gamma1 sigma a match ->
-                              local (over ctx (++gamma1++[substType 0 valTo a]))
-                                    (checkTerm match ([],applyTypeExprArgs (valTo,sigma))))
-                           gamma1s sigmas as matches
+      zipWithM_ (\StrDef{..} match ->
+                   local (over ctx (++gamma1++[substType 0 valTo a]))
+                         (checkTerm match ([],applyTypeExprArgs (valTo,sigma))))
+                strDefs matches
       pure ( gamma ++ [applyTypeExprArgs (In valFrom, idCtx gamma)]
            , applyTypeExprArgs ( valTo
                                , map (shiftFreeVarsExpr 1 0) (idCtx gamma)))
@@ -208,10 +210,10 @@ inferTerm expr = catchError (inferTerm' expr)
       gamma' <- inferType valFrom
       let Ductive{..} = valTo
       betaeqCtx gamma' gamma
-      sequence_ $ zipWith4 (\gamma1 sigma a match ->
-                               local (over ctx (++gamma1++[applyTypeExprArgs (valFrom,sigma)]))
-                                     (checkTerm match ([], shiftFreeVarsTypeExpr 1 0 $ substType 0 valFrom a)))
-                           gamma1s sigmas as matches
+      zipWithM_ (\StrDef{..} match ->
+                    local (over ctx (++gamma1++[applyTypeExprArgs (valFrom,sigma)]))
+                          (checkTerm match ([], shiftFreeVarsTypeExpr 1 0 $ substType 0 valFrom a)))
+                strDefs matches
       pure ( gamma ++ [applyTypeExprArgs (valFrom, idCtx gamma)]
            , applyTypeExprArgs (Coin valTo
                                , map (shiftFreeVarsExpr 1 0) (idCtx gamma)))
@@ -253,12 +255,10 @@ inlineTypeExpr (Coin duc) = Coin <$> inlineDuctive duc
 inlineTypeExpr tyExpr = pure tyExpr
 
 inlineDuctive :: Ductive -> TI ann Ductive
-inlineDuctive Ductive{..} = do
-  gamma <- inlineCtx gamma
-  sigmas <- mapM (mapM inlineExpr) sigmas
-  as <- mapM inlineTypeExpr as
-  gamma1s <- mapM inlineCtx gamma1s
-  pure $ Ductive{..}
+inlineDuctive = overDuctiveM inlineTypeExpr inlineExpr inlineStrDef
+
+inlineStrDef :: StrDef -> TI ann StrDef
+inlineStrDef = overStrDefM inlineTypeExpr inlineExpr
 
 inlineExpr :: Expr -> TI ann Expr
 inlineExpr (GlobalExprVar n tyPars exprPars) = lookupDefExprTI n tyPars exprPars

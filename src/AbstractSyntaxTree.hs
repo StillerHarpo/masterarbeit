@@ -9,8 +9,8 @@ import Data.Map (Map)
 
 import Control.Monad.Identity
 
-type Type = (Ctx,TypeExpr)
-type Kind = Ctx
+type Type = (Ctx,TypeExpr) -- Ctx = Gamma, TypeExpr = A in "Gamma -> A"
+type Kind = Ctx -- Ctx = Gamma in "Gamma -> *"
 
 data TypedExpr = TypedExpr Expr Type
   deriving (Show)
@@ -56,17 +56,24 @@ instance Eq TypeExpr where
   _                     == _                     = False
 
 data Ductive = Ductive { gamma :: Ctx
-                       , sigmas :: [[Expr]]
-                       , as :: [TypeExpr]
-                       , gamma1s :: [Ctx]
+                       , strDefs :: [StrDef]
                        , nameDuc :: Text
-                       , strNames :: [Text]
                        }
   deriving (Show)
 
 instance Eq Ductive where
-  Ductive g1 s1 a1 g11 _ _ == Ductive g2 s2 a2 g12 _ _ =
-    g1 == g2 && s1 == s2 && a1 == a2 && g11 == g12
+  Ductive g1 s1 _ == Ductive g2 s2 _ = g1 == g2 && s1 == s2
+
+data StrDef = StrDef { sigma :: [Expr]
+                     , a :: TypeExpr
+                     , gamma1 :: Ctx
+                     , strName :: Text
+                     }
+  deriving (Show)
+
+instance Eq StrDef where
+  StrDef s1 a1 g1 _ == StrDef s2 a2 g2 _ =
+    s1 == s2 && a1 == a2 && g1 == g2
 
 data Expr = UnitExpr -- verum value
           -- If numbers are the same the names should also be the
@@ -136,24 +143,42 @@ overTypeExprM fTyExpr _ _ (Abstr tyExpr1 tyExpr2) =
   Abstr <$> fTyExpr tyExpr1 <*> fTyExpr tyExpr2
 overTypeExprM _ fDuc _ (In duc) = In <$> fDuc duc
 overTypeExprM _ fDuc _ (Coin duc) = Coin <$> fDuc duc
-overTypeExprM fTyExpr _ _ atom = fTyExpr atom
+overTypeExprM _ _ _ atom = pure atom
 
 overDuctive :: (TypeExpr -> TypeExpr)
              -> (Expr -> Expr)
+             -> (StrDef -> StrDef)
              -> Ductive -> Ductive
-overDuctive fTyExpr fExpr =
-  runIdentity . overDuctiveM (pure . fTyExpr) (pure . fExpr)
+overDuctive fTyExpr fExpr fStrDef =
+  runIdentity . overDuctiveM (pure . fTyExpr)
+                             (pure . fExpr)
+                             (pure . fStrDef)
 
 overDuctiveM :: Monad m
              => (TypeExpr -> m TypeExpr)
              -> (Expr -> m Expr)
+             -> (StrDef -> m StrDef)
              -> Ductive -> m Ductive
-overDuctiveM fTyExpr fExpr Ductive{..} = do
+overDuctiveM fTyExpr fExpr fStrDef Ductive{..} = do
   gamma <- overTypeExprInCtxM fTyExpr gamma
-  sigmas <- mapM (mapM fExpr) sigmas
-  as <- mapM fTyExpr as
-  gamma1s <- mapM (overTypeExprInCtxM fTyExpr) gamma1s
+  strDefs <- mapM fStrDef strDefs
   pure Ductive{..}
+
+overStrDef :: (TypeExpr -> TypeExpr)
+             -> (Expr -> Expr)
+             -> StrDef -> StrDef
+overStrDef fTyExpr fExpr =
+  runIdentity . overStrDefM (pure . fTyExpr) (pure . fExpr)
+
+overStrDefM :: Monad m
+             => (TypeExpr -> m TypeExpr)
+             -> (Expr -> m Expr)
+             -> StrDef -> m StrDef
+overStrDefM fTyExpr fExpr StrDef{..} = do
+  sigma <- mapM fExpr sigma
+  a <- fTyExpr a
+  gamma1 <- overTypeExprInCtxM fTyExpr gamma1
+  pure StrDef{..}
 
 overTypeExprInCtxM :: Monad m => (TypeExpr -> m TypeExpr) -> Ctx -> m Ctx
 overTypeExprInCtxM = mapM
@@ -194,3 +219,4 @@ overExprM fTyExpr fDuc fExpr Corec{..} = do
   pure Corec{..}
 overExprM fTyExpr _ fExpr (WithParameters pars expr) =
   WithParameters <$> mapM fTyExpr pars <*> fExpr expr
+overExprM _ _ _ atom = pure atom

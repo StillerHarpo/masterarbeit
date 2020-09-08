@@ -16,12 +16,12 @@ substExpr i r (GlobalExprVar n tyPars exprPars) =
 substExpr i r (e1 :@: e2) = substExpr i r e1 :@: substExpr i r e2
 substExpr i r re@Rec{..} = let Ductive{..} = fromRec
                                newMatches  = zipWith (\i m -> substExpr i (shiftFreeVarsExpr i 0 r) m)
-                                                     (map ((+1) . (+i) . length) gamma1s)
+                                                     (map ((+1) . (+i) . length . gamma1) strDefs)
                                                      matches
                            in re { matches = newMatches}
 substExpr i r c@Corec{..} = let Ductive{..} = toCorec
                                 newMatches  = zipWith (\i m -> substExpr i (shiftFreeVarsExpr i 0 r) m)
-                                                      (map ((+1) . (+i) . length) gamma1s)
+                                                      (map ((+1) . (+i) . length . gamma1) strDefs)
                                                       matches
                             in c { matches = newMatches }
 substExpr _ _ e = e
@@ -40,27 +40,24 @@ substDuctiveExpr :: Int -> Expr -> Ductive -> Ductive
 substDuctiveExpr i r1 dIn@Ductive{..} =
   let dOut = Ductive
         { gamma = substCtx i r1 gamma
-        , sigmas =
-            zipWith (\s g -> map (substExpr
-                                     (1+i+length g)
-                                     (shiftFreeVarsExpr 0
-                                                        (1+i+length g)
-                                                        r1))
-                                     s)
-                    sigmas gamma1s
-        , as =
-            zipWith (\g a -> substTypeExpr
-                               (i + length g)
-                               (shiftFreeVarsExpr 0
-                                                  (i + length g)
-                                                  r1)
-                               a)
-                    gamma1s as
-        , gamma1s = map (substCtx i r1) gamma1s
+        , strDefs = map (substStrDefExpr i r1) strDefs
         , nameDuc = "???"
-        , strNames = []
         }
   in if dOut == dIn then dIn else dOut
+
+substStrDefExpr :: Int -> Expr -> StrDef -> StrDef
+substStrDefExpr i r1 strDef@StrDef{..} =
+  strDef { sigma = map (substExpr (1+i+length gamma1)
+                                  (shiftFreeVarsExpr 0
+                                                    (1+i+length gamma1)
+                                                     r1))
+                       sigma
+         , a = substTypeExpr (i + length gamma1)
+                             (shiftFreeVarsExpr 0
+                                                (i + length gamma1)
+                                                r1)
+                             a
+        , gamma1 = substCtx i r1 gamma1}
 
 substCtx :: Int -> Expr -> Ctx -> Ctx
 substCtx _ _ [] = []
@@ -91,10 +88,13 @@ substTypes _ [] e = e
 substTypes n (v:vs) e = substTypes (n+1) vs (substType n v e)
 
 substDuctiveTypeExpr :: Int -> TypeExpr -> Ductive -> Ductive
-substDuctiveTypeExpr i r1 dOld@Ductive{..} =
-  let dNew =  dOld { as = map (substType (i+1) (shiftFreeTypeVars 1 0 r1)) as
-                   , nameDuc = "???" }
-  in if dNew == dOld then dOld else dNew
+substDuctiveTypeExpr i r = overDuctive (substType i r)
+                                       (substTypeInExpr i r)
+                                       (substStrDefTypeExpr i r)
+
+substStrDefTypeExpr :: Int -> TypeExpr -> StrDef -> StrDef
+substStrDefTypeExpr i r strDef@StrDef{..} =
+  strDef { a = substType (i+1) (shiftFreeTypeVars 1 0 r) a }
 
 substTypeInExpr :: Int -> TypeExpr -> Expr -> Expr
 substTypeInExpr i r (e1 :@: e2) = substTypeInExpr i r e1 :@: substTypeInExpr i r e2
@@ -131,13 +131,15 @@ substPars _ [] e = e
 substPars n (v:vs) e = substPars (n+1) vs (substPar n v e)
 
 substDuctivePar :: Int -> TypeExpr -> Ductive -> Ductive
-substDuctivePar i r1 dOld@Ductive{..} =
-  let dNew =  dOld { as = map (substPar i (shiftFreeTypeVars 1 0 r1)) as
-                   , gamma =  substParInCtx i r1 gamma
-                   , sigmas = map (map $ substParInExpr i (shiftFreeTypeVars 1 0 r1)) sigmas
-                   , gamma1s = map (substParInCtx i r1) gamma1s
-                   , nameDuc = "???" }
-  in if dNew == dOld then dOld else dNew
+substDuctivePar i r = overDuctive (substPar i r)
+                                  (substParInExpr i r)
+                                  (substStrDefPar i r)
+
+substStrDefPar :: Int -> TypeExpr -> StrDef -> StrDef
+substStrDefPar i r strDef@StrDef{..} =
+  strDef { a = substPar i (shiftFreeTypeVars 1 0 r) a
+         , sigma = map (substParInExpr i (shiftFreeTypeVars 1 0 r)) sigma
+         , gamma1 = substParInCtx i r gamma1 }
 
 substParInExpr :: Int -> TypeExpr -> Expr -> Expr
 substParInExpr i r (e1 :@: e2) = substParInExpr i r e1 :@: substParInExpr i r e2
