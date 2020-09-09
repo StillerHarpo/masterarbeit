@@ -258,51 +258,21 @@ betaeqTyCtx ctx1 ctx2 = do
           "\ndoesn't match length of type context" <+> pretty ctx2)
   zipWithM_ betaeqCtx ctx1 ctx2
 
+inlineFuns :: OverFunsM (TI ann)
+inlineFuns = (overFunsM inlineFuns)
+               { fTyExprM = inlineTypeExpr
+               , fExprM   = inlineExpr }
+
 inlineTypeExpr :: TypeExpr -> TI ann TypeExpr
-inlineTypeExpr (tyExpr :@ expr)        = (:@) <$> inlineTypeExpr tyExpr
-                                              <*> inlineExpr expr
 inlineTypeExpr (GlobalTypeVar n vars)  = lookupDefTypeExprTI n vars
                                          >>= inlineTypeExpr
-inlineTypeExpr (Abstr tyExpr1 tyExpr2) = Abstr <$> inlineTypeExpr tyExpr1
-                                               <*> inlineTypeExpr tyExpr2
-inlineTypeExpr (In duc)                = In <$> inlineDuctive duc
-inlineTypeExpr (Coin duc)              = Coin <$> inlineDuctive duc
-inlineTypeExpr tyExpr                  = pure tyExpr
-
-inlineDuctive :: Ductive -> TI ann Ductive
-inlineDuctive = overDuctiveM inlineTypeExpr inlineExpr inlineStrDef
-
-inlineStrDef :: StrDef -> TI ann StrDef
-inlineStrDef = overStrDefM inlineTypeExpr inlineExpr
+inlineTypeExpr tyExpr                  = overTypeExprM inlineFuns tyExpr
 
 inlineExpr :: Expr -> TI ann Expr
 inlineExpr (GlobalExprVar n tyPars exprPars) =
   lookupDefExprTI n tyPars exprPars >>= inlineExpr
-inlineExpr (e1 :@: e2)                       =
-  (:@:) <$> inlineExpr e1 <*> inlineExpr e2
-inlineExpr Constructor{..} = do
-  ductive <- inlineDuctive ductive
-  pure Constructor{..}
-inlineExpr Destructor{..} = do
-  ductive <- inlineDuctive ductive
-  pure Destructor{..}
-inlineExpr Rec{..} = do
-  fromRec <- inlineDuctive fromRec
-  toRec <- inlineTypeExpr toRec
-  matches <- mapM inlineExpr matches
-  pure Rec{..}
-inlineExpr Corec{..} = do
-  fromCorec <- inlineTypeExpr fromCorec
-  toCorec <- inlineDuctive toCorec
-  matches <- mapM inlineExpr matches
-  pure Corec{..}
-inlineExpr (WithParameters tyExprs expr) = WithParameters
-                                           <$> mapM inlineTypeExpr tyExprs
-                                           <*> inlineExpr expr
-inlineExpr expr = pure expr
-
-inlineCtx :: Ctx -> TI ann Ctx
-inlineCtx = mapM inlineTypeExpr
+inlineExpr expr                              =
+  overExprM inlineFuns expr
 
 lookupDefTypeTI :: Text -- ^ name of expr var
                 -> [TypeExpr] -- ^ type parameters to check

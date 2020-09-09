@@ -368,9 +368,76 @@ main = hspec $ do
         ===
         Abstr UnitType UnitType
 
+  describe "Substitution Works" $ do
+    it "substitutes Parameter" $
+      substPar 0 UnitType (Parameter 0 "")
+      `shouldBe`
+      UnitType
+    it "substitutes Parameters from over function" $
+      fTyExpr (substParFuns 0 UnitType) (Parameter 0 "")
+      `shouldBe`
+      UnitType
+    it "substitutes Parameter in Ctx" $
+      substParInCtx 0 UnitType [Parameter 0 "", Parameter 1 ""]
+      `shouldBe`
+      [UnitType, Parameter 1 ""]
+    let ducWith x = Ductive { gamma = [x]
+                            , strDefs = [StrDef { sigma = []
+                                                , a     = x
+                                                , gamma1 = [x]
+                                                , strName = ""}]
+                            , nameDuc = ""}
+    it "substitute Parameter with Unit in ductive" $
+       substPar 0 UnitType (In (ducWith (Parameter 0 "")))
+       `shouldBe`
+       In (ducWith UnitType)
+
+  let shouldCheck :: (HasCallStack, Show a, Eq a) => TI ann a -> a -> Expectation
+      shouldCheck ti = shouldCheckIn ti emptyCtx
+
+  describe "Eval works" $ do
+    it "evals unit type to unit type" $
+      evalTypeExpr UnitType
+      `shouldCheck`
+       UnitType
+    it "evals abstraction to abstraction" $
+      evalTypeExpr (Abstr UnitType UnitType)
+      `shouldCheck`
+      Abstr UnitType UnitType
+    it "evals \\T -> T @ () to T" $
+      evalTypeExpr (Abstr UnitType UnitType :@ UnitExpr)
+      `shouldCheck`
+      UnitType
+    it "evals mu to mu" $
+      evalTypeExpr (In emptyDuc)
+      `shouldCheck`
+      In emptyDuc
+    it "evals nu to nu" $
+      evalTypeExpr (Coin emptyDuc)
+      `shouldCheck`
+      Coin emptyDuc
+    it "evals unit expression to Unit expression" $
+      evalExpr UnitExpr
+      `shouldCheck`
+      UnitExpr
+    it "evals rec to rec" $
+      evalExpr (Rec { fromRec = emptyDuc
+                     , toRec = UnitType
+                     , matches = []})
+      `shouldCheck`
+      Rec { fromRec = emptyDuc
+          , toRec = UnitType
+          , matches = []}
+    it "evals corec to corec" $
+      evalExpr (Corec { fromCorec = UnitType
+                       , toCorec = emptyDuc
+                       , matches = []})
+      `shouldCheck`
+      Corec { fromCorec = UnitType
+                       , toCorec = emptyDuc
+                       , matches = []}
+
   describe "Type Checker works" $ do
-    let shouldCheck :: (HasCallStack, Show a, Eq a) => TI ann a -> a -> Expectation
-        shouldCheck ti = shouldCheckIn ti emptyCtx
     it "type checks unit type" $
       inferType UnitType
       `shouldCheck`

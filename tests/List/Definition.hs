@@ -9,7 +9,6 @@ import Data.Text(Text)
 import AbstractSyntaxTree
 
 import Lib
-import Nat
 import Pair.Definition
 
 listD, listDR :: Text

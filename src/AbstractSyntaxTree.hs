@@ -127,106 +127,112 @@ type Ctx = [TypeExpr]
 -- | TyCtx contains only inductive coninductive types for now
 type TyCtx = [Ctx]
 
-overTypeExpr :: (TypeExpr -> TypeExpr)
-             -> (Ductive -> Ductive)
-             -> (Expr -> Expr)
-             -> TypeExpr -> TypeExpr
-overTypeExpr fTyExpr fDuc fExpr =
-  runIdentity . overTypeExprM (pure . fTyExpr)
-                              (pure . fDuc)
-                              (pure . fExpr)
+data OverFuns = OverFuns { fTyExpr  :: TypeExpr -> TypeExpr
+                         , fDuctive :: Ductive  -> Ductive
+                         , fStrDef  :: StrDef   -> StrDef
+                         , fExpr    :: Expr     -> Expr
+                         , fCtx     :: Ctx      -> Ctx }
 
-overTypeExprM :: Monad m
-              => (TypeExpr -> m TypeExpr)
-              -> (Ductive -> m Ductive)
-              -> (Expr -> m Expr)
-              -> TypeExpr -> m TypeExpr
-overTypeExprM fTyExpr _   fExpr (tyExpr :@ expr)          =
-  (:@) <$> fTyExpr tyExpr <*> fExpr expr
-overTypeExprM fTyExpr _   _     (GlobalTypeVar n tyExprs) =
-  GlobalTypeVar n <$> mapM fTyExpr tyExprs
-overTypeExprM fTyExpr _   _     (Abstr tyExpr1 tyExpr2)   =
-  Abstr <$> fTyExpr tyExpr1 <*> fTyExpr tyExpr2
-overTypeExprM _      fDuc _     (In duc)                  =
-  In <$> fDuc duc
-overTypeExprM _      fDuc _     (Coin duc)                =
-  Coin <$> fDuc duc
-overTypeExprM _      _    _     atom                      =
+data OverFunsM m = OverFunsM { fTyExprM  :: TypeExpr -> m TypeExpr
+                             , fDuctiveM :: Ductive  -> m Ductive
+                             , fStrDefM  :: StrDef   -> m StrDef
+                             , fExprM    :: Expr     -> m Expr
+                             , fCtxM     :: Ctx      -> m Ctx }
+
+-- TODO Doesn't work that way
+overFuns :: OverFuns -> OverFuns
+overFuns f = OverFuns { fTyExpr  = overTypeExpr f
+                      , fDuctive = overDuctive f
+                      , fStrDef  = overStrDef f
+                      , fExpr    = overExpr f
+                      , fCtx     = overCtx f }
+
+overFunsM :: Monad m => OverFunsM m -> OverFunsM m
+overFunsM f = OverFunsM { fTyExprM  = overTypeExprM f
+                        , fDuctiveM = overDuctiveM f
+                        , fStrDefM  = overStrDefM f
+                        , fExprM    = overExprM f
+                        , fCtxM     = overCtxM f }
+
+overFunsToOverFunsM :: OverFuns -> OverFunsM Identity
+overFunsToOverFunsM OverFuns{..} =
+  OverFunsM { fTyExprM  = pure . fTyExpr
+            , fDuctiveM = pure . fDuctive
+            , fStrDefM  = pure . fStrDef
+            , fExprM    = pure . fExpr
+            , fCtxM     = pure . fCtx }
+
+overTypeExpr :: OverFuns -> TypeExpr -> TypeExpr
+overTypeExpr overFuns =
+  runIdentity . overTypeExprM (overFunsToOverFunsM overFuns)
+
+overTypeExprM :: Monad m => OverFunsM m -> TypeExpr -> m TypeExpr
+overTypeExprM OverFunsM{..} (tyExpr :@ expr)          =
+  (:@) <$> fTyExprM tyExpr <*> fExprM expr
+overTypeExprM OverFunsM{..} (GlobalTypeVar n tyExprs) =
+  GlobalTypeVar n <$> mapM fTyExprM tyExprs
+overTypeExprM OverFunsM{..} (Abstr tyExpr1 tyExpr2)   =
+  Abstr <$> fTyExprM tyExpr1 <*> fTyExprM tyExpr2
+overTypeExprM OverFunsM{..} (In duc)                  =
+  In <$> fDuctiveM duc
+overTypeExprM OverFunsM{..} (Coin duc)                =
+  Coin <$> fDuctiveM duc
+overTypeExprM _             atom =
   pure atom
 
-overDuctive :: (TypeExpr -> TypeExpr)
-             -> (Expr -> Expr)
-             -> (StrDef -> StrDef)
-             -> Ductive -> Ductive
-overDuctive fTyExpr fExpr fStrDef =
-  runIdentity . overDuctiveM (pure . fTyExpr)
-                             (pure . fExpr)
-                             (pure . fStrDef)
+overDuctive :: OverFuns -> Ductive -> Ductive
+overDuctive overFuns =
+  runIdentity . overDuctiveM (overFunsToOverFunsM overFuns)
 
-overDuctiveM :: Monad m
-             => (TypeExpr -> m TypeExpr)
-             -> (Expr -> m Expr)
-             -> (StrDef -> m StrDef)
-             -> Ductive -> m Ductive
-overDuctiveM fTyExpr fExpr fStrDef Ductive{..} = do
-  gamma <- overTypeExprInCtxM fTyExpr gamma
-  strDefs <- mapM fStrDef strDefs
+overDuctiveM :: Monad m => OverFunsM m -> Ductive -> m Ductive
+overDuctiveM OverFunsM{..} Ductive{..} = do
+  gamma <- fCtxM gamma
+  strDefs <- mapM fStrDefM strDefs
   pure Ductive{..}
 
-overStrDef :: (TypeExpr -> TypeExpr)
-             -> (Expr -> Expr)
-             -> StrDef -> StrDef
-overStrDef fTyExpr fExpr =
-  runIdentity . overStrDefM (pure . fTyExpr) (pure . fExpr)
+overStrDef :: OverFuns -> StrDef -> StrDef
+overStrDef overFuns =
+  runIdentity . overStrDefM (overFunsToOverFunsM overFuns)
 
-overStrDefM :: Monad m
-             => (TypeExpr -> m TypeExpr)
-             -> (Expr -> m Expr)
-             -> StrDef -> m StrDef
-overStrDefM fTyExpr fExpr StrDef{..} = do
-  sigma <- mapM fExpr sigma
-  a <- fTyExpr a
-  gamma1 <- overTypeExprInCtxM fTyExpr gamma1
+overStrDefM :: Monad m => OverFunsM m -> StrDef -> m StrDef
+overStrDefM OverFunsM{..} StrDef{..} = do
+  sigma <- mapM fExprM sigma
+  a <- fTyExprM a
+  gamma1 <- fCtxM gamma1
   pure StrDef{..}
 
-overTypeExprInCtxM :: Monad m => (TypeExpr -> m TypeExpr) -> Ctx -> m Ctx
-overTypeExprInCtxM = mapM
+overCtx :: OverFuns -> Ctx -> Ctx
+overCtx OverFuns{..} = map fTyExpr
 
-overExpr :: (TypeExpr -> TypeExpr)
-         -> (Ductive -> Ductive)
-         -> (Expr -> Expr)
-         -> Expr -> Expr
-overExpr fTyExpr fDuc fExpr =
-  runIdentity . overExprM (pure . fTyExpr)
-                          (pure . fDuc)
-                          (pure . fExpr)
+overCtxM :: Monad m => OverFunsM m -> Ctx -> m Ctx
+overCtxM OverFunsM{..} = mapM fTyExprM
 
-overExprM :: Monad m
-          => (TypeExpr -> m TypeExpr)
-          -> (Ductive -> m Ductive)
-          -> (Expr -> m Expr)
-          -> Expr -> m Expr
-overExprM fTyExpr _    fExpr (GlobalExprVar n tyExprs exprs) =
-  GlobalExprVar n <$> mapM fTyExpr tyExprs <*> mapM fExpr exprs
-overExprM _       _    fExpr (expr1 :@: expr2)               =
-  (:@:) <$> fExpr expr1 <*> fExpr expr2
-overExprM _       fDuc _     Constructor{..}                 =
-  do ductive <- fDuc ductive
+overExpr :: OverFuns -> Expr -> Expr
+overExpr overFuns =
+  runIdentity . overExprM (overFunsToOverFunsM overFuns)
+
+overExprM :: Monad m => OverFunsM m -> Expr -> m Expr
+overExprM OverFunsM{..} (GlobalExprVar n tyExprs exprs) =
+  GlobalExprVar n <$> mapM fTyExprM tyExprs <*> mapM fExprM exprs
+overExprM OverFunsM{..} (expr1 :@: expr2)               =
+  (:@:) <$> fExprM expr1 <*> fExprM expr2
+overExprM OverFunsM{..} Constructor{..}                 =
+  do ductive <- fDuctiveM ductive
      pure Constructor{..}
-overExprM _       fDuc _     Destructor{..}                  =
-  do ductive <- fDuc ductive
+overExprM OverFunsM{..} Destructor{..}                  =
+  do ductive <- fDuctiveM ductive
      pure Destructor{..}
-overExprM fTyExpr fDuc fExpr Rec{..}                         =
-  do fromRec <- fDuc fromRec
-     toRec <- fTyExpr toRec
-     matches <- mapM fExpr matches
+overExprM OverFunsM{..} Rec{..}                         =
+  do fromRec <- fDuctiveM fromRec
+     toRec <- fTyExprM toRec
+     matches <- mapM fExprM matches
      pure Rec{..}
-overExprM fTyExpr fDuc fExpr Corec{..}                       =
-  do fromCorec <- fTyExpr fromCorec
-     toCorec <- fDuc toCorec
-     matches <- mapM fExpr matches
+overExprM OverFunsM{..} Corec{..}                       =
+  do fromCorec <- fTyExprM fromCorec
+     toCorec <- fDuctiveM toCorec
+     matches <- mapM fExprM matches
      pure Corec{..}
-overExprM fTyExpr _    fExpr (WithParameters pars expr)      =
-  WithParameters <$> mapM fTyExpr pars <*> fExpr expr
-overExprM _       _    _     atom                            =
+overExprM OverFunsM{..} (WithParameters pars expr)      =
+  WithParameters <$> mapM fTyExprM pars <*> fExprM expr
+overExprM OverFunsM{..} atom                            =
   pure atom
