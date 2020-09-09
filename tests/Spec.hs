@@ -1,32 +1,33 @@
 {-# language OverloadedStrings#-}
-import Test.Hspec
-import Test.Hspec.Expectations
-import Test.Hspec.Megaparsec
+import qualified Data.Map                   as Map
+import qualified Data.Text                  as T
 
-import qualified Hedgehog.Gen           as Gen
-import qualified Hedgehog.Range         as Range
+import           Control.Monad.State.Strict
+
+import           Lens.Micro.Platform
+
+import qualified Hedgehog.Gen               as Gen
+import qualified Hedgehog.Range             as Range
+
+import           Test.Hspec.Expectations
+import           Test.Hspec.Megaparsec
 import           Test.Hspec
-import           Test.Hspec.Hedgehog    ((===), forAll, hedgehog)
+import           Test.Hspec.Hedgehog                    ( (===)
+                                                        , forAll
+                                                        , hedgehog)
 
-import Text.Megaparsec
+import           Text.Megaparsec
 
-import qualified Data.Map as Map
 
-import Control.Monad.State.Strict
+import           Parser
+import           ShiftFreeVars
+import           TypeChecker
+import           TypeAction
+import           Subst
+import           Eval
+import           AbstractSyntaxTree
 
-import qualified Data.Text as T
-
-import Lens.Micro.Platform
-
-import Parser
-import ShiftFreeVars
-import TypeChecker
-import TypeAction
-import Subst
-import Eval
-import AbstractSyntaxTree
-
-import Lib
+import           Lib
 import qualified Bool
 import qualified Nat
 import qualified Packed

@@ -14,15 +14,15 @@ import TypeAction
 import Eval
 
 import Data.Text
-import Data.Bifunctor (first)
+import Data.Bifunctor             (first)
 
 import Text.Megaparsec
 
 import Lens.Micro.Platform
 
-import Test.Hspec.Hedgehog ((===), MonadTest)
+import Test.Hspec.Hedgehog        ((===), MonadTest)
 
-import Prelude hiding (unlines)
+import Prelude             hiding (unlines)
 
 -- | first parses definitions then checks if parsing the expression
 --   matches the expected expression in the parsed context
@@ -34,7 +34,8 @@ shouldParseWithDefs :: HasCallStack
 shouldParseWithDefs defs input expOutput =
   case parse (Strict.execStateT (many parseStatement <* eof) emptyState)
              "" (unlines defs) of
-    Left err -> error . show $ errorBundlePretty err
+    Left err     ->
+      error . show $ errorBundlePretty err
     Right pState ->
       parse (Strict.evalStateT (many parseStatement <* eof) pState)
             "" input
@@ -82,7 +83,8 @@ shouldRunWithDefs' :: (HasCallStack, Show a, Eq a, MonadIO m)
                    -> m ()
 shouldRunWithDefs' comp defs action expOutput =
   case parse parseProgram "" (unlines defs) of
-    Left err -> liftIO $ error . show $ errorBundlePretty err
+    Left err      ->
+      liftIO $ error . show $ errorBundlePretty err
     Right defCtx' ->
       let typedDefCtx =
             execState (runExceptT $ checkProgramPTI defCtx') []
@@ -164,7 +166,8 @@ shouldEvalSameWithDefs :: HasCallStack
                        -> Expectation
 shouldEvalSameWithDefs defs input1 input2 =
    case parse parseProgram "" (unlines defs) of
-    Left err -> liftIO $ error . show $ errorBundlePretty err
+    Left err      ->
+      liftIO $ error . show $ errorBundlePretty err
     Right defCtx' ->
       let typedDefCtx =
             execState (runExceptT $ checkProgramPTI defCtx') []

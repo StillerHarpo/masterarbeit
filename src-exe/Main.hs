@@ -1,20 +1,24 @@
 module Main where
 
-import Data.Bifunctor (first)
-import qualified Data.Text as T
-import Data.Text.IO
-import Prelude hiding (readFile, putStrLn)
-import Control.Monad (zipWithM_)
+import           Prelude                                          hiding ( readFile
+                                                                         , putStrLn)
 
-import Text.Megaparsec (parse, errorBundlePretty)
-import Data.Text.Prettyprint.Doc.Render.Terminal
-import Data.Text.Prettyprint.Doc
+import           Data.Bifunctor                                          ( first)
+import qualified Data.Text                                  as T
+import           Data.Text.IO
+import           Data.Text.Prettyprint.Doc
+import           Data.Text.Prettyprint.Doc.Render.Terminal
 
-import System.Environment (getArgs)
+import           Control.Monad                                           (zipWithM_)
 
-import AbstractSyntaxTree
-import Parser (parseProgram)
-import TypeChecker (checkProgram)
+import           Text.Megaparsec                                         ( parse
+                                                                         , errorBundlePretty)
+
+import           System.Environment                                      ( getArgs)
+
+import           AbstractSyntaxTree
+import           Parser                                                  ( parseProgram)
+import           TypeChecker                                             ( checkProgram)
 
 main :: IO ()
 main = do

@@ -3,11 +3,11 @@
 
 module AbstractSyntaxTree where
 
-import Data.Text (Text)
-import qualified Data.Text as T
-import Data.Map (Map)
+import           Data.Text                   (Text)
+import qualified Data.Text              as T
+import           Data.Map                    (Map)
 
-import Control.Monad.Identity
+import           Control.Monad.Identity
 
 type Type = (Ctx,TypeExpr) -- Ctx = Gamma, TypeExpr = A in "Gamma -> A"
 type Kind = Ctx -- Ctx = Gamma in "Gamma -> *"
@@ -100,20 +100,26 @@ data Expr = UnitExpr -- verum value
   deriving (Show)
 
 instance Eq Expr where
-  UnitExpr                == UnitExpr                = True
-  (LocalExprVar i _)      == (LocalExprVar j _)      = i == j
-  (GlobalExprVar n p1 pe1) == (GlobalExprVar m p2 pe2) = n == m
-                                                        && p1 == p2
-                                                        && pe1 ==pe2
-  (e1 :@: e2)             == (e3 :@: e4)             = e1 == e3 && e2 == e4
-  (Constructor d1 i1)     == (Constructor d2 i2)     = d1 == d2 && i1 == i2
-  (Destructor d1 i1)      == (Destructor d2 i2)      = d1 == d2 && i1 == i2
-  (Rec fr1 tr1 ms1)       == (Rec fr2 tr2 ms2)       = fr1 == fr2 && tr1 == tr2
-                                                       && and (zipWith (==) ms1 ms2)
-  (Corec fc1 tc1 ms1)     == (Corec fc2 tc2 ms2)     = fc1 == fc2 && tc1 == tc2
-                                                       && and (zipWith (==) ms1 ms2)
-  (WithParameters te1 e1) == (WithParameters te2 e2) = te1 == te2 && e1 == e2
-  _                       == _                       = False
+  UnitExpr                 == UnitExpr                 =
+    True
+  (LocalExprVar i _)       == (LocalExprVar j _)       =
+    i == j
+  (GlobalExprVar n p1 pe1) == (GlobalExprVar m p2 pe2) =
+    n == m && p1 == p2 && pe1 ==pe2
+  (e1 :@: e2)              == (e3 :@: e4)              =
+    e1 == e3 && e2 == e4
+  (Constructor d1 i1)      == (Constructor d2 i2)      =
+    d1 == d2 && i1 == i2
+  (Destructor d1 i1)       == (Destructor d2 i2)       =
+    d1 == d2 && i1 == i2
+  (Rec fr1 tr1 ms1)        == (Rec fr2 tr2 ms2)        =
+    fr1 == fr2 && tr1 == tr2 && and (zipWith (==) ms1 ms2)
+  (Corec fc1 tc1 ms1)      == (Corec fc2 tc2 ms2)      =
+    fc1 == fc2 && tc1 == tc2 && and (zipWith (==) ms1 ms2)
+  (WithParameters te1 e1)  == (WithParameters te2 e2)  =
+    te1 == te2 && e1 == e2
+  _                        == _                        =
+    False
 
 
 type Ctx = [TypeExpr]
@@ -135,15 +141,18 @@ overTypeExprM :: Monad m
               -> (Ductive -> m Ductive)
               -> (Expr -> m Expr)
               -> TypeExpr -> m TypeExpr
-overTypeExprM fTyExpr _ fExpr (tyExpr :@ expr) =
+overTypeExprM fTyExpr _   fExpr (tyExpr :@ expr)          =
   (:@) <$> fTyExpr tyExpr <*> fExpr expr
-overTypeExprM fTyExpr _ _ (GlobalTypeVar n tyExprs) =
+overTypeExprM fTyExpr _   _     (GlobalTypeVar n tyExprs) =
   GlobalTypeVar n <$> mapM fTyExpr tyExprs
-overTypeExprM fTyExpr _ _ (Abstr tyExpr1 tyExpr2) =
+overTypeExprM fTyExpr _   _     (Abstr tyExpr1 tyExpr2)   =
   Abstr <$> fTyExpr tyExpr1 <*> fTyExpr tyExpr2
-overTypeExprM _ fDuc _ (In duc) = In <$> fDuc duc
-overTypeExprM _ fDuc _ (Coin duc) = Coin <$> fDuc duc
-overTypeExprM _ _ _ atom = pure atom
+overTypeExprM _      fDuc _     (In duc)                  =
+  In <$> fDuc duc
+overTypeExprM _      fDuc _     (Coin duc)                =
+  Coin <$> fDuc duc
+overTypeExprM _      _    _     atom                      =
+  pure atom
 
 overDuctive :: (TypeExpr -> TypeExpr)
              -> (Expr -> Expr)
@@ -197,26 +206,27 @@ overExprM :: Monad m
           -> (Ductive -> m Ductive)
           -> (Expr -> m Expr)
           -> Expr -> m Expr
-overExprM fTyExpr _ fExpr (GlobalExprVar n tyExprs exprs) =
+overExprM fTyExpr _    fExpr (GlobalExprVar n tyExprs exprs) =
   GlobalExprVar n <$> mapM fTyExpr tyExprs <*> mapM fExpr exprs
-overExprM _ _ fExpr (expr1 :@: expr2) = (:@:) <$> fExpr expr1
-                                              <*> fExpr expr2
-overExprM _ fDuc _ Constructor{..} = do
-  ductive <- fDuc ductive
-  pure Constructor{..}
-overExprM _ fDuc _ Destructor{..} = do
-  ductive <- fDuc ductive
-  pure Destructor{..}
-overExprM fTyExpr fDuc fExpr Rec{..} = do
-  fromRec <- fDuc fromRec
-  toRec <- fTyExpr toRec
-  matches <- mapM fExpr matches
-  pure Rec{..}
-overExprM fTyExpr fDuc fExpr Corec{..} = do
-  fromCorec <- fTyExpr fromCorec
-  toCorec <- fDuc toCorec
-  matches <- mapM fExpr matches
-  pure Corec{..}
-overExprM fTyExpr _ fExpr (WithParameters pars expr) =
+overExprM _       _    fExpr (expr1 :@: expr2)               =
+  (:@:) <$> fExpr expr1 <*> fExpr expr2
+overExprM _       fDuc _     Constructor{..}                 =
+  do ductive <- fDuc ductive
+     pure Constructor{..}
+overExprM _       fDuc _     Destructor{..}                  =
+  do ductive <- fDuc ductive
+     pure Destructor{..}
+overExprM fTyExpr fDuc fExpr Rec{..}                         =
+  do fromRec <- fDuc fromRec
+     toRec <- fTyExpr toRec
+     matches <- mapM fExpr matches
+     pure Rec{..}
+overExprM fTyExpr fDuc fExpr Corec{..}                       =
+  do fromCorec <- fTyExpr fromCorec
+     toCorec <- fDuc toCorec
+     matches <- mapM fExpr matches
+     pure Corec{..}
+overExprM fTyExpr _    fExpr (WithParameters pars expr)      =
   WithParameters <$> mapM fTyExpr pars <*> fExpr expr
-overExprM _ _ _ atom = pure atom
+overExprM _       _    _     atom                            =
+  pure atom

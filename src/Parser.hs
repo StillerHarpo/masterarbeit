@@ -7,29 +7,29 @@
 
 module Parser where
 
-import Lib
+import           Lib
 
-import AbstractSyntaxTree
+import           AbstractSyntaxTree
 
-import qualified Data.Set as Set
-import Data.Set (Set)
-import Data.List (elemIndex)
-import Data.String
-import Data.Tuple(swap)
+import qualified Data.Set                        as Set
+import           Data.Set                                  (Set)
+import           Data.List                                 (elemIndex)
+import           Data.String
+import           Data.Tuple                                (swap)
 
-import Control.Monad (void)
-import Control.Monad.Combinators.Expr
-import Control.Monad.State.Strict
-import Lens.Micro.Platform
+import           Control.Monad                             (void)
+import           Control.Monad.Combinators.Expr
+import           Control.Monad.State.Strict
+import           Lens.Micro.Platform
 
-import Data.Char (isAlphaNum)
-import Data.Text (Text)
-import qualified Data.Text as T
-import Data.Void
-import Text.Megaparsec
-import Text.Megaparsec.Char
-import qualified Text.Megaparsec.Char as Parsec
-import qualified Text.Megaparsec.Char.Lexer as L
+import           Data.Char                                 (isAlphaNum)
+import           Data.Text (Text)
+import qualified Data.Text                       as T
+import           Data.Void
+import           Text.Megaparsec
+import           Text.Megaparsec.Char
+import qualified Text.Megaparsec.Char            as Parsec
+import qualified Text.Megaparsec.Char.Lexer      as L
 
 -- TODO reverse ctx
 
@@ -44,20 +44,30 @@ type TyCtxP = [(Text, CtxP)]
 data InOrCoin = InTag | CoinTag
 
 data ParserState = ParserState {
-    _scLineFold :: Maybe (Parsec Void Text ())
-  , _exprDefs:: Set Text
-  , _typeExprDefs :: Set Text
-  , _defDuctives :: [(Text, (InOrCoin, Ductive))]
+    _scLineFold      :: Maybe (Parsec Void Text ())
+  , _exprDefs        :: Set Text
+  , _typeExprDefs    :: Set Text
+  , _defDuctives     :: [(Text, (InOrCoin, Ductive))]
   , _constructorDefs :: Set Text
-  , _destructorDefs :: Set Text
-  , _localExprVars :: [Text]
-  , _localTypeVars :: [Text]
-  , _parameters :: [Text]
+  , _destructorDefs  :: Set Text
+  , _localExprVars   :: [Text]
+  , _localTypeVars   :: [Text]
+  , _parameters      :: [Text]
   }
 $(makeLenses ''ParserState)
 
 emptyState :: ParserState
-emptyState = ParserState Nothing Set.empty Set.empty [] Set.empty Set.empty [] [] []
+emptyState = ParserState {
+    _scLineFold      = Nothing
+  , _exprDefs        = Set.empty
+  , _typeExprDefs    = Set.empty
+  , _defDuctives     = []
+  , _constructorDefs = Set.empty
+  , _destructorDefs  = Set.empty
+  , _localExprVars   = []
+  , _localTypeVars   = []
+  , _parameters      = []
+  }
 
 -- | a parser with a space consumer state for line folding
 type Parser = StateT ParserState (Parsec Void Text)
@@ -144,14 +154,16 @@ parseConstructorDef name = parseStructorDef $ swap <$> ((,)
   <$> withLocalTypeVar name (lexeme parseTypeExpr)
   <* symbol "->"
   <* lexeme (withPredicate (== name)
-                           (`T.append` (" should be the same as type " `T.append` name))
+                           (`T.append` (" should be the same as type "
+                                        `T.append` name))
                            parseTypeStrVarT)
   <*> many (lexeme parseExpr))
 
 parseDestructorDef :: Text -> Parser StrDef
 parseDestructorDef name = parseStructorDef $ (,)
   <$ lexeme (withPredicate (== name)
-                           (`T.append` ("should be the same as type " `T.append` name))
+                           (`T.append` ("should be the same as type "
+                                        `T.append` name))
                            parseTypeStrVarT)
   <*> many (lexeme parseExpr)
   <* symbol "->"
@@ -166,7 +178,7 @@ parseDataHeader = do
   parameters .= map fst pars
   void $ symbol ":"
   gammaP <- lexeme parseCtx
-  void $ if null gammaP
+  void $ if   null gammaP
          then symbols ["Set", "where"]
          else symbols ["->", "Set", "where"]
   pure (name, gammaP, pars)
@@ -177,14 +189,15 @@ parseStructorDef p = do
   void $ symbol ":"
   gamma1P <- lexeme parseCtx
   let (vars,gamma1) = unzip gamma1P
-  void $ if null gamma1
+  void $ if   null gamma1
          then pure ""
          else symbol "->"
   (sigma,a) <- withLocalExprVars vars p
   pure StrDef{..}
 
 parseTypeExpr :: Parser TypeExpr
-parseTypeExpr = try (parseApp (:@) parseTypeTerm parseTerm) <|> parseTypeTerm
+parseTypeExpr = try (parseApp (:@) parseTypeTerm parseTerm)
+                <|> parseTypeTerm
 
 parseTypeTerm :: Parser TypeExpr
 parseTypeTerm = choice $ map lexeme
@@ -226,7 +239,7 @@ parseExprVar :: Parser Expr
 parseExprVar = do
   var <- lexeme parseExprVarT
   ParserState{..} <- get
-  if var `Set.member` _exprDefs
+  if   var `Set.member` _exprDefs
   then GlobalExprVar var <$> parseParameters
                          <*> parseExprParameters
   else case elemIndex var _localExprVars of
@@ -247,7 +260,7 @@ parseTypeVar :: Parser TypeExpr
 parseTypeVar = do
   var <- parseTypeStrVarT
   ParserState{..} <- get
-  if var `Set.member` _typeExprDefs
+  if   var `Set.member` _typeExprDefs
   then GlobalTypeVar var <$> parseParameters
   else case elemIndex var _localTypeVars of
          Just idx ->
@@ -320,16 +333,20 @@ orderMatches name matches = do
   exprs <- orderExprs (map strName strDefs) ([],matches)
   pure (ductive,exprs)
   where
-    orderExprs [] ([],[]) = pure []
-    orderExprs [] (m1,m2) = singleFailure $ "The following structors are not part of"
-                                          <> name
-                                          <> "or are duplicated \n"
-                                          <> T.unwords (map fst (m1++m2))
-    orderExprs (str:_) (_,[]) = singleFailure $ "Pattern matching non exhaustive for "
+    orderExprs []           ([], []              )               =
+      pure []
+    orderExprs []           (m1, m2              )               =
+      singleFailure $ "The following structors are not part of"
+                      <> name
+                      <> "or are duplicated \n"
+                      <> T.unwords (map fst (m1++m2))
+    orderExprs (str:_)      (_ , []              )               =
+      singleFailure $ "Pattern matching non exhaustive for "
                                               <> str
-    orderExprs s@(str:strs) (mf,m@(mStr,expr):ms)
-      | str == mStr = (expr:) <$> orderExprs strs ([],mf ++ ms)
-      | otherwise = orderExprs s (m:mf,ms)
+    orderExprs s@(str:strs) (mf, m@(mStr,expr):ms) | str == mStr =
+      (expr:) <$> orderExprs strs ([],mf ++ ms)
+                                                   | otherwise   =
+      orderExprs s (m:mf,ms)
 
 
 parseMatch :: Parser (Text,Expr)
@@ -349,7 +366,7 @@ parseCtxNE = symbol "(" *> parseCtxRest
           void $ symbol ":"
           expr <- parseTypeExpr
           c <- symbol "," <|> symbol ")"
-          if c == ","
+          if   c == ","
           then ((var,expr):) <$> withLocalExprVars [var] parseCtxRest
           else pure [(var,expr)]
 
@@ -363,11 +380,11 @@ parseParCtxNE = symbol "<" *> parseParCtxRest
           checkName var
           void $ symbol ":"
           ctx <- parseCtx
-          void $ if null ctx
+          void $ if   null ctx
                  then symbols ["Set"]
                  else symbols ["->", "Set"]
           c <- symbol "," <|> symbol ">"
-          if c == ","
+          if   c == ","
           then ((var,ctx):) <$> withParVars [var] parseParCtxRest
           else pure [(var,ctx)]
 
@@ -379,7 +396,7 @@ parseParametersNE = symbol "<" *> parseParametersRest
   where parseParametersRest = do
           tyExpr <- lexeme parseTypeExpr
           c <- symbol "," <|> symbol ">"
-          if c == ","
+          if   c == ","
           then (tyExpr:) <$> parseParametersRest
           else pure [tyExpr]
 
@@ -391,7 +408,7 @@ parseExprParametersNE = symbol "(" *> parseParametersRest
   where parseParametersRest = do
           expr <- lexeme parseExpr
           c <- symbol "," <|> symbol ")"
-          if c == ","
+          if   c == ","
           then (expr:) <$> parseParametersRest
           else pure [expr]
 
@@ -407,7 +424,8 @@ withLocalExprVars :: [Text] -> Parser a -> Parser a
 withLocalExprVars vars p =
   (localExprVars %= (++ vars))
   *> p
-  <* (localExprVars %= \allVars -> take (length allVars - length vars) allVars)
+  <* (localExprVars %= \allVars ->
+        take (length allVars - length vars) allVars)
 
 withLocalTypeVar :: Text -> Parser a -> Parser a
 withLocalTypeVar var p =
@@ -419,26 +437,27 @@ withParVars :: [Text] -> Parser a -> Parser a
 withParVars vars p =
   (parameters %= (++ vars))
   *> p
-  <* (parameters %= \allVars -> take (length allVars - length vars) allVars)
-
+  <* (parameters %= \allVars ->
+        take (length allVars - length vars) allVars)
 
 -- | checks if name is already used.  We forbid name shadowing for now
 checkName :: Text -- ^ name
           -> Parser ()
 checkName name = do
   ParserState{..} <- get
-  if name `Set.member` _exprDefs
-    || name `Set.member` _typeExprDefs
-    || name `Set.member` _constructorDefs
-    || name `Set.member` _destructorDefs
+  if   name `Set.member` _exprDefs
+       || name `Set.member` _typeExprDefs
+       || name `Set.member` _constructorDefs
+       || name `Set.member` _destructorDefs
   then fancyFailure $ Set.singleton $ ErrorFail "Name already defined"
   else pure ()
 
 -- | lookup lifted to the parser monad
 lookupP :: Text -> [(Text,b)] -> Parser b
-lookupP var ctx = case lookup var ctx of
-                     Just t   -> pure t
-                     Nothing -> singleFailure $ "Variable not defined: " <> var
+lookupP var ctx =
+  case lookup var ctx of
+    Just t   -> pure t
+    Nothing  -> singleFailure $ "Variable not defined: " <> var
 
 -- | The space consumer with newline
 scn :: Parsec Void Text ()
@@ -476,7 +495,8 @@ lineFold :: Parser a -> Parser a
 lineFold p = do
   parserState <- get
   (a, innerState) <- lift $ L.lineFold scn $
-      \sc' -> runStateT (p <* lift scn) (set scLineFold (Just sc') parserState)
+      \sc' -> runStateT (p <* lift scn)
+                        (set scLineFold (Just sc') parserState)
   put $ set scLineFold Nothing innerState
   pure a
 
@@ -491,7 +511,7 @@ noLineFold p = do
 lexeme :: Parser a -> Parser a
 lexeme p = view scLineFold <$> get >>= \case
                   Just sc' -> try (L.lexeme (lift sc') p) <|> p
-                  Nothing -> L.lexeme (lift sc) p
+                  Nothing  -> L.lexeme (lift sc) p
 
 manyLexeme :: Parser a -> Parser [a]
 manyLexeme = lexeme . many . lexeme
@@ -499,7 +519,7 @@ manyLexeme = lexeme . many . lexeme
 symbol :: Text -> Parser Text
 symbol t = view scLineFold <$> get >>= \case
                   Just sc' -> try (L.symbol (lift sc') t) <|> string t
-                  Nothing -> L.symbol (lift sc) t
+                  Nothing  -> L.symbol (lift sc) t
 
 
 symbols :: [Text] -> Parser [Text]
@@ -516,14 +536,12 @@ withPredicate
 withPredicate f msg p = do
   o <- getOffset
   r <- p
-  if f r
-    then return r
-    else parseError (FancyError o (Set.singleton (ErrorFail . T.unpack $ msg r)))
+  if   f r
+  then return r
+  else parseError $ FancyError o
+                  $ Set.singleton
+                  $ ErrorFail . T.unpack
+                  $ msg r
 
 singleFailure :: Text -> Parser a
 singleFailure = fancyFailure . Set.singleton . ErrorFail . T.unpack
-
-unzip4 :: [(a,b,c,d)] -> ([a], [b], [c], [d])
-unzip4 = foldl (\(as, bs, cs, ds) (a, b ,c ,d) -> (a:as,b:bs,c:cs,d:ds))
-               ([],[],[],[])
-

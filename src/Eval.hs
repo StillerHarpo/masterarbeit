@@ -20,7 +20,8 @@ evalTypeExpr (f :@ arg) = do
   case (valF, valArg) of
     (Abstr _ expr,_) -> evalTypeExpr $ substTypeExpr 0 valArg expr
     _ -> pure $ valF :@ valArg
-evalTypeExpr e = overTypeExprM evalTypeExpr evalDuctive evalExpr e
+evalTypeExpr e          =
+  overTypeExprM evalTypeExpr evalDuctive evalExpr e
 
 evalCtx :: Ctx -> TI ann Ctx
 evalCtx = mapM evalTypeExpr
@@ -35,7 +36,7 @@ evalStrDef :: StrDef -> TI ann StrDef
 evalStrDef = overStrDefM evalTypeExpr evalExpr
 
 evalExpr :: Expr -> TI ann Expr
-evalExpr (f :@: arg) = do
+evalExpr (f :@: arg)                       = do
   valF <- evalExpr f
   valArg <- evalExpr arg
   case (valF, valArg) of
@@ -71,5 +72,6 @@ evalExpr (f :@: arg) = do
     _ -> pure $ valF :@: valArg
 evalExpr (GlobalExprVar v tyPars exprPars) =
   lookupDefExprTI v tyPars exprPars >>= evalExpr
-evalExpr (WithParameters pars expr) = evalExpr $ substParsInExpr 0 (reverse pars) expr
+evalExpr (WithParameters pars expr)        =
+  evalExpr $ substParsInExpr 0 (reverse pars) expr
 evalExpr e = overExprM evalTypeExpr evalDuctive evalExpr e
