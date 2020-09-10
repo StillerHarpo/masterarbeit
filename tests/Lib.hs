@@ -1,28 +1,28 @@
 module Lib where
 
-import Test.Hspec
-import Test.Hspec.Megaparsec
+import           Prelude                              hiding (unlines)
 
-import Control.Monad.Except
-import Control.Monad.State
+import           Data.Text
+import           Data.Bifunctor                              (first)
+
+import           Control.Monad.Except
+import           Control.Monad.State
 import qualified Control.Monad.State.Strict as Strict
 
-import AbstractSyntaxTree
-import Parser
-import TypeChecker
-import TypeAction
-import Eval
+import           Text.Megaparsec
 
-import Data.Text
-import Data.Bifunctor             (first)
+import           Test.Hspec
+import           Test.Hspec.Megaparsec
+import           Test.Hspec.Hedgehog                         ( (===)
+                                                             , MonadTest)
 
-import Text.Megaparsec
+import           Lens.Micro.Platform
 
-import Lens.Micro.Platform
-
-import Test.Hspec.Hedgehog        ((===), MonadTest)
-
-import Prelude             hiding (unlines)
+import           AbstractSyntaxTree
+import           Parser
+import           TypeChecker
+import           TypeAction
+import           Eval
 
 -- | first parses definitions then checks if parsing the expression
 --   matches the expected expression in the parsed context
