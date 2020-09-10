@@ -2,6 +2,7 @@
 {-# language TupleSections #-}
 {-# language RecordWildCards #-}
 {-# language LambdaCase #-}
+{-# language TemplateHaskell #-}
 
 module TypeChecker where
 
@@ -27,9 +28,24 @@ import           ShiftFreeVars
 import           Subst
 import           TypeAction
 import           Eval
+import           Betaeq
 
 import           PrettyPrinter
 
+-- | Type inference monad
+type TI ann = ExceptT (Doc ann) (Reader ContextTI)
+
+data ContextTI = ContextTI { _ctx    :: Ctx
+                           , _tyCtx  :: TyCtx
+                           , _parCtx :: TyCtx
+                           , _defCtx :: [Statement]
+                           }
+$(makeLenses ''ContextTI)
+
+runTI :: TI ann a -> ContextTI -> Either (Doc ann) a
+runTI ti = runReader (runExceptT ti)
+
+-- | Program type inference monad
 type PTI ann = ExceptT (Doc ann) (State [Statement])
 
 evalPTI :: PTI ann a -> [Statement] -> Either (Doc ann) a
@@ -51,20 +67,23 @@ checkProgramPTI (ExprDef{..} : stmts)    = do
   tiInPTI $ local (set parCtx tyParameterCtx) $ checkCtx exprParameterCtx
   ty <- Just <$> tiInPTI (local (set parCtx tyParameterCtx
                                  . set ctx exprParameterCtx)
-                                (inferTerm expr >>= evalType))
-  expr <- tiInPTI $ evalExpr expr
+                                (inferTerm expr
+                                 >>= (evalInTI . evalType)))
+  expr <- evalInPTI $ evalExpr expr
   modify (ExprDef{..} :)
   checkProgramPTI stmts
 checkProgramPTI (TypeDef{..} : stmts)    = do
   tiInPTI $ checkParCtx parameterCtx
   kind <- Just <$> tiInPTI (local (set parCtx parameterCtx)
-                                  (inferType typeExpr >>= evalCtx))
-  typeExpr <- tiInPTI $ evalTypeExpr typeExpr
+                                  (inferType typeExpr
+                                   >>= (evalInTI .evalCtx)))
+  typeExpr <- evalInPTI $ evalTypeExpr typeExpr
   modify (TypeDef{..} :)
   checkProgramPTI stmts
 checkProgramPTI (Expression expr : stmts) =
-  (:) <$> (TypedExpr <$> tiInPTI (evalExpr expr)
-                     <*> tiInPTI (inferTerm expr >>= evalType))
+  (:) <$> (TypedExpr <$> evalInPTI (evalExpr expr)
+                     <*> tiInPTI (inferTerm expr
+                                  >>= (evalInTI . evalType)))
       <*> checkProgramPTI stmts
 
 tiInPTI :: TI ann a -> PTI ann a
@@ -73,6 +92,17 @@ tiInPTI ti = do
   case runTI ti $ set defCtx curDefCtx emptyCtx of
     Left err -> throwError err
     Right a  -> pure a
+
+evalInTI :: Eval ann a -> TI ann a
+evalInTI eval = do
+  stmtCtx <- view defCtx
+  numPars <- length <$> view parCtx
+  case runEval eval EvalCtx {..} of
+    Left err -> throwError err
+    Right a  -> pure a
+
+evalInPTI :: Eval ann a -> PTI ann a
+evalInPTI = tiInPTI . evalInTI
 
 checkTyCtx :: TyCtx -> TI ann ()
 checkTyCtx = mapM_ checkCtx
@@ -102,7 +132,7 @@ checkCtx ctx' = catchError (checkCtx' ctx')
       >> checkCtx ctx'
 
 checkType :: TypeExpr -> Kind -> TI ann ()
-checkType e k = inferType e >>= betaeqCtx k
+checkType e k = inferType e >>= (evalInTI . betaeqCtx k)
 
 inferType :: TypeExpr -> TI ann Kind
 inferType tyExpr = catchError (inferType' tyExpr)
@@ -127,7 +157,7 @@ inferType tyExpr = catchError (inferType' tyExpr)
         (b:gamma2) -> do
           (ctx,b') <- inferTerm t
           assert (null ctx) "Type Ctx should be empty"
-          betaeq b b'
+          evalInTI $ betaeq b b'
           pure $ substCtx 0 t gamma2
     inferType' (Abstr tyX b)          =
       (tyX:) <$> local (ctx %~ (tyX:)) (inferType b)
@@ -163,8 +193,8 @@ checkContextMorph exprs gamma1 gamma2 =
 checkTerm :: Expr -> Type -> TI ann ()
 checkTerm e (ctx1,a1) = do
   (ctx2, a2) <- inferTerm e
-  betaeqCtx ctx1 ctx2
-  betaeq a1 a2
+  evalInTI $ betaeqCtx ctx1 ctx2
+  evalInTI $ betaeq a1 a2
 
 inferTerm :: Expr -> TI ann Type
 inferTerm expr = catchError (inferTerm' expr)
@@ -183,7 +213,7 @@ inferTerm expr = catchError (inferTerm' expr)
         (a:ctx2,b) -> do
           (ctx,a') <- inferTerm s
           assert (null ctx) "Type Ctx should be empty"
-          betaeq a a'
+          evalInTI $ betaeq a a'
           --shift free vars 0
           pure ( shiftFreeVarsCtx (-1)
                                   0
@@ -206,11 +236,11 @@ inferTerm expr = catchError (inferTerm' expr)
                in ( gamma1 ++ [applyTypeExprArgs (Coin d, sigma)]
                   , shiftFreeVarsTypeExpr 1 0 $ substType 0 (Coin d) a))
     inferTerm' Rec{..}                          = do
-      valTo <- evalTypeExpr toRec
-      valFrom <- evalDuctive fromRec
+      valTo <- evalInTI $  evalTypeExpr toRec
+      valFrom <- evalInTI $ evalDuctive fromRec
       gamma' <- inferType valTo
       let Ductive{..} = valFrom
-      betaeqCtx gamma' gamma
+      evalInTI $ betaeqCtx gamma' gamma
       zipWithM_ (\StrDef{..} match ->
                    local (over ctx (++gamma1++[substType 0 valTo a]))
                          (checkTerm match ([],applyTypeExprArgs (valTo,sigma))))
@@ -219,11 +249,11 @@ inferTerm expr = catchError (inferTerm' expr)
            , applyTypeExprArgs ( valTo
                                , map (shiftFreeVarsExpr 1 0) (idCtx gamma)))
     inferTerm' Corec{..}                       = do
-      valTo <- evalDuctive toCorec
-      valFrom <- evalTypeExpr fromCorec
+      valTo <- evalInTI $ evalDuctive toCorec
+      valFrom <-evalInTI $  evalTypeExpr fromCorec
       gamma' <- inferType valFrom
       let Ductive{..} = valTo
-      betaeqCtx gamma' gamma
+      evalInTI $ betaeqCtx gamma' gamma
       zipWithM_ (\StrDef{..} match ->
                     local (over ctx (++gamma1++[applyTypeExprArgs (valFrom,sigma)]))
                           (checkTerm match ([], shiftFreeVarsTypeExpr 1 0 $ substType 0 valFrom a)))
@@ -233,46 +263,16 @@ inferTerm expr = catchError (inferTerm' expr)
                                , map (shiftFreeVarsExpr 1 0) (idCtx gamma)))
     inferTerm' (WithParameters ps e) = inferTerm $ substParsInExpr 0 (reverse ps) e
 
-betaeq :: TypeExpr -> TypeExpr -> TI ann ()
-betaeq e1 e2 = do
-  ee1 <- inlineTypeExpr e1 >>= evalTypeExpr
-  ee2 <- inlineTypeExpr e2 >>= evalTypeExpr
-  if ee1 == ee2
-  then pure ()
-  else throwError $ "couldn't match type"
-                  <+> pretty e1
-                  <+> "with type"
-                  <+> pretty e2
-
-betaeqCtx :: Ctx -> Ctx -> TI ann ()
-betaeqCtx ctx1 ctx2 = do
-  assert (length ctx1 == length ctx2)
-         ("length of context" <+> pretty ctx1 <>
-          "\ndoesn't match length of context" <+> pretty ctx2)
-  zipWithM_ betaeq ctx1 ctx2
-
-betaeqTyCtx :: TyCtx -> TyCtx -> TI ann ()
-betaeqTyCtx ctx1 ctx2 = do
-  assert (length ctx1 == length ctx2)
-         ("length of type context " <+> pretty ctx1 <>
-          "\ndoesn't match length of type context" <+> pretty ctx2)
-  zipWithM_ betaeqCtx ctx1 ctx2
-
-inlineFuns :: OverFunsM (TI ann)
-inlineFuns = (overFunsM inlineFuns)
-               { fTyExprM = inlineTypeExpr
-               , fExprM   = inlineExpr }
-
-inlineTypeExpr :: TypeExpr -> TI ann TypeExpr
-inlineTypeExpr (GlobalTypeVar n vars)  = lookupDefTypeExprTI n vars
-                                         >>= inlineTypeExpr
-inlineTypeExpr tyExpr                  = overTypeExprM inlineFuns tyExpr
-
-inlineExpr :: Expr -> TI ann Expr
-inlineExpr (GlobalExprVar n tyPars exprPars) =
-  lookupDefExprTI n tyPars exprPars >>= inlineExpr
-inlineExpr expr                              =
-  overExprM inlineFuns expr
+lookupLocalVarTI :: Int -> Text -> [a] -> TI ann a
+lookupLocalVarTI i t ctx = lookupLocalVarTI' i (reverse ctx)
+  where
+    lookupLocalVarTI' :: Int -> [a] -> TI ann a
+    lookupLocalVarTI' _ []     = throwError (pretty t <+> "not defined")
+    lookupLocalVarTI' 0 (x:_)  = pure x
+    lookupLocalVarTI' n (x:xs)
+      | n < 0                  =
+          error "internal error negative variable lookup"
+      | otherwise              = lookupLocalVarTI' (n-1) xs
 
 lookupDefTypeTI :: Text -- ^ name of expr var
                 -> [TypeExpr] -- ^ type parameters to check
@@ -286,7 +286,7 @@ lookupDefTypeTI t tyPars exprPars = view defCtx >>= lookupDefTypeTI'
     lookupDefTypeTI' (ExprDef{..}:stmts)
       | t == name                        =
           do parsKinds <- mapM inferType tyPars
-             catchError (betaeqTyCtx parsKinds tyParameterCtx)
+             catchError (evalInTI $ betaeqTyCtx parsKinds tyParameterCtx)
                         (throwError . (<> "\n while looking up variable "
                                        <+> pretty t
                                        <+> "with type parameters"
@@ -294,7 +294,7 @@ lookupDefTypeTI t tyPars exprPars = view defCtx >>= lookupDefTypeTI'
              parsTypes <- mapM inferTerm exprPars
              assert (all (null . fst) parsTypes)
                     "types expression parameters should have empty ctxts"
-             catchError (betaeqCtx (map snd parsTypes)
+             catchError (evalInTI $ betaeqCtx (map snd parsTypes)
                                    (map (substPars 0 (reverse tyPars))
                                          exprParameterCtx))
                         (throwError . (<> "\n while looking up variable "
@@ -335,8 +335,7 @@ checkParKinds []         []          =
   pure ()
 checkParKinds (par:pars) (ctx':ctxs) =
   do kind <- local (ctx .~ []) $ inferType par
-     betaeqCtx ctx' kind
+     evalInTI $ betaeqCtx ctx' kind
      checkParKinds pars (substParInParCtx 0 par ctxs)
 checkParKinds _          _           =
   throwError "number of parameters doesn't match the expected one"
-

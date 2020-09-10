@@ -13,12 +13,12 @@ import ShiftFreeVars
 import Subst
 import TypeAction
 
-evalFuns :: OverFunsM (TI ann)
+evalFuns :: OverFunsM (Eval ann)
 evalFuns = (overFunsM evalFuns)
              { fTyExprM = evalTypeExpr
              , fExprM   = evalExpr}
 
-evalTypeExpr :: TypeExpr -> TI ann TypeExpr
+evalTypeExpr :: TypeExpr -> Eval ann TypeExpr
 evalTypeExpr (f :@ arg) = do
   valF <- evalTypeExpr f
   valArg <- evalExpr arg
@@ -27,16 +27,16 @@ evalTypeExpr (f :@ arg) = do
     _ -> pure $ valF :@ valArg
 evalTypeExpr e          = overTypeExprM evalFuns e
 
-evalCtx :: Ctx -> TI ann Ctx
+evalCtx :: Ctx -> Eval ann Ctx
 evalCtx = overCtxM evalFuns
 
-evalType :: Type -> TI ann Type
+evalType :: Type -> Eval ann Type
 evalType (ctx', tyExpr) = (,) <$> evalCtx ctx' <*> evalTypeExpr tyExpr
 
-evalDuctive :: Ductive -> TI ann Ductive
+evalDuctive :: Ductive -> Eval ann Ductive
 evalDuctive = overDuctiveM evalFuns
 
-evalExpr :: Expr -> TI ann Expr
+evalExpr :: Expr -> Eval ann Expr
 evalExpr (f :@: arg)                       = do
   valF <- evalExpr f
   valArg <- evalExpr arg
@@ -72,7 +72,7 @@ evalExpr (f :@: arg)                       = do
                                                               recEval))
     _ -> pure $ valF :@: valArg
 evalExpr (GlobalExprVar v tyPars exprPars) =
-  lookupDefExprTI v tyPars exprPars >>= evalExpr
+  lookupDefExpr v tyPars exprPars >>= evalExpr
 evalExpr (WithParameters pars expr)        =
   evalExpr $ substParsInExpr 0 (reverse pars) expr
 evalExpr e =

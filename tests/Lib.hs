@@ -42,6 +42,40 @@ shouldParseWithDefs defs input expOutput =
       `shouldParse`
       expOutput
 
+shouldEvalIn' :: (HasCallStack, Show a, Eq a)
+              => (Either String a -> Either String a -> m ())
+              -> Eval ann a
+              -> EvalCtx
+              -> a
+              -> m ()
+shouldEvalIn' comp eval ctx' val = first show (runEval eval ctx')
+                                   `comp`
+                                   Right val
+
+shouldEvalIn :: (HasCallStack, Show a, Eq a)
+              => Eval ann a
+              -> EvalCtx
+              -> a
+              -> Expectation
+shouldEvalIn = shouldEvalIn' shouldBe
+
+shouldEvalInGlobCtx' :: (HasCallStack, Show a, Eq a)
+                   => (Either String a -> Either String a -> m ())
+                   -> [Statement]
+                   -> Eval ann a
+                   -> a
+                   -> m ()
+shouldEvalInGlobCtx' comp stmtCtx' eval =
+  shouldEvalIn' comp eval (emptyEvalCtx {stmtCtx = stmtCtx'})
+
+shouldEvalInGlobCtx :: (HasCallStack, Show a, Eq a)
+                    => [Statement]
+                    -> Eval ann a
+                    -> a
+                    -> Expectation
+shouldEvalInGlobCtx = shouldEvalInGlobCtx' shouldBe
+
+
 shouldCheckIn' :: (HasCallStack, Show a, Eq a)
               => (Either String a -> Either String a -> m ())
               -> TI ann a
@@ -136,7 +170,7 @@ shouldEvalWithDefs' :: (HasCallStack, MonadIO m)
                     -> Expr
                     -> m ()
 shouldEvalWithDefs' comp defs input =
-  shouldRunWithDefs' comp defs (evalExpr input)
+  shouldRunWithDefs' comp defs (evalInTI $ evalExpr input)
 
 -- | first parses definition then check if evaluating the expression
 --   matches the expected one in the parsed context
@@ -171,8 +205,9 @@ shouldEvalSameWithDefs defs input1 input2 =
     Right defCtx' ->
       let typedDefCtx =
             execState (runExceptT $ checkProgramPTI defCtx') []
-          stateTI = set defCtx typedDefCtx emptyCtx
-          val1 = first show (runTI (evalExpr input1) stateTI)
-          val2 = first show (runTI (evalExpr input2) stateTI)
+          stateEval = EvalCtx { stmtCtx = typedDefCtx
+                              , numPars = 0}
+          val1 = first show (runEval (evalExpr input1) stateEval)
+          val2 = first show (runEval (evalExpr input2) stateEval)
       in val1 `shouldBe` val2
 

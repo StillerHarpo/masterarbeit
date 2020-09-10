@@ -46,6 +46,7 @@ library
                        Subst,
                        TypeAction,
                        Eval,
+                       Betaeq,
                        TypeChecker,
                        PrettyPrinter
   other-modules:       Lib

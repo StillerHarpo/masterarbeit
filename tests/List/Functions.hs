@@ -210,18 +210,18 @@ appTests = do
       ([], GlobalTypeVar "List" [UnitType])
   it "Type checks Evaluation of app on [] x [] to zero (as expr var)" $
     shouldRunWithDefs [packedD, pairD, listD, appD "Unit"]
-                      (evalExpr (GlobalExprVar "app" [] []
-                                 :@: listPair listEx1Expr
-                                              listEx1Expr
-                                              UnitType)
+                      (evalInTI (evalExpr (GlobalExprVar "app" [] []
+                                           :@: listPair listEx1Expr
+                                                        listEx1Expr
+                                                        UnitType))
                        >>= inferTerm)
       ([], listExpr UnitType)
   it "Type checks Evaluation of app on [] x [] to zero (as expr)" $
     shouldRunWithDefs [packedD, pairD, listD, appD "Unit"]
-                      (evalExpr (appExpr UnitType
-                                 :@: listPair listEx1Expr
-                                              listEx1Expr
-                                              UnitType)
+                      (evalInTI (evalExpr (appExpr UnitType
+                                           :@: listPair listEx1Expr
+                                                        listEx1Expr
+                                                        UnitType))
                        >>= inferTerm)
       ([], listExpr UnitType)
   it "Evaluates length on app on [] x [] to zero" $

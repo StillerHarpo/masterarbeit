@@ -25,6 +25,7 @@ import           TypeChecker
 import           TypeAction
 import           Subst
 import           Eval
+import           Betaeq
 import           AbstractSyntaxTree
 
 import           Lib
@@ -323,34 +324,34 @@ main = hspec $ do
                       , typeExpr = UnitType
                       , kind = Nothing}
     it "inlines nested Global Var" $
-      shouldCheckInGlobCtx [tyA]
-                           (inlineTypeExpr $ GlobalTypeVar "A" [])
-                           UnitType
+      shouldEvalInGlobCtx [tyA]
+                          (inlineTypeExpr $ GlobalTypeVar "A" [])
+                          UnitType
     let tyB = TypeDef { name = "B"
                       , parameterCtx = []
                       , typeExpr = GlobalTypeVar "A" []
                       , kind = Nothing}
     it "inlines nested Global Var" $
-      shouldCheckInGlobCtx [tyA,tyB]
-                           (inlineTypeExpr $ GlobalTypeVar "A" [])
-                           UnitType
+      shouldEvalInGlobCtx [tyA,tyB]
+                          (inlineTypeExpr $ GlobalTypeVar "A" [])
+                          UnitType
     let tyC = TypeDef { name = "C"
                       , parameterCtx = [[]]
                       , typeExpr = Parameter 0 "X"
                       , kind = Nothing}
     it "inlines parameterized Global Var" $
-      shouldCheckInGlobCtx [tyC]
-                           (inlineTypeExpr $ GlobalTypeVar "C" [UnitType])
-                           UnitType
+      shouldEvalInGlobCtx [tyC]
+                          (inlineTypeExpr $ GlobalTypeVar "C" [UnitType])
+                          UnitType
     let a = ExprDef { name = "a"
                     , tyParameterCtx = []
                     , exprParameterCtx = []
                     , expr = UnitExpr
                     , ty = Nothing}
     it "inlines Global var with unit expr" $
-      shouldCheckInGlobCtx [a]
-                           (inlineExpr $ GlobalExprVar "a" [] [])
-                           UnitExpr
+      shouldEvalInGlobCtx [a]
+                          (inlineExpr $ GlobalExprVar "a" [] [])
+                          UnitExpr
 
   let emptyDuc = Ductive { gamma = []
                          , strDefs = []
@@ -392,39 +393,39 @@ main = hspec $ do
        `shouldBe`
        In (ducWith UnitType)
 
-  let shouldCheck :: (HasCallStack, Show a, Eq a) => TI ann a -> a -> Expectation
-      shouldCheck ti = shouldCheckIn ti emptyCtx
+  let shouldEval :: (HasCallStack, Show a, Eq a) => Eval ann a -> a -> Expectation
+      shouldEval eval = shouldEvalIn eval emptyEvalCtx
 
   describe "Eval works" $ do
     it "evals unit type to unit type" $
       evalTypeExpr UnitType
-      `shouldCheck`
+      `shouldEval`
        UnitType
     it "evals abstraction to abstraction" $
       evalTypeExpr (Abstr UnitType UnitType)
-      `shouldCheck`
+      `shouldEval`
       Abstr UnitType UnitType
     it "evals \\T -> T @ () to T" $
       evalTypeExpr (Abstr UnitType UnitType :@ UnitExpr)
-      `shouldCheck`
+      `shouldEval`
       UnitType
     it "evals mu to mu" $
       evalTypeExpr (In emptyDuc)
-      `shouldCheck`
+      `shouldEval`
       In emptyDuc
     it "evals nu to nu" $
       evalTypeExpr (Coin emptyDuc)
-      `shouldCheck`
+      `shouldEval`
       Coin emptyDuc
     it "evals unit expression to Unit expression" $
       evalExpr UnitExpr
-      `shouldCheck`
+      `shouldEval`
       UnitExpr
     it "evals rec to rec" $
       evalExpr (Rec { fromRec = emptyDuc
                      , toRec = UnitType
                      , matches = []})
-      `shouldCheck`
+      `shouldEval`
       Rec { fromRec = emptyDuc
           , toRec = UnitType
           , matches = []}
@@ -432,12 +433,14 @@ main = hspec $ do
       evalExpr (Corec { fromCorec = UnitType
                        , toCorec = emptyDuc
                        , matches = []})
-      `shouldCheck`
+      `shouldEval`
       Corec { fromCorec = UnitType
                        , toCorec = emptyDuc
                        , matches = []}
 
   describe "Type Checker works" $ do
+    let shouldCheck :: (HasCallStack, Show a, Eq a) => TI ann a -> a -> Expectation
+        shouldCheck ti = shouldCheckIn ti emptyCtx
     it "type checks unit type" $
       inferType UnitType
       `shouldCheck`
