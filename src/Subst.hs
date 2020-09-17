@@ -4,6 +4,7 @@ module Subst where
 
 import AbstractSyntaxTree
 import ShiftFreeVars
+import Mark
 import Lib
 
 substExprFuns :: Int -> Expr -> OverFuns
@@ -44,7 +45,7 @@ substStrDefExpr i r1 strDef@StrDef{..} =
         , gamma1 = substCtx i r1 gamma1}
 
 substExpr :: Int -> Expr -> Expr -> Expr
-substExpr i r v@(LocalExprVar j _)
+substExpr i r v@(LocalExprVar j False _)
   | i == j                = r
   | otherwise             = v
 substExpr i r iter@Iter{..}  =
@@ -65,10 +66,12 @@ substCtx i r (e:ctx) =
   substTypeExpr i r e : substCtx (i+1) (shiftFreeVarsExpr 1 0 r) ctx
 
 substExprs :: Int -> [Expr] -> Expr -> Expr
-substExprs = substMult substExpr
+substExprs i exprs =
+  unmarkInExpr . substMult substExpr i (map markInExpr exprs)
 
 substTypeExprs :: Int -> [Expr] -> TypeExpr -> TypeExpr
-substTypeExprs = substMult substTypeExpr
+substTypeExprs  i exprs =
+  unmarkInTyExpr . substMult substTypeExpr i (map markInExpr exprs)
 
 substTypeFuns :: Int -> TypeExpr -> OverFuns
 substTypeFuns i r =
@@ -78,13 +81,14 @@ substTypeFuns i r =
     , fStrDef  = substStrDefTypeExpr i r }
 
 substType :: Int -> TypeExpr -> TypeExpr -> TypeExpr
-substType i r v@(LocalTypeVar j _)
+substType i r v@(LocalTypeVar j False _)
   | i == j      = r
   | otherwise   = v
 substType i r e = overTypeExpr (substTypeFuns i r) e
 
 substTypes :: Int -> [TypeExpr] -> TypeExpr -> TypeExpr
-substTypes = substMult substType
+substTypes i tyExprs =
+  unmarkInTyExpr . substMult substType i (map markInTyExpr tyExprs)
 
 substOpenDuctiveTypeExpr :: Int -> TypeExpr -> OpenDuctive -> OpenDuctive
 substOpenDuctiveTypeExpr i r op@OpenDuctive{..} =
@@ -103,13 +107,14 @@ substParFuns i r = (overFuns (substParFuns i r))
                      , fStrDef  = substStrDefPar i r }
 
 substPar :: Int -> TypeExpr -> TypeExpr -> TypeExpr
-substPar i r v@(Parameter j _)
+substPar i r v@(Parameter j False _)
   | i == j     = r
   | otherwise  = v
 substPar i r e = overTypeExpr (substParFuns i r) e
 
 substPars :: Int -> [TypeExpr] -> TypeExpr -> TypeExpr
-substPars = substMult substPar
+substPars i tyExprs =
+  unmarkInTyExpr . substMult substPar i (map markInTyExpr tyExprs)
 
 substOpenDuctivePar :: Int -> TypeExpr -> OpenDuctive -> OpenDuctive
 substOpenDuctivePar i r op@OpenDuctive{..} =
@@ -120,7 +125,8 @@ substOpenDuctivePar i r op@OpenDuctive{..} =
          , strDefs = map (substStrDefPar i' r') strDefs }
 
 substOpenDuctivePars :: Int -> [TypeExpr] -> OpenDuctive -> OpenDuctive
-substOpenDuctivePars = substMult substOpenDuctivePar
+substOpenDuctivePars i tyExprs =
+  unmarkInDuc . substMult substOpenDuctivePar i (map markInTyExpr tyExprs)
 
 substParCtxPar :: Int -> TypeExpr -> TyCtx -> TyCtx
 substParCtxPar _ _ []               =
@@ -135,14 +141,15 @@ substStrDefPar i r strDef@StrDef{..} =
          , gamma1 = substParInCtx i r gamma1 }
 
 substStrDefPars :: Int -> [TypeExpr] -> StrDef -> StrDef
-substStrDefPars = substMult substStrDefPar
+substStrDefPars i tyExprs =
+  unmarkInStrDef . substMult substStrDefPar i (map markInTyExpr tyExprs)
 
 substParInExpr :: Int -> TypeExpr -> Expr -> Expr
 substParInExpr i r = overExpr (substParFuns i r)
 
 substParsInExpr :: Int -> [TypeExpr] -> Expr -> Expr
-substParsInExpr _ []     e = e
-substParsInExpr n (v:vs) e = substParsInExpr (n+1) vs (substParInExpr n v e)
+substParsInExpr i tyExprs =
+  unmarkInExpr . substMult substParInExpr i (map markInTyExpr tyExprs)
 
 substParInCtx :: Int -> TypeExpr -> Ctx -> Ctx
 substParInCtx i r = overCtx (substParFuns i r)

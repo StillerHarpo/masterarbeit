@@ -23,11 +23,11 @@ streamDuc =
               , parameterCtx = [[]]
               , inOrCoin = IsCoin
               , strDefs = [ StrDef { sigma = []
-                                   , a = Parameter 0 "A"
+                                   , a = Parameter 0 False "A"
                                    , gamma1 = []
                                    , strName = "Head"}
                           , StrDef { sigma = []
-                                   , a = LocalTypeVar 0 "Stream"
+                                   , a = LocalTypeVar 0 False "Stream"
                                    , gamma1 = []
                                    , strName = "Tail"}]
               , nameDuc = "Stream" }

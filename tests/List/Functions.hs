@@ -39,7 +39,7 @@ lengthExpr ty =
        , matches = [ zeroExpr
                    , sucExpr
                      :@: (sndExpr ty (GlobalTypeVar "Nat" [])
-                          :@: LocalExprVar 0 "n")]}
+                          :@: LocalExprVar 0 False "n")]}
 
 lengthTest :: Spec
 lengthTest = do
@@ -100,7 +100,7 @@ headExpr ty =
        , matches = [ nothingExpr ty
                    , justExpr ty
                      :@: (fstExpr ty (GlobalTypeVar "Maybe" [ty])
-                          :@: LocalExprVar 0 "n")]}
+                          :@: LocalExprVar 0 False "n")]}
 
 headTests :: Spec
 headTests = do
@@ -148,11 +148,11 @@ appExpr ty =
                   , motive = GlobalTypeVar "List" [ty]
                   , matches = [ sndExpr (GlobalTypeVar "List" [ty])
                                         (GlobalTypeVar "List" [ty])
-                                :@: LocalExprVar 1 "x"
-                              , consExpr ty :@: LocalExprVar 0 "n"]}
+                                :@: LocalExprVar 1 False "x"
+                              , consExpr ty :@: LocalExprVar 0 False "n"]}
             :@: (fstExpr (GlobalTypeVar "List" [ty])
                          (GlobalTypeVar "List" [ty])
-                 :@: LocalExprVar 0 "x")]}
+                 :@: LocalExprVar 0 False "x")]}
 
 appTests :: Spec
 appTests = do

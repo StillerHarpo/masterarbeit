@@ -27,7 +27,7 @@ maybeDuc = OpenDuctive { gamma = []
                                             , gamma1 = []
                                             , strName = "Nothing"}
                                    , StrDef { sigma = []
-                                            , a = Parameter 0 "A"
+                                            , a = Parameter 0 False "A"
                                             , gamma1 = []
                                             , strName = "Just"}]
                        , nameDuc = "Maybe"}

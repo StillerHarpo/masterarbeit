@@ -30,7 +30,7 @@ idExpr = Iter { ductive = natDuc
               , parameters = []
               , motive = GlobalTypeVar "Nat" []
               , matches = [ zeroExpr
-                          , sucExpr :@: LocalExprVar 0 "x"]}
+                          , sucExpr :@: LocalExprVar 0 False "x"]}
 
 idTests :: Spec
 idTests = do
@@ -89,10 +89,10 @@ plusExpr =
                 , motive = GlobalTypeVar "Nat" []
                 , matches = [ sndExpr (GlobalTypeVar "Nat" [])
                                      (GlobalTypeVar "Nat" [])
-                              :@: LocalExprVar 1 "x"
-                             , sucExpr :@: LocalExprVar 0 "n"]}
+                              :@: LocalExprVar 1 False "x"
+                             , sucExpr :@: LocalExprVar 0 False "n"]}
            :@: (fstExpr (GlobalTypeVar "Nat" []) (GlobalTypeVar "Nat" [])
-                :@: LocalExprVar 0 "x")]}
+                :@: LocalExprVar 0 False "x")]}
 
 plusTests :: Spec
 plusTests = do

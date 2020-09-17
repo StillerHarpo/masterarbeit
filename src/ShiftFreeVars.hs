@@ -22,11 +22,11 @@ shiftFreeVarsTypeExpr j k e               =
 shiftFreeVarsExpr :: Int -- ^ how much should they be shifted
                   -> Int -- ^ offset for free vars
                   -> Expr -> Expr
-shiftFreeVarsExpr j k v@(LocalExprVar i n)
+shiftFreeVarsExpr j k v@(LocalExprVar i m n)
   | i < k                         =
       v
   | otherwise                     =
-      LocalExprVar (i+j) n
+      LocalExprVar (i+j) m n
 shiftFreeVarsExpr j k i@Iter{..}   =
     i { matches = zipWith (shiftFreeVarsExpr j)
                           (map ((1+) . (k+) . length . gamma1)
@@ -51,9 +51,9 @@ shiftFreeTypeVarsFuns j k =
 shiftFreeTypeVars :: Int -- ^ how much should they be shifted
                   -> Int -- ^ offset for free vars
                   -> TypeExpr -> TypeExpr
-shiftFreeTypeVars j k v@(LocalTypeVar i n)
+shiftFreeTypeVars j k v@(LocalTypeVar i False n)
   | i < k               = v
-  | otherwise           = LocalTypeVar (i+j) n
+  | otherwise           = LocalTypeVar (i+j) False n
 shiftFreeTypeVars j k e = overTypeExpr (shiftFreeTypeVarsFuns j k) e
 
 shiftFreeTypeVarsStrDef :: Int -- ^ how much should they be shifted
@@ -71,9 +71,9 @@ shiftFreeParsFuns j k =
     , fOpenDuctive = shiftFreeParsOpenDuctive j k }
 
 shiftFreeParsTypeExpr :: Int -> Int -> TypeExpr -> TypeExpr
-shiftFreeParsTypeExpr j k p@(Parameter i n)
+shiftFreeParsTypeExpr j k p@(Parameter i m n)
   | i < k                      = p
-  | otherwise                  = Parameter (i+j) n
+  | otherwise                  = Parameter (i+j) m n
 shiftFreeParsTypeExpr j k e    = overTypeExpr (shiftFreeParsFuns j k) e
 
 shiftFreeParsOpenDuctive :: Int -> Int -> OpenDuctive -> OpenDuctive

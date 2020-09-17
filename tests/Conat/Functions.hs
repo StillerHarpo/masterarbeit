@@ -36,7 +36,7 @@ isZeroExpr =
                           , parameters = [GlobalTypeVar "Conat" []]
                           , motive = GlobalTypeVar "Bool" []
                           , matches = [ trueExpr, falseExpr]})
-                    :@: (prevExpr :@: LocalExprVar 0 "x")]}
+                    :@: (prevExpr :@: LocalExprVar 0 False "x")]}
 
 isZeroTests :: Spec
 isZeroTests = do

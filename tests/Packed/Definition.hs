@@ -21,7 +21,7 @@ packedDuc = OpenDuctive { gamma = []
                         , inOrCoin = IsIn
                         , parameterCtx = [[]]
                         , strDefs = [ StrDef { sigma = []
-                                             , a = Parameter 0 "A"
+                                             , a = Parameter 0 False "A"
                                              , gamma1 = []
                                              , strName = "Pack"}]
                         , nameDuc = "Packed"}

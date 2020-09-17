@@ -7,7 +7,7 @@ import           Control.Monad.State.Strict
 import           Lens.Micro.Platform
 
 import qualified Hedgehog.Gen               as Gen
-import qualified Hedgehog.Range             as Range
+import qualified Hedgehog.Range          as Range
 
 import           Test.Hspec.Expectations
 import           Test.Hspec.Megaparsec
@@ -23,6 +23,7 @@ import           Parser
 import           ShiftFreeVars
 import           TypeChecker
 import           TypeAction
+import           Mark
 import           Subst
 import           Eval
 import           Betaeq
@@ -110,7 +111,7 @@ main = hspec $ do
                           , parameterCtx = []
                           , strDefs = [StrDef {
                                 sigma = []
-                              , a = LocalTypeVar 0 "C"
+                              , a = LocalTypeVar 0 False "C"
                               , gamma1 = []
                               , strName = "C1"}]
                           , nameDuc = "C" }
@@ -156,12 +157,12 @@ main = hspec $ do
                    inOrCoin = IsIn,
                    parameterCtx = [],
                    strDefs = [ StrDef { sigma = [UnitExpr]
-                                      , a = LocalTypeVar 0 "C" :@ UnitExpr
+                                      , a = LocalTypeVar 0 False "C" :@ UnitExpr
                                       , gamma1 = []
                                       , strName = "C1"}
                              , StrDef { sigma = [UnitExpr]
-                                      , a =  LocalTypeVar 0 "C"
-                                             :@ LocalExprVar 0 "y"
+                                      , a =  LocalTypeVar 0 False "C"
+                                             :@ LocalExprVar 0 False "y"
                                       , gamma1 = [UnitType]
                                       , strName = "C2"}],
                    nameDuc = "C"}]
@@ -188,11 +189,11 @@ main = hspec $ do
                     inOrCoin = IsIn,
                     gamma = [ UnitType],
                     strDefs = [ StrDef { sigma = [UnitExpr],
-                                         a = LocalTypeVar 0 "A":@ UnitExpr,
+                                         a = LocalTypeVar 0 False "A":@ UnitExpr,
                                          gamma1 = [],
                                          strName = "C1"}
                               , StrDef { sigma = [UnitExpr],
-                                         a = LocalTypeVar 0 "A" :@ LocalExprVar 0 "y",
+                                         a = LocalTypeVar 0 False "A" :@ LocalExprVar 0 False "y",
                                          gamma1 = [UnitType],
                                          strName = "C2"}],
                     nameDuc = "A"}
@@ -208,7 +209,7 @@ main = hspec $ do
                            , inOrCoin = IsIn
                            , parameterCtx = []
                            , strDefs = [ StrDef { sigma = []
-                                                , a = LocalTypeVar 0 "A"
+                                                , a = LocalTypeVar 0 False "A"
                                                 , gamma1 = []
                                                 , strName = "C"} ]
                            , nameDuc = "A" }
@@ -217,7 +218,7 @@ main = hspec $ do
                            , parameters = []
                            , motive = GlobalTypeVar "A" []
                            , matches = [ Structor a [] 0
-                                         :@: LocalExprVar 0 "x" ]}])
+                                         :@: LocalExprVar 0 False "x" ]}])
     it "parses context with spaces" $
        parse parseProgram "" "data A : (x : Unit, y : Unit) -> Set where"
        `shouldParse`
@@ -235,7 +236,7 @@ main = hspec $ do
                             , inOrCoin = IsIn
                             , parameterCtx = [[]]
                             , strDefs = [ StrDef { sigma = []
-                                                 , a = Parameter 0 "B"
+                                                 , a = Parameter 0 False "B"
                                                  , gamma1 = []
                                                  , strName = "C"}]
                             , nameDuc = "A"}
@@ -254,7 +255,7 @@ main = hspec $ do
                             , inOrCoin = IsCoin
                             , parameterCtx = [[]]
                             , strDefs = [ StrDef { sigma = []
-                                                 , a = Parameter 0 "B"
+                                                 , a = Parameter 0 False "B"
                                                  , gamma1 = []
                                                  , strName = "C"}]
                             , nameDuc = "A" }
@@ -280,19 +281,19 @@ main = hspec $ do
                            , inOrCoin = IsIn
                            , parameterCtx = []
                            , strDefs = [ StrDef { sigma = []
-                                                , a =  LocalTypeVar 0 "A"
+                                                , a =  LocalTypeVar 0 False "A"
                                                 , gamma1 = []
                                                 , strName = "C1"}
                                        , StrDef { sigma = []
-                                                , a =  LocalTypeVar 0 "A"
+                                                , a =  LocalTypeVar 0 False "A"
                                                 , gamma1 =  [UnitType]
                                                 , strName = "C2"}
                                        , StrDef { sigma = []
-                                                , a =  LocalTypeVar 0 "A"
+                                                , a =  LocalTypeVar 0 False "A"
                                                 , gamma1 = [UnitType, UnitType]
                                                 , strName = "C3"}
                                        , StrDef { sigma = []
-                                                , a =  LocalTypeVar 0 "A"
+                                                , a =  LocalTypeVar 0 False "A"
                                                 , gamma1 = [UnitType, UnitType, UnitType]
                                                 , strName = "C4"}]
                            , nameDuc = "A" }
@@ -301,19 +302,19 @@ main = hspec $ do
                              , parameters = []
                              , motive = GlobalTypeVar "A" []
                              , matches = [ Structor a [] 0
-                                           :@: LocalExprVar 0 "x"
+                                           :@: LocalExprVar 0 False "x"
                                          , Structor a [] 1
-                                           :@: LocalExprVar 1 "x"
-                                           :@: LocalExprVar 0 "y"
+                                           :@: LocalExprVar 1 False "x"
+                                           :@: LocalExprVar 0 False "y"
                                          , Structor a [] 2
-                                           :@: LocalExprVar 2 "x"
-                                           :@: LocalExprVar 1 "y"
-                                          :@: LocalExprVar 0 "z"
+                                           :@: LocalExprVar 2 False "x"
+                                           :@: LocalExprVar 1 False "y"
+                                          :@: LocalExprVar 0 False "z"
                                          , Structor a [] 3
-                                           :@: LocalExprVar 3 "x"
-                                           :@: LocalExprVar 2 "y"
-                                           :@: LocalExprVar 1 "z"
-                                           :@: LocalExprVar 0 "u"]}])
+                                           :@: LocalExprVar 3 False "x"
+                                           :@: LocalExprVar 2 False "y"
+                                           :@: LocalExprVar 1 False "z"
+                                           :@: LocalExprVar 0 False "u"]}])
 
   let emptyInDuc = OpenDuctive { gamma = []
                                , inOrCoin = IsIn
@@ -334,42 +335,72 @@ main = hspec $ do
         ===
         Abstr UnitType UnitType
 
+  describe "(un)marking works" $ do
+    it "marks every variable" $
+      markInExpr (LocalExprVar 0 False ""
+                  :@: LocalExprVar 1 False ""
+                  :@: LocalExprVar 3 False "")
+      `shouldBe`
+      (LocalExprVar 0 True "" :@: LocalExprVar 1 True "" :@: LocalExprVar 3 True "")
+    it "unmarks every variable" $
+      unmarkInExpr (LocalExprVar 0 True ""
+                  :@: LocalExprVar 1 True ""
+                  :@: LocalExprVar 3 True "")
+      `shouldBe`
+      (LocalExprVar 0 False "" :@: LocalExprVar 1 False "" :@: LocalExprVar 3 False "")
+
   describe "Substitution Works" $ do
     it "substitutes unit expression in expression" $
-      substExpr 0 UnitExpr (LocalExprVar 0 "")
+      substExpr 0 UnitExpr (LocalExprVar 0 False "")
       `shouldBe`
       UnitExpr
     it "substitutes variable in expression" $
-      substExpr 0 (LocalExprVar 0 "") (LocalExprVar 0 "")
+      substExpr 0 (LocalExprVar 0 False "") (LocalExprVar 0 False "")
       `shouldBe`
-      LocalExprVar 0 ""
+      LocalExprVar 0 False ""
     it "substitutes variable in expression with offset 1" $
-      substExpr 1 (LocalExprVar 0 "") (LocalExprVar 1 "")
+      substExpr 1 (LocalExprVar 0 False "") (LocalExprVar 1 False "")
       `shouldBe`
-      LocalExprVar 0 ""
+      LocalExprVar 0 False ""
     it "substitutes expression which is bound by abstraction" $
-      substTypeExpr 0 (LocalExprVar 2 "") (Abstr UnitType
+      substTypeExpr 0 (LocalExprVar 2 False "") (Abstr UnitType
                                                 (UnitType
-                                                 :@ (LocalExprVar 0 ""
-                                                     :@: LocalExprVar 1 "")))
+                                                 :@ (LocalExprVar 0 False ""
+                                                     :@: LocalExprVar 1 False "")))
       `shouldBe`
-      Abstr UnitType (UnitType :@ (LocalExprVar 0 ""
-                                   :@: LocalExprVar 3 ""))
+      Abstr UnitType (UnitType :@ (LocalExprVar 0 False ""
+                                   :@: LocalExprVar 3 False ""))
     it "substitutes expression which is bound by abstraction with offset 1" $
-      substTypeExpr 1 (LocalExprVar 2 "") (Abstr UnitType
+      substTypeExpr 1 (LocalExprVar 2 False "") (Abstr UnitType
                                                 (UnitType
-                                                 :@ (LocalExprVar 0 ""
-                                                     :@: LocalExprVar 2 "")))
+                                                 :@ (LocalExprVar 0 False ""
+                                                     :@: LocalExprVar 2 False "")))
       `shouldBe`
-      Abstr UnitType (UnitType :@ (LocalExprVar 0 ""
-                                   :@: LocalExprVar 3 ""))
+      Abstr UnitType (UnitType :@ (LocalExprVar 0 False ""
+                                   :@: LocalExprVar 3 False ""))
 
     it "substitutes multible expressions " $
-       substExprs 0 [LocalExprVar 2 ""
-                    , LocalExprVar 3 ""] (LocalExprVar 0 ""
-                                          :@: LocalExprVar 1 "")
+       substExprs 0 [LocalExprVar 2 False ""
+                    , LocalExprVar 3 False ""] (LocalExprVar 0 False ""
+                                               :@: LocalExprVar 1 False "")
        `shouldBe`
-       (LocalExprVar 2 "" :@: LocalExprVar 3 "")
+       (LocalExprVar 2 False "" :@: LocalExprVar 3 False "")
+    it "substitutes epressions in parallel" $
+       substExprs 0 [LocalExprVar 2 False ""
+                    , LocalExprVar 1 False ""
+                    , LocalExprVar 0 False ""] (LocalExprVar 0 False ""
+                                                :@: LocalExprVar 1 False ""
+                                                :@: LocalExprVar 2 False "")
+       `shouldBe`
+       (LocalExprVar 2 False "" :@: LocalExprVar 1 False "" :@: LocalExprVar 0 False "")
+    it "substitutes epressions in parallel 2" $
+       substExprs 0 [LocalExprVar 0 False ""
+                    , LocalExprVar 1 False ""
+                    , LocalExprVar 2 False ""] (LocalExprVar 0 False ""
+                                                :@: LocalExprVar 1 False ""
+                                                :@: LocalExprVar 2 False "")
+       `shouldBe`
+       (LocalExprVar 0 False "" :@: LocalExprVar 1 False "" :@: LocalExprVar 2 False "")
     let ducBound = emptyInDuc {strDefs = [StrDef { gamma1 = [UnitType, UnitType]
                                                  , a  = UnitType
                                                  , sigma = []
@@ -378,28 +409,37 @@ main = hspec $ do
                          , parameters = []
                          , motive = UnitType
                          , matches = []}
-    it "substitue expression which is bound by Iteration" $
-      substExpr 0 (LocalExprVar 2 "")
-                  (iterBound {matches = [LocalExprVar 1 ""
-                                         :@: LocalExprVar 3 ""]})
+    it "substitute expression which is bound by Iteration" $
+      substExpr 0 (LocalExprVar 2 False "")
+                  (iterBound {matches = [LocalExprVar 1 False ""
+                                         :@: LocalExprVar 3 False ""]})
       `shouldBe`
-      iterBound {matches = [LocalExprVar 1 "" :@: LocalExprVar 5 ""]}
-    it "substitue expression which is bound by Iteration with offset one" $
-      substExpr 1 (LocalExprVar 3 "")
-                  (iterBound {matches = [LocalExprVar 4 ""
-                                         :@: LocalExprVar 5 ""]})
+      iterBound {matches = [LocalExprVar 1 False "" :@: LocalExprVar 5 False ""]}
+    it "substitute expression which is bound by Iteration with offset one" $
+      substExpr 1 (LocalExprVar 3 False "")
+                  (iterBound {matches = [LocalExprVar 4 False ""
+                                         :@: LocalExprVar 5 False ""]})
       `shouldBe`
-      iterBound {matches = [LocalExprVar 6 "" :@: LocalExprVar 5 ""]}
+      iterBound {matches = [LocalExprVar 6 False "" :@: LocalExprVar 5 False ""]}
 
-    it ("substitue multible expressions in expression which is"
+    it ("substitute multible expressions in expression which is"
         <> "bound by Iteration") $
-      substExprs 0 [LocalExprVar 2 "", LocalExprVar 3 ""]
-                  (iterBound {matches = [LocalExprVar 4 ""
-                                         :@: LocalExprVar 3 ""]})
+      substExprs 0 [LocalExprVar 2 False "", LocalExprVar 3 False ""]
+                  (iterBound {matches = [LocalExprVar 4 False ""
+                                         :@: LocalExprVar 3 False ""]})
       `shouldBe`
-      iterBound {matches = [LocalExprVar 6 "" :@: LocalExprVar 5 ""]}
+      iterBound {matches = [LocalExprVar 6 False "" :@: LocalExprVar 5 False ""]}
+    it ("substitute multible expressions in expression which is"
+        <> "bound by Iteration 2") $
+      substExprs 0 [LocalExprVar 2 False "", LocalExprVar 3 False ""]
+                  (iterBound {matches = [ LocalExprVar 4 False ""
+                                          :@: LocalExprVar 2 False ""]}
+                   :@: LocalExprVar 0 False "")
+      `shouldBe`
+      (iterBound {matches = [LocalExprVar 6 False "" :@: LocalExprVar 2 False ""]}
+       :@: LocalExprVar 2 False "")
     it "substitute type expression" $
-      substType 0 UnitType (LocalTypeVar 0 "")
+      substType 0 UnitType (LocalTypeVar 0 False "")
       `shouldBe`
       UnitType
     let emptyStrDef = StrDef { gamma1 = []
@@ -409,31 +449,31 @@ main = hspec $ do
         emptyDuc = Ductive { openDuctive = emptyInDuc
                            , parametersTyExpr = []}
     it "substitutes a bound type expression" $
-      substType 0 (LocalTypeVar 2 "")
-                  (emptyDuc {openDuctive = emptyInDuc { strDefs = [ emptyStrDef {a = LocalTypeVar 0 ""}
-                                                      , emptyStrDef {a = LocalTypeVar 1 ""}]}})
+      substType 0 (LocalTypeVar 2 False "")
+                  (emptyDuc {openDuctive = emptyInDuc { strDefs = [ emptyStrDef {a = LocalTypeVar 0 False ""}
+                                                      , emptyStrDef {a = LocalTypeVar 1 False ""}]}})
       `shouldBe`
-      emptyDuc {openDuctive = emptyInDuc {strDefs = [ emptyStrDef {a = LocalTypeVar 0 ""}
-                                                    , emptyStrDef {a = LocalTypeVar 3 ""}]}}
+      emptyDuc {openDuctive = emptyInDuc {strDefs = [ emptyStrDef {a = LocalTypeVar 0 False ""}
+                                                    , emptyStrDef {a = LocalTypeVar 3 False ""}]}}
     it "substitutes Parameter" $
-      substPar 0 UnitType (Parameter 0 "")
+      substPar 0 UnitType (Parameter 0 False "")
       `shouldBe`
       UnitType
     it "substitutes Parameters from over function" $
-      fTyExpr (substParFuns 0 UnitType) (Parameter 0 "")
+      fTyExpr (substParFuns 0 UnitType) (Parameter 0 False "")
       `shouldBe`
       UnitType
     it "substitutes Parameter in Ctx" $
-      substParInCtx 0 UnitType [Parameter 0 "", Parameter 1 ""]
+      substParInCtx 0 UnitType [Parameter 0 False "", Parameter 1 False ""]
       `shouldBe`
-      [UnitType, Parameter 1 ""]
+      [UnitType, Parameter 1 False ""]
     it "substitue parameters in global variable" $
-      substPar 0 UnitType (GlobalTypeVar "" [Parameter 0 ""])
+      substPar 0 UnitType (GlobalTypeVar "" [Parameter 0 False ""])
       `shouldBe`
       GlobalTypeVar "" [UnitType]
     it "substitue parameter in openDuctive" $
       substOpenDuctivePar 0 UnitType
-        (OpenDuctive { gamma = [Parameter 0 "x"]
+        (OpenDuctive { gamma = [Parameter 0 False "x"]
                      , parameterCtx = []
                      , inOrCoin = IsIn
                      , strDefs = []
@@ -457,11 +497,11 @@ main = hspec $ do
                             , nameDuc = ""}
             , parametersTyExpr = []}
     it "substitute Parameter with Unit in ductive" $
-       substPar 0 UnitType (ducWith (Parameter 0 ""))
+       substPar 0 UnitType (ducWith (Parameter 0 False ""))
        `shouldBe`
        ducWith UnitType
     it "substitute Parameter in parameters of type" $
-       substPar 0 UnitType (emptyDuc {parametersTyExpr = [Parameter 0 ""]})
+       substPar 0 UnitType (emptyDuc {parametersTyExpr = [Parameter 0 False ""]})
        `shouldBe`
        emptyDuc {parametersTyExpr = [UnitType]}
 
@@ -476,11 +516,11 @@ main = hspec $ do
                               , strDefs = [ StrDef { strName = "Fst"
                                                    , gamma1 = []
                                                    , sigma = []
-                                                   , a = Parameter 1 "A"}
+                                                   , a = Parameter 1 False "A"}
                                           , StrDef { strName = "Fst"
                                                    , gamma1 = []
                                                    , sigma = []
-                                                   , a = Parameter 0 "B"}]}
+                                                   , a = Parameter 0 False "B"}]}
         pairUnits = Ductive { openDuctive = pairDuc
                             , parametersTyExpr = [UnitType,UnitType]}
     it "Type action on mu with parameters works" $
@@ -491,11 +531,11 @@ main = hspec $ do
             , motive = pairUnits
             , matches = [ Structor { ductive = pairDuc
                                    , parameters = [UnitType, UnitType]
-                                   , num = 0} :@: LocalExprVar 0 ""
+                                   , num = 0} :@: LocalExprVar 0 False ""
                         , Structor { ductive = pairDuc
                                    , parameters = [UnitType, UnitType]
-                                   , num = 1} :@: LocalExprVar 0 "" ]}
-      :@: LocalExprVar 0 "")
+                                   , num = 1} :@: LocalExprVar 0 False "" ]}
+      :@: LocalExprVar 0 False "")
 
   describe "Eval works" $ do
     it "evals unit type to unit type" $
@@ -557,7 +597,7 @@ main = hspec $ do
       shouldEvalInGlobCtx [tyA,tyB]
                           (inlineTypeExpr $ GlobalTypeVar "B" [])
                           (Ductive (ducB {gamma = [Ductive ducA []]}) [])
-    let ducC = emptyInDuc { gamma = [Parameter 0 "x"]
+    let ducC = emptyInDuc { gamma = [Parameter 0 False "x"]
                           , nameDuc = "C"}
         tyC = TypeDef ducC
     it "inlines parameterized Global Var" $

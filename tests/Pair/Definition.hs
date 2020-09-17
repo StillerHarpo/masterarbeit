@@ -22,11 +22,11 @@ pairDuc = OpenDuctive { gamma = []
                       , inOrCoin = IsCoin
                       , parameterCtx = [[],[]]
                       , strDefs = [ StrDef { sigma = []
-                                           , a = Parameter 1 "A"
+                                           , a = Parameter 1 False "A"
                                            , gamma1 = []
                                            , strName = "First"}
                                   , StrDef { sigma = []
-                                           , a = Parameter 0 "B"
+                                           , a = Parameter 0 False "B"
                                            , gamma1 = []
                                            , strName = "Second"}]
                       , nameDuc = "Pair" }

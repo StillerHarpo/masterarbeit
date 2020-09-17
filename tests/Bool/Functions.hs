@@ -111,10 +111,10 @@ orExpr =
                 , matches = [ trueExpr
                             , sndExpr (GlobalTypeVar "Bool" [])
                                       (GlobalTypeVar "Bool" [])
-                              :@: LocalExprVar 1 "x"]}
+                              :@: LocalExprVar 1 False "x"]}
            :@: (fstExpr (GlobalTypeVar "Bool" [])
                         (GlobalTypeVar "Bool" [])
-               :@: LocalExprVar 0 "x")]}
+               :@: LocalExprVar 0 False "x")]}
 
 orTests :: Spec
 orTests = do

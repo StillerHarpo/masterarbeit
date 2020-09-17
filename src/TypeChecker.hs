@@ -63,7 +63,7 @@ checkProgramPTI (ExprDef{..} : stmts)    = do
                                  . set ctx exprParameterCtx)
                                 (inferTerm expr
                                  >>= (evalInTI . evalType)))
-  expr <- evalInPTI $ evalExpr expr
+  -- expr <- evalInPTI $ evalExpr expr
   modify (ExprDef{..} :)
   checkProgramPTI stmts
 checkProgramPTI (TypeDef duc : stmts)    =
@@ -131,11 +131,11 @@ inferType tyExpr = catchError (inferType' tyExpr)
   where
     inferType' UnitType               =
       pure []
-    inferType' v@(LocalTypeVar idx _) =
+    inferType' v@(LocalTypeVar idx _ _) =
       do ty <- view tyCtx >>= lookupLocalVarTI idx (T.pack $ show v)
          view ctx >>= checkCtx
          pure ty
-    inferType' v@(Parameter idx _)    =
+    inferType' v@(Parameter idx _ _)   =
       do ty <- view parCtx >>= lookupLocalVarTI idx (T.pack $ show v)
          view ctx >>= checkCtx
          pure (shiftFreeParsKind (idx + 1) 0 ty)
@@ -202,7 +202,7 @@ inferTerm expr = catchError (inferTerm' expr)
                                                <+> pretty expr))
   where
     inferTerm' UnitExpr = pure ([],UnitType)
-    inferTerm' v@(LocalExprVar idx _)            =
+    inferTerm' v@(LocalExprVar idx _ _)          =
       ([],) . shiftFreeVarsTypeExpr (idx + 1) 0
       <$> (view ctx >>= lookupLocalVarTI idx (T.pack $ show v))
     inferTerm' (GlobalExprVar x tyPars exprPars) =

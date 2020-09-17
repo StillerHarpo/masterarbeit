@@ -27,7 +27,7 @@ natDuc = OpenDuctive { gamma = []
                                           , gamma1 = []
                                           , strName = "Zero"}
                                  , StrDef { sigma = []
-                                          , a = LocalTypeVar 0 "Nat"
+                                          , a = LocalTypeVar 0 False "Nat"
                                           , gamma1 = []
                                           , strName = "Suc"}]
                      , nameDuc = "Nat"}

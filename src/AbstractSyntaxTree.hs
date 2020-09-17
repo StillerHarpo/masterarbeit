@@ -31,8 +31,8 @@ data TypeExpr = UnitType -- verum type
               -- If numbers are the same the names should also be the
               -- same
               -- TODO Maybe throw error if this is not the case
-              | LocalTypeVar Int Text
-              | Parameter Int Text
+              | LocalTypeVar Int Bool Text
+              | Parameter Int Bool Text
               | GlobalTypeVar Text [TypeExpr]
               | Abstr TypeExpr TypeExpr
               | Ductive { openDuctive :: OpenDuctive
@@ -42,8 +42,8 @@ data TypeExpr = UnitType -- verum type
 instance Eq TypeExpr where
   UnitType              == UnitType              = True
   (tE1 :@ e1)           == (tE2 :@ e2)           = tE1 == tE2 && e1 == e2
-  (LocalTypeVar i1 _)   == (LocalTypeVar i2 _)   = i1 == i2
-  (Parameter i1 _)      == (Parameter i2 _)      = i1 == i2
+  (LocalTypeVar i1 _ _) == (LocalTypeVar i2 _ _) = i1 == i2
+  (Parameter i1 _ _)    == (Parameter i2 _ _)    = i1 == i2
   (GlobalTypeVar n1 p1) == (GlobalTypeVar n2 p2) = n1 == n2 && p1 == p2
   (Abstr ty1 e1)        == (Abstr ty2 e2)        = ty1 == ty2 && e1 == e2
   (Ductive oDuc1 pars1) == (Ductive oDuc2 pars2) = oDuc1 == oDuc2
@@ -72,7 +72,7 @@ data Expr = UnitExpr -- verum value
           -- If numbers are the same the names should also be the
           -- same
           -- TODO Maybe throw error if this is not the case
-          | LocalExprVar Int Text -- Ctx-- term variables
+          | LocalExprVar Int Bool Text -- Ctx-- term variables
           | GlobalExprVar Text [TypeExpr] [Expr]
           | Expr :@: Expr
           | Structor { ductive :: OpenDuctive
@@ -89,7 +89,7 @@ data Expr = UnitExpr -- verum value
 instance Eq Expr where
   UnitExpr                 == UnitExpr                 =
     True
-  (LocalExprVar i _)       == (LocalExprVar j _)       =
+  (LocalExprVar i _ _)     == (LocalExprVar j _ _)     =
     i == j
   (GlobalExprVar n p1 pe1) == (GlobalExprVar m p2 pe2) =
     n == m && p1 == p2 && pe1 ==pe2

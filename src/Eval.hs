@@ -45,7 +45,7 @@ evalExpr (f :@: arg)                       = do
       recEval <- typeAction (substPars 0 (reverse parameters) a)
                             -- TODO shift idCtx by one
                             [applyExprArgs (r, idCtx (gamma ductive))
-                            :@: LocalExprVar 0 ""]
+                            :@: LocalExprVar 0 False ""]
                             [gamma1]
                             [Ductive{..}]
                             [motive]
@@ -64,7 +64,7 @@ evalExpr (f :@: arg)                       = do
       recEval <- typeAction (substPars 0 (reverse parameters) a)
                             -- TODO shift idCtx by one
                             [applyExprArgs (c, idCtx (gamma ductive))
-                            :@: LocalExprVar 0 ""]
+                            :@: LocalExprVar 0 False ""]
                             [gamma1]
                             [motive]
                             [Ductive{..}]
@@ -75,8 +75,9 @@ evalExpr (f :@: arg)                       = do
                                                               recEval))
     _ -> pure $ valF :@: valArg
 evalExpr (GlobalExprVar v tyPars exprPars) = do
-  res <- lookupDefExpr v tyPars exprPars
-  evalExpr res
+  valTyPars <- mapM evalTypeExpr tyPars
+  valExprPars <- mapM evalExpr exprPars
+  lookupDefExpr v valTyPars valExprPars >>= evalExpr
 evalExpr e =
   overExprM evalFuns e
 

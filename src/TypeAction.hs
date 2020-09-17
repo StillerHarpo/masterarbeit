@@ -35,9 +35,9 @@ typeAction :: TypeExpr
            -> [TypeExpr]
            -> [TypeExpr]
            -> Eval ann Expr
-typeAction (LocalTypeVar n _) terms _      _   _ =
-   pure $  terms !! n
-typeAction (Parameter _ _)    _     _      _   _ =
+typeAction (LocalTypeVar i _ _) terms _      _   _ =
+   pure $  terms !! i
+typeAction Parameter{}          _     _      _   _ =
   error "Internatal error: parameter in type action"
 typeAction (GlobalTypeVar n vars) terms gammas as' bs  = do
   tyExpr <- lookupDefTypeExpr n vars
@@ -68,7 +68,7 @@ typeAction Ductive{..}             terms gammas as bs =
            recEval <- typeAction dk
                                  -- TODO is this the right variable?
                                 -- Could be bound by wrong binder.
-                                (LocalExprVar 0 "" : terms)
+                                (LocalExprVar 0 False "" : terms)
                                 (gamma : gammas)
                                 (motive : as)
                                 (motive : bs )
@@ -84,7 +84,7 @@ typeAction Ductive{..}             terms gammas as bs =
          let parameters = map (substTypes 0 abstrAs) parametersTyExpr
              ductive = OpenDuctive{..} { strDefs =  strDefsAs }
          -- TODO probably shift idCtx by one
-         pure $  applyExprArgs (Iter {..}  , idCtx gamma) :@: LocalExprVar 0 ""
+         pure $  applyExprArgs (Iter {..}  , idCtx gamma) :@: LocalExprVar 0 False ""
        IsCoin -> do
          let parameters = map (substTypes 0 abstrAs) parametersTyExpr
              ductive = OpenDuctive{..} { strDefs =  strDefsAs }
@@ -95,12 +95,12 @@ typeAction Ductive{..}             terms gammas as bs =
            recEval <- typeAction dk
                                  -- TODO is this the right variable?
                                  -- Could be bound by wrong binder.
-                                 (LocalExprVar 0 "" : terms )
+                                 (LocalExprVar 0 False "" : terms )
                                  (gamma : gammas )
                                  (motive : as)
                                  (motive : bs )
            pure $ substExpr 0 (applyExprArgs ( Structor{..} , idDelta)
-                               :@: LocalExprVar 0 "")
+                               :@: LocalExprVar 0 False "")
                               recEval)
                                         idDeltas
                                         (map (substPars 0 (reverse
@@ -111,9 +111,9 @@ typeAction Ductive{..}             terms gammas as bs =
          let ductive = OpenDuctive{..} { strDefs =  strDefsBs }
              parameters = map (substTypes 0 abstrBs) parametersTyExpr
          pure $ applyExprArgs (Iter {..}  ,idCtx gamma)
-                :@: LocalExprVar 0 ""
+                :@: LocalExprVar 0 False ""
 typeAction _                  _     _      _   _  =
-  pure $ LocalExprVar 0 ""
+  pure $ LocalExprVar 0 False ""
 
 -- | splits up a chain of left associative applications to a expression
 -- into a list of  arguments
@@ -129,8 +129,8 @@ abstrArgs = foldr Abstr
 
 idCtx :: Ctx -> [Expr]
 idCtx []  = []
-idCtx [_] = [LocalExprVar 0 ""]
-idCtx ctx = map (flip LocalExprVar "")
+idCtx [_] = [LocalExprVar 0 False ""]
+idCtx ctx = map (\i -> LocalExprVar i False "")
                 [length ctx - 1, length ctx - 2 .. 0]
 
 -- | splits up a chain of left associative applications to a type into a

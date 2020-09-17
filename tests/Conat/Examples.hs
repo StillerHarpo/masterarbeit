@@ -60,7 +60,7 @@ infinityExpr = Iter { motive = GlobalTypeVar "Conat" []
                     , matches = [Structor { ductive = maybeDuc
                                           , parameters = [GlobalTypeVar "Conat" []]
                                           , num = 1}
-                                 :@: LocalExprVar 0 "x"]}
+                                 :@: LocalExprVar 0 False "x"]}
                 :@: GlobalExprVar "zero" [] []
 
 conatExTests :: Spec

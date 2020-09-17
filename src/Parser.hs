@@ -240,6 +240,7 @@ parseExprVar = do
   else case elemIndex var _localExprVars of
          Just idx ->
            pure $ LocalExprVar (length _localExprVars - idx - 1)
+                               False
                                var
          Nothing  ->
            fancyFailure $ Set.singleton $ ErrorFail "Name not defined"
@@ -260,12 +261,14 @@ parseTypeVar = do
   else case elemIndex var _localTypeVars of
          Just idx ->
            pure $ LocalTypeVar (length _localTypeVars - idx - 1)
+                               False
                                var
          Nothing  ->
            -- TODO maybe name shadowing could be a problem
            case elemIndex var _parameterNames of
              Just idx ->
                pure $ Parameter (length _parameterNames - idx - 1)
+                                False
                                 var
              Nothing  ->
                fancyFailure $ Set.singleton $ ErrorFail "Name not defined"

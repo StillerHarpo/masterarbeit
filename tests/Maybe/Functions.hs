@@ -25,7 +25,7 @@ idExpr =
        , parameters = [UnitType]
        , motive = GlobalTypeVar "Maybe" [UnitType]
        , matches = [ nothingExpr UnitType
-                   , justExpr UnitType :@: LocalExprVar 0 "x"]}
+                   , justExpr UnitType :@: LocalExprVar 0 False "x"]}
 
 idTests :: Spec
 idTests = do

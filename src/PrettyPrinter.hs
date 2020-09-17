@@ -31,13 +31,13 @@ instance PrettyPresc TypeExpr where
     "Unit"
   prettyPresc p (e1 :@ e2)            =
     parensIf p $ pretty e1 <+> "@" <+> prettyParens e2
-  prettyPresc _ (LocalTypeVar i "")   =
+  prettyPresc _ (LocalTypeVar i _ "")  =
     "?Ty" <> pretty i
-  prettyPresc _ (LocalTypeVar i n)    =
+  prettyPresc _ (LocalTypeVar i _ n)   =
     pretty n <> "[" <> pretty i <> "]"
-  prettyPresc _ (Parameter i "")   =
+  prettyPresc _ (Parameter i _ "")   =
     "?Par" <> pretty i
-  prettyPresc _ (Parameter i n)       =
+  prettyPresc _ (Parameter i _ n)       =
     pretty n <> "[" <> pretty i <> "]"
   prettyPresc _ (GlobalTypeVar n [])  =
     pretty n
@@ -55,9 +55,9 @@ instance Pretty OpenDuctive where
 instance PrettyPresc Expr where
   prettyPresc _ UnitExpr                       =
     "()"
-  prettyPresc _ (LocalExprVar i "")            =
+  prettyPresc _ (LocalExprVar i _ "")          =
     "?" <> pretty i
-  prettyPresc _ (LocalExprVar i n)             =
+  prettyPresc _ (LocalExprVar i _ n)           =
     pretty n <> "{" <> pretty i <> "}"
   prettyPresc _ (GlobalExprVar n [] [])        =
     pretty n

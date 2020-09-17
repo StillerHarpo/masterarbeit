@@ -43,6 +43,7 @@ library
   exposed-modules:     AbstractSyntaxTree,
                        Parser,
                        ShiftFreeVars,
+                       Mark,
                        Subst,
                        TypeAction,
                        Eval,

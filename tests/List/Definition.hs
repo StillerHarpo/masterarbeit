@@ -30,8 +30,8 @@ listDuc =
                            , gamma1 = []
                            , strName = "Nil" }
                   , StrDef { sigma = []
-                           , a = GlobalTypeVar "Pair" [ Parameter 0 "A"
-                                                      , LocalTypeVar 0 "List"]
+                           , a = GlobalTypeVar "Pair" [ Parameter 0 False "A"
+                                                      , LocalTypeVar 0 False "List"]
                            , gamma1 = []
                            , strName = "Cons"}]
               , nameDuc = "List"}

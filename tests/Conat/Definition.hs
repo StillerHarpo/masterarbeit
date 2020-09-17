@@ -25,7 +25,7 @@ conatDuc = OpenDuctive { gamma = []
                        , inOrCoin = IsCoin
                        , parameterCtx = []
                        , strDefs = [ StrDef { sigma = []
-                                            , a = GlobalTypeVar "Maybe" [LocalTypeVar 0 "Conat"]
+                                            , a = GlobalTypeVar "Maybe" [LocalTypeVar 0 False "Conat"]
                                             , gamma1 = []
                                             , strName = "Prev"}]
                        , nameDuc = "Conat" }
