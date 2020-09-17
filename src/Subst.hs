@@ -5,7 +5,6 @@ module Subst where
 import AbstractSyntaxTree
 import ShiftFreeVars
 import Lib
-import Debug.Trace
 
 substExprFuns :: Int -> Expr -> OverFuns
 substExprFuns i r =
@@ -152,7 +151,7 @@ substParsInCtx :: Int -> [TypeExpr] -> Ctx -> Ctx
 substParsInCtx = substMult substParInCtx
 
 substParInParCtx :: Int -> TypeExpr -> TyCtx -> TyCtx
-substParInParCtx i r []          =
+substParInParCtx _ _ []          =
   []
 substParInParCtx i r (ctx':ctxs) =
   substParInCtx i r ctx' : substParInParCtx (i+1) r ctxs

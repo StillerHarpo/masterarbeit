@@ -1,14 +1,9 @@
 {-# language RecordWildCards #-}
-{-# language StandaloneDeriving #-}
 {-# language OverloadedStrings #-}
 
 module PrettyPrinter where
 
-
 import Data.Text.Prettyprint.Doc
-import Data.Text                 (Text)
-
-import Lib
 
 import AbstractSyntaxTree
 

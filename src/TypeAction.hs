@@ -3,21 +3,18 @@
 
 module TypeAction where
 
-import           Lens.Micro.Platform
-
 import           Data.Text.Prettyprint.Doc
-import           Data.Text                      (Text)
-import qualified Data.Text                 as T
+import           Data.Text                 (Text)
 
 import           Control.Monad.Except
 import           Control.Monad.Reader
-import           Control.Arrow                  (second)
+import           Control.Arrow             (second)
 
 import           AbstractSyntaxTree
 import           ShiftFreeVars
 import           Subst
 
-import           PrettyPrinter
+import           PrettyPrinter             ()
 
 -- | Evaluation monad for looking up global variables
 type Eval ann = ExceptT (Doc ann) (Reader EvalCtx)

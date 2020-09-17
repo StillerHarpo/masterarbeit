@@ -8,7 +8,6 @@ import Control.Monad.Except
 import Data.Text.Prettyprint.Doc
 
 import AbstractSyntaxTree
-import Subst
 import TypeAction
 import Eval
 

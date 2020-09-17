@@ -4,17 +4,10 @@
 
 module Eval where
 
-import Control.Monad.Reader
-
-import Lens.Micro.Platform
-
 import AbstractSyntaxTree
 import ShiftFreeVars
 import Subst
 import TypeAction
-
-import           Data.Text.Prettyprint.Doc
-import           PrettyPrinter
 
 evalFuns :: OverFunsM (Eval ann)
 evalFuns = (overFunsM evalFuns)
@@ -75,18 +68,13 @@ evalExpr (f :@: arg)                       = do
                             [gamma1]
                             [motive]
                             [Ductive{..}]
-      let res =  shiftFreeVarsExpr ((-1) - length gamma1)
-                                   (1 + length gamma1)
-                                   (substExprs 0 (last args : reverse tau)
-                                                 (substExpr 0 (matches !! i)
-                                                              recEval))
       evalExpr $ shiftFreeVarsExpr ((-1) - length gamma1)
                                    (1 + length gamma1)
                                    (substExprs 0 (last args : reverse tau)
                                                  (substExpr 0 (matches !! i)
                                                               recEval))
     _ -> pure $ valF :@: valArg
-evalExpr val@(GlobalExprVar v tyPars exprPars) = do
+evalExpr (GlobalExprVar v tyPars exprPars) = do
   res <- lookupDefExpr v tyPars exprPars
   evalExpr res
 evalExpr e =

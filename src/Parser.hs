@@ -17,8 +17,6 @@ import           Data.List                                 (elemIndex)
 import           Data.String
 import           Data.Tuple                                (swap)
 
-import           Control.Monad                             (void)
-import           Control.Monad.Combinators.Expr
 import           Control.Monad.State.Strict
 import           Lens.Micro.Platform
 
@@ -28,7 +26,6 @@ import qualified Data.Text                       as T
 import           Data.Void
 import           Text.Megaparsec
 import           Text.Megaparsec.Char
-import qualified Text.Megaparsec.Char            as Parsec
 import qualified Text.Megaparsec.Char.Lexer      as L
 
 -- TODO reverse ctx
@@ -277,8 +274,7 @@ parseStrVar :: Parser Expr
 parseStrVar = do
   var <- parseTypeStrVarT
   parameters <- parseParameters
-  let nameStr = var
-      lookupStr []                             =
+  let lookupStr []                             =
         singleFailure "Con/Destrunctor not defined"
       lookupStr (ductive@OpenDuctive{..}:ductives) =
         case saveIdx var (map strName strDefs) of

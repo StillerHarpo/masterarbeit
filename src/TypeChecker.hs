@@ -10,8 +10,6 @@ import           Control.Monad.Except
 import           Control.Monad.Reader
 import           Control.Monad.State
 
-import           Data.List
-
 import           Lens.Micro.Platform
 
 import           Data.Text                      (Text)
@@ -27,8 +25,6 @@ import           Subst
 import           TypeAction
 import           Eval
 import           Betaeq
-
-import           PrettyPrinter
 
 -- | Type inference monad
 type TI ann = ExceptT (Doc ann) (Reader ContextTI)
@@ -186,13 +182,13 @@ checkContextMorph exprs gamma1 gamma2 =
   where
     checkContextMorph' []     gamma1 []         =
       checkCtx gamma1
-    checkContextMorph' []     _      _          =
-      throwError $ "Invalid context morphism:"
-                   <> "Gamma2 should be empty for empty morphism"
     checkContextMorph' (t:ts) gamma1 (a:gamma2) =
       do local (over ctx (const gamma1))
                (checkTerm t ([], substTypeExprs 0 ts a))
          checkContextMorph ts gamma1 gamma2
+    checkContextMorph' _      _      _          =
+      throwError $ "Invalid context morphism:"
+                   <> "Gamma2 should be empty for empty morphism"
 
 checkTerm :: Expr -> Type -> TI ann ()
 checkTerm e (ctx1,a1) = do
@@ -279,7 +275,7 @@ lookupLocalVarTI i t ctx = lookupLocalVarTI' i (reverse ctx)
     lookupLocalVarTI' :: Int -> [a] -> TI ann a
     lookupLocalVarTI' _ []     = throwError (pretty t <+> "not defined")
     lookupLocalVarTI' 0 (x:_)  = pure x
-    lookupLocalVarTI' n (x:xs)
+    lookupLocalVarTI' n (_:xs)
       | n < 0                  =
           error "internal error negative variable lookup"
       | otherwise              = lookupLocalVarTI' (n-1) xs
