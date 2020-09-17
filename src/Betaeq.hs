@@ -1,4 +1,5 @@
 {-# language OverloadedStrings #-}
+{-# language RecordWildCards #-}
 
 module Betaeq where
 
@@ -7,6 +8,7 @@ import Control.Monad.Except
 import Data.Text.Prettyprint.Doc
 
 import AbstractSyntaxTree
+import Subst
 import TypeAction
 import Eval
 
@@ -44,6 +46,9 @@ inlineTypeExpr :: TypeExpr -> Eval ann TypeExpr
 inlineTypeExpr (GlobalTypeVar n vars)  = lookupDefTypeExpr n vars
                                          >>= inlineTypeExpr
 inlineTypeExpr tyExpr                  = overTypeExprM inlineFuns tyExpr
+
+inlineDuc :: OpenDuctive -> Eval ann OpenDuctive
+inlineDuc = overOpenDuctiveM inlineFuns
 
 inlineExpr :: Expr -> Eval ann Expr
 inlineExpr (GlobalExprVar n tyPars exprPars) =

@@ -17,34 +17,27 @@ streamD = T.unlines
   , "  Tail : Stream -> Stream"
   ]
 
-streamDuc :: TypeExpr -> Ductive
-streamDuc x =
-  Ductive { gamma = []
-          , strDefs = [ StrDef { sigma = []
-                               , a = x
-                               , gamma1 = []
-                               , strName = "Head"}
-                      , StrDef { sigma = []
-                               , a = LocalTypeVar 0 "Stream"
-                               , gamma1 = []
-                               , strName = "Head"}]
-          , nameDuc = "Stream" }
-
-streamDucA :: Ductive
-streamDucA = streamDuc (Parameter 0 "A")
+streamDuc ::  OpenDuctive
+streamDuc =
+  OpenDuctive { gamma = []
+              , parameterCtx = [[]]
+              , inOrCoin = IsCoin
+              , strDefs = [ StrDef { sigma = []
+                                   , a = Parameter 0 "A"
+                                   , gamma1 = []
+                                   , strName = "Head"}
+                          , StrDef { sigma = []
+                                   , a = LocalTypeVar 0 "Stream"
+                                   , gamma1 = []
+                                   , strName = "Tail"}]
+              , nameDuc = "Stream" }
 
 streamExpr :: TypeExpr -> TypeExpr
-streamExpr = Coin . streamDuc
-
-streamExprA :: TypeExpr
-streamExprA = Coin streamDucA
+streamExpr x = Ductive { openDuctive = streamDuc
+                       , parametersTyExpr = [x] }
 
 streamTest :: Spec
 streamTest =
   it "Parses the definition of Stream" $
     shouldParseWithDefs [] streamD
-      [ TypeDef { name = "Stream"
-                , parameterCtx = [[]]
-                , typeExpr = streamExprA
-                , kind = Nothing}]
-
+      [ TypeDef streamDuc ]

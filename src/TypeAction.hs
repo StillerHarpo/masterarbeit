@@ -38,67 +38,83 @@ typeAction :: TypeExpr
            -> [TypeExpr]
            -> [TypeExpr]
            -> Eval ann Expr
-typeAction (LocalTypeVar n _) terms _      _   _ = do
-   l <- asks numPars
-   pure $ terms !! (n + l)
-typeAction (Parameter n _)    terms _      _   _ = pure $ terms !! n
+typeAction (LocalTypeVar n _) terms _      _   _ =
+   pure $  terms !! n
+typeAction (Parameter _ _)    _     _      _   _ =
+  error "Internatal error: parameter in type action"
 typeAction (GlobalTypeVar n vars) terms gammas as' bs  = do
   tyExpr <- lookupDefTypeExpr n vars
   typeAction tyExpr terms gammas as' bs
 typeAction (c :@ s)           terms gammas as' bs =
   flip (substExpr 0) s <$> typeAction c terms gammas as' bs
 typeAction (Abstr _ c) terms gammas as' bs = typeAction c terms gammas as' bs
-typeAction (In d)             terms gammas as' bs = do
-  let idDeltas = map (map (shiftFreeVarsExpr 1 0) . idCtx . gamma1)
-                     (strDefs d)
-      fromRec = d { strDefs =
-                      map (\strDef@StrDef{..} ->
-                           strDef { a = substTypes 1 (zipWith abstrArgs
-                                                               as'
-                                                               gammas)
-                                                       a })
-                           (strDefs d) } -- R_a in paper
-      toRec = In fromRec
-      rb = applyDuctiveCtx IsIn fromRec
-  matches <- sequence $ zipWith3 (\idDelta dk k -> do
-    recEval <- typeAction dk
-                          -- TODO is this the right variable?
-                         -- Could be bound by wrong binder.
-                         (LocalExprVar 0 "" : terms)
-                         (gamma d : gammas)
-                         (rb : as')
-                         (rb : bs )
-    pure $ applyExprArgs (Constructor fromRec k, idDelta)
-                          :@: recEval) -- g_k in paper
-                                  idDeltas (map a (strDefs d))  [0..]
-  pure$  applyExprArgs (Rec {..}  , idCtx (gamma d)) :@: LocalExprVar 0 ""
-typeAction (Coin d)           terms gammas as' bs = do
-  let idDeltas = map (map (shiftFreeVarsExpr 1 0) . idCtx . gamma1)
-                     (strDefs d)
-      toCorec = d { strDefs =
-                      map (\strDef@StrDef{..} ->
-                            strDef { a = substTypes 1 (zipWith abstrArgs
-                                                               bs
-                                                               gammas)
-                                                       a})
-                          (strDefs d)}
-      fromCorec = Coin toCorec
-      rb = applyDuctiveCtx IsCoin toCorec
-      -- g_k in paper
-  matches <- sequence $ zipWith3 (\idDelta dk k -> do
-    recEval <- typeAction dk
-                          -- TODO is this the right variable?
-                          -- Could be bound by wrong binder.
-                          (LocalExprVar 0 "" : terms )
-                          (gamma d : gammas )
-                          (rb : as')
-                          (rb : bs )
-    pure $ substExpr 0 (applyExprArgs ( Destructor toCorec k
-                                      , idDelta)
-                        :@: LocalExprVar 0 "")
-                       recEval)
-                                 idDeltas (map a (strDefs d)) [0..]
-  pure $ applyExprArgs (Corec {..}  ,idCtx (gamma d)) :@: LocalExprVar 0 ""
+typeAction Ductive{..}             terms gammas as bs =
+  let OpenDuctive{..} = openDuctive
+      abstrAs = zipWith abstrArgs as gammas -- R_a in paper
+      abstrBs = zipWith abstrArgs bs gammas -- R_b in paper
+      strDefsAs = map (\strDef@StrDef{..} ->
+                                 strDef { a = substTypes 1 abstrAs a })
+                       strDefs
+      strDefsBs = map (\strDef@StrDef{..} ->
+                                 strDef { a = substTypes 1 abstrBs a })
+                       strDefs
+      idDeltas = map (map (shiftFreeVarsExpr 1 0) . idCtx . gamma1)
+                            strDefs
+  in case inOrCoin of
+       IsIn -> do
+         let parameters = map (substTypes 0 abstrBs) parametersTyExpr
+             ductive = OpenDuctive{..} { strDefs =  strDefsBs }
+             openDuctive = OpenDuctive{..} { strDefs =  strDefsBs }
+             motive = Ductive{..}
+               { parametersTyExpr = map (substTypes 0 abstrBs) parametersTyExpr }
+         matches <- sequence $ zipWith3 (\idDelta dk num -> do
+           recEval <- typeAction dk
+                                 -- TODO is this the right variable?
+                                -- Could be bound by wrong binder.
+                                (LocalExprVar 0 "" : terms)
+                                (gamma : gammas)
+                                (motive : as)
+                                (motive : bs )
+         -- TODO probably shift idDelta by one
+           pure $ applyExprArgs (Structor{..}, idDelta)
+                                 :@: recEval) -- g_k in paper
+                                         idDeltas
+                                         (map (substPars 0 (reverse
+                                                            $ map (shiftFreeTypeVars 1 0)
+                                                                   parametersTyExpr) . a)
+                                               strDefs)
+                                         [0..]
+         let parameters = map (substTypes 0 abstrAs) parametersTyExpr
+             ductive = OpenDuctive{..} { strDefs =  strDefsAs }
+         -- TODO probably shift idCtx by one
+         pure $  applyExprArgs (Iter {..}  , idCtx gamma) :@: LocalExprVar 0 ""
+       IsCoin -> do
+         let parameters = map (substTypes 0 abstrAs) parametersTyExpr
+             ductive = OpenDuctive{..} { strDefs =  strDefsAs }
+             openDuctive = OpenDuctive{..} { strDefs =  strDefsAs }
+             motive = Ductive{..}
+               { parametersTyExpr = map (substTypes 0 abstrAs) parametersTyExpr }
+         matches <- sequence $ zipWith3 (\idDelta dk num -> do
+           recEval <- typeAction dk
+                                 -- TODO is this the right variable?
+                                 -- Could be bound by wrong binder.
+                                 (LocalExprVar 0 "" : terms )
+                                 (gamma : gammas )
+                                 (motive : as)
+                                 (motive : bs )
+           pure $ substExpr 0 (applyExprArgs ( Structor{..} , idDelta)
+                               :@: LocalExprVar 0 "")
+                              recEval)
+                                        idDeltas
+                                        (map (substPars 0 (reverse
+                                                           $ map (shiftFreeTypeVars 1 0)
+                                                                  parametersTyExpr) . a)
+                                              strDefs)
+                                        [0..]
+         let ductive = OpenDuctive{..} { strDefs =  strDefsBs }
+             parameters = map (substTypes 0 abstrBs) parametersTyExpr
+         pure $ applyExprArgs (Iter {..}  ,idCtx gamma)
+                :@: LocalExprVar 0 ""
 typeAction _                  _     _      _   _  =
   pure $ LocalExprVar 0 ""
 
@@ -129,15 +145,6 @@ getTypeExprArgs arg           = (arg,[])
 applyTypeExprArgs :: (TypeExpr,[Expr]) -> TypeExpr
 applyTypeExprArgs (f,args) = foldl (:@) f args
 
-data InOrCoin = IsIn | IsCoin
-
--- | apply the context of a ductive to it
-applyDuctiveCtx :: InOrCoin -> Ductive -> TypeExpr
-applyDuctiveCtx IsIn   d@Ductive{..} =
-  applyTypeExprArgs (In d, idCtx gamma)
-applyDuctiveCtx IsCoin d@Ductive{..} =
-  applyTypeExprArgs (Coin d, idCtx gamma)
-
 lookupDefExpr :: Text -- ^ name of expr var
               -> [TypeExpr] -- ^ type parameters to check
               -> [Expr] -- ^ expr parameters to check
@@ -147,9 +154,10 @@ lookupDefExpr t tyPars exprPars = asks stmtCtx >>= lookupDefExpr'
     lookupDefExpr' :: [Statement] -> Eval ann Expr
     lookupDefExpr' []         = throwError $ "Variable"
                                               <+> pretty t
-                                              <> "not defined"
+                                              <+> "not defined"
     lookupDefExpr' (ExprDef{..}:stmts)
       | t == name             = do
+         -- TODO should be unnecessary because it's already type checked
          assert (length tyPars == length tyParameterCtx)
                 ("parameters to type variables have to be complete"
                   <> "\n while looking up" <+> pretty t
@@ -170,23 +178,13 @@ lookupDefExpr t tyPars exprPars = asks stmtCtx >>= lookupDefExpr'
 lookupDefTypeExpr :: Text -- ^ name of type var
                   -> [TypeExpr] -- ^ parameters to check
                   -> Eval ann TypeExpr
-lookupDefTypeExpr t pars = asks stmtCtx >>= lookupDefTypeExpr'
+lookupDefTypeExpr t parametersTyExpr = asks stmtCtx >>= lookupDefTypeExpr'
   where
     lookupDefTypeExpr' :: [Statement] -> Eval ann TypeExpr
     lookupDefTypeExpr' []        = throwError $ "Variable" <+> pretty t
                                                  <+> "not defined"
-    lookupDefTypeExpr' (TypeDef{..}:stmts)
-      | t == name                = do
-          assert (length pars == length parameterCtx)
-                 ("parameters to type variables have to be complete"
-                 <> "\n while looking up" <+> pretty t
-                 <> "\n with parameters" <+> pretty pars
-                 <> "\n and parameter context" <+> pretty parameterCtx)
---    TODO This function gets used in evalution with doesn't change the context
---         Are this tests really not necessary?
---        parsKinds <- mapM inferType pars
---        betaeqTyCtx parsKinds parameterCtx
-          pure $ substPars 0 (reverse pars) typeExpr
+    lookupDefTypeExpr' (TypeDef openDuctive@OpenDuctive{..}:stmts)
+      | t == nameDuc             = pure Ductive{..}
       | otherwise                = lookupDefTypeExpr' stmts
     lookupDefTypeExpr' (_:stmts) = lookupDefTypeExpr' stmts
 

@@ -36,25 +36,20 @@ listEx5D = "list5 = Cons<Nat> @ "
 listEx5DR = T.unlines [listEx5DR, twoD, listEx5D]
 
 listEx1Expr, listEx2Expr, listEx3Expr, listEx4Expr, listEx5Expr :: Expr
-listEx1Expr = WithParameters [UnitType] (Constructor listDucA 0)
-              :@: UnitExpr
-listEx2Expr = WithParameters [UnitType] (Constructor listDucA 1)
+listEx1Expr = nilExpr UnitType
+listEx2Expr = consExpr UnitType
               :@: mkPairExpr UnitType
                              (GlobalTypeVar "List" [UnitType])
                              UnitExpr
                              (GlobalExprVar "list1" [] [])
-listEx3Expr = WithParameters [GlobalTypeVar "Nat" []]
-                             (Constructor listDucA 0)
-              :@: UnitExpr
-listEx4Expr = WithParameters [GlobalTypeVar "Nat" []]
-                             (Constructor listDucA 1)
+listEx3Expr = nilExpr (GlobalTypeVar "Nat" [])
+listEx4Expr = consExpr (GlobalTypeVar "Nat" [])
               :@: mkPairExpr (GlobalTypeVar "Nat" [])
                              (GlobalTypeVar "List"
                                             [GlobalTypeVar "Nat" []])
                              (GlobalExprVar "one" [] [])
                              (GlobalExprVar "list3" [] [])
-listEx5Expr = WithParameters [GlobalTypeVar "Nat" []]
-                             (Constructor listDucA 1)
+listEx5Expr = consExpr (GlobalTypeVar "Nat" [])
               :@: mkPairExpr (GlobalTypeVar "Nat" [])
                              (GlobalTypeVar "List"
                                             [GlobalTypeVar "Nat" []])
@@ -62,9 +57,8 @@ listEx5Expr = WithParameters [GlobalTypeVar "Nat" []]
                              (GlobalExprVar "list4" [] [])
 
 genListExpr :: TypeExpr -> [Expr] -> Expr
-genListExpr ty [] = WithParameters [ty] (Constructor listDucA 0)
-                   :@: UnitExpr
-genListExpr ty (x:xs) = WithParameters [ty] (Constructor listDucA 1)
+genListExpr ty [] = nilExpr ty
+genListExpr ty (x:xs) = consExpr ty
                        :@: mkPairExpr ty (GlobalTypeVar "List" [ty]) x (genListExpr ty xs)
 
 listExTest :: Spec

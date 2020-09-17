@@ -23,15 +23,33 @@ twoD = "two = Suc @ one"
 twoDR = T.unlines [oneDR, twoD]
 
 zeroExpr, oneExpr, oneExprI, twoExpr, twoExprI :: Expr
-zeroExpr = Constructor natDuc 0 :@: UnitExpr
-oneExpr = Constructor natDuc 1 :@: GlobalExprVar "zero" [] []
-oneExprI = Constructor natDuc 1 :@: zeroExpr
-twoExpr = Constructor natDuc 1 :@: GlobalExprVar "one" [] []
-twoExprI = Constructor natDuc 1 :@: oneExprI
+zeroExpr = Structor { ductive = natDuc
+                    , parameters = []
+                    , num = 0 }
+           :@: UnitExpr
+oneExpr = Structor { ductive = natDuc
+                   , parameters = []
+                   , num = 1 }
+          :@: GlobalExprVar "zero" [] []
+oneExprI = Structor { ductive = natDuc
+                    , parameters = []
+                    , num = 1 }
+           :@: zeroExpr
+twoExpr = Structor { ductive = natDuc
+                    , parameters = []
+                    , num = 1 }
+          :@: GlobalExprVar "one" [] []
+twoExprI = Structor { ductive = natDuc
+                    , parameters = []
+                    , num = 1 }
+           :@: oneExprI
 
 genNatExpr :: Int -> Expr
 genNatExpr 0 = zeroExpr
-genNatExpr n = Constructor natDuc 1 :@: genNatExpr (n - 1)
+genNatExpr n = Structor { ductive = natDuc
+                        , parameters = []
+                        , num = 1 }
+               :@: genNatExpr (n - 1)
 
 natExTests :: Spec
 natExTests = do

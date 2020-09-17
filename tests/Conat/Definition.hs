@@ -20,23 +20,29 @@ conatD = T.unlines
 conatDR :: Text
 conatDR = T.unlines [maybeD, conatD]
 
-conatDuc :: Ductive
-conatDuc = Ductive { gamma = []
-                   , strDefs = [ StrDef { sigma = []
-                                        , a = GlobalTypeVar "Maybe" [LocalTypeVar 0 "Conat"]
-                                        , gamma1 = []
-                                        , strName = "Prev"}]
-                   , nameDuc = "Conat" }
+conatDuc :: OpenDuctive
+conatDuc = OpenDuctive { gamma = []
+                       , inOrCoin = IsCoin
+                       , parameterCtx = []
+                       , strDefs = [ StrDef { sigma = []
+                                            , a = GlobalTypeVar "Maybe" [LocalTypeVar 0 "Conat"]
+                                            , gamma1 = []
+                                            , strName = "Prev"}]
+                       , nameDuc = "Conat" }
 
-conatExpr = Coin conatDuc
+conatExpr :: TypeExpr
+conatExpr = Ductive { parametersTyExpr = []
+                    , openDuctive = conatDuc}
+
+prevExpr :: Expr
+prevExpr = Structor { ductive = conatDuc
+                    , parameters = []
+                    , num = 0}
 
 conatTest :: Spec
 conatTest =
   it "Parses the definition of Conat" $
     shouldParseWithDefs [maybeD] conatD
-      [ TypeDef { name = "Conat"
-                , parameterCtx = []
-                , typeExpr = conatExpr
-                , kind = Nothing}]
+      [ TypeDef conatDuc ]
 
 

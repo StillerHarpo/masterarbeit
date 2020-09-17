@@ -24,22 +24,15 @@ maybeEx3DR = T.unlines [natD, maybeD, maybeEx3D]
 maybeEx4D = "maybe4 = Just<Nat> @ one"
 maybeEx4DR = T.unlines [oneDR, maybeD, maybeEx4D]
 
-maybeEx1Expr, maybeEx1ExprI, maybeEx2Expr, maybeEx2ExprI :: Expr
+maybeEx1Expr, maybeEx2Expr :: Expr
 maybeEx3Expr, maybeEx3ExprI, maybeEx4Expr, maybeEx4ExprI :: Expr
-maybeEx1Expr = WithParameters [UnitType] (Constructor maybeDucA 0)
-              :@: UnitExpr
-maybeEx1ExprI = Constructor (maybeDuc UnitType) 0 :@: UnitExpr
-maybeEx2Expr = WithParameters [UnitType] (Constructor maybeDucA 1)
-              :@: UnitExpr
-maybeEx2ExprI = Constructor (maybeDuc UnitType) 1 :@: UnitExpr
-maybeEx3Expr = WithParameters [GlobalTypeVar "Nat" []]
-                             (Constructor maybeDucA 0)
-              :@: UnitExpr
-maybeEx3ExprI = Constructor (maybeDuc natExpr) 0 :@: UnitExpr
-maybeEx4Expr = WithParameters [GlobalTypeVar "Nat" []]
-                             (Constructor maybeDucA 1)
-              :@: GlobalExprVar "one" [] []
-maybeEx4ExprI = Constructor (maybeDuc natExpr) 1 :@: oneExprI
+maybeEx1Expr = nothingExpr UnitType
+maybeEx2Expr = justExpr UnitType :@: UnitExpr
+maybeEx3Expr = nothingExpr (GlobalTypeVar "Nat" [])
+maybeEx3ExprI = nothingExpr natExpr
+maybeEx4Expr = justExpr (GlobalTypeVar "Nat" [])
+               :@: GlobalExprVar "one" [] []
+maybeEx4ExprI = justExpr natExpr:@: oneExprI
 
 maybeExTests :: Spec
 maybeExTests = do

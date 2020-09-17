@@ -47,12 +47,12 @@ data ParserState = ParserState {
     _scLineFold      :: Maybe (Parsec Void Text ())
   , _exprDefs        :: Set Text
   , _typeExprDefs    :: Set Text
-  , _defDuctives     :: [(Text, (InOrCoin, Ductive))]
+  , _defDuctives     :: [OpenDuctive]
   , _constructorDefs :: Set Text
   , _destructorDefs  :: Set Text
   , _localExprVars   :: [Text]
   , _localTypeVars   :: [Text]
-  , _parameters      :: [Text]
+  , _parameterNames  :: [Text]
   }
 $(makeLenses ''ParserState)
 
@@ -66,7 +66,7 @@ emptyState = ParserState {
   , _destructorDefs  = Set.empty
   , _localExprVars   = []
   , _localTypeVars   = []
-  , _parameters      = []
+  , _parameterNames      = []
   }
 
 -- | a parser with a space consumer state for line folding
@@ -114,16 +114,15 @@ parseData = nonIndented $ parseBlock
          gamma = map snd gammaP
          parameterCtx = map (map snd . snd) parametersCtxP
          strNames = map strName strDefs
+         inOrCoin = IsIn
      localExprVars .= []
      localTypeVars .= []
      mapM_ checkName strNames
-     defDuctives %= ((name, (InTag, Ductive{..})):)
+     defDuctives %= (OpenDuctive{..}:)
      typeExprDefs %= Set.insert name
      constructorDefs %= Set.union (Set.fromList strNames)
-     let typeExpr = In Ductive{..}
-         kind = Nothing
-     parameters .= []
-     pure $ TypeDef{..})
+     parameterNames .= []
+     pure $ TypeDef OpenDuctive{..})
 
 parseCodata :: Parser Statement
 parseCodata = nonIndented $ parseBlock
@@ -137,16 +136,15 @@ parseCodata = nonIndented $ parseBlock
          gamma = map snd gammaP
          parameterCtx = map (map snd . snd) parametersCtxP
          strNames = map strName strDefs
+         inOrCoin = IsCoin
      localExprVars .= []
      localTypeVars .= []
      mapM_ checkName strNames
-     defDuctives %= ((name, (CoinTag, Ductive{..})):)
+     defDuctives %= (OpenDuctive{..}:)
      typeExprDefs %= Set.insert name
      destructorDefs %= Set.union (Set.fromList strNames)
-     let typeExpr = Coin Ductive{..}
-         kind = Nothing
-     parameters .= []
-     pure TypeDef{..})
+     parameterNames .= []
+     pure (TypeDef OpenDuctive{..}))
 
 parseConstructorDef :: Text -> Parser StrDef
 parseConstructorDef name = parseStructorDef $ swap <$> ((,)
@@ -173,9 +171,9 @@ parseDestructorDef name = parseStructorDef $ (,)
 parseDataHeader :: Parser (Text, CtxP, TyCtxP)
 parseDataHeader = do
   name <- lexeme parseTypeStrVarT
-  parameters .= []
+  parameterNames .= []
   pars <- lexeme parseParCtx
-  parameters .= map fst pars
+  parameterNames .= map fst pars
   void $ symbol ":"
   gammaP <- lexeme parseCtx
   void $ if   null gammaP
@@ -268,9 +266,9 @@ parseTypeVar = do
                                var
          Nothing  ->
            -- TODO maybe name shadowing could be a problem
-           case elemIndex var _parameters of
+           case elemIndex var _parameterNames of
              Just idx ->
-               pure $ Parameter (length _parameters - idx - 1)
+               pure $ Parameter (length _parameterNames - idx - 1)
                                 var
              Nothing  ->
                fancyFailure $ Set.singleton $ ErrorFail "Name not defined"
@@ -278,15 +276,15 @@ parseTypeVar = do
 parseStrVar :: Parser Expr
 parseStrVar = do
   var <- parseTypeStrVarT
-  pars <- parseParameters
+  parameters <- parseParameters
   let nameStr = var
-      lookupStr [] = singleFailure "Con/Destrunctor not defined"
-      lookupStr ((_,(inOrCoin,ductive@Ductive{..})):ductives) =
-        case (saveIdx var (map strName strDefs), inOrCoin) of
-          (Just num, InTag) -> pure $ Constructor{..}
-          (Just num, CoinTag) -> pure $ Destructor{..}
-          (Nothing, _) -> lookupStr ductives
-  withParameters pars <$> ((view defDuctives <$> get) >>= lookupStr)
+      lookupStr []                             =
+        singleFailure "Con/Destrunctor not defined"
+      lookupStr (ductive@OpenDuctive{..}:ductives) =
+        case saveIdx var (map strName strDefs) of
+          Just num -> pure $ Structor{..}
+          Nothing  -> lookupStr ductives
+  (view defDuctives <$> get) >>= lookupStr
 
 parseUnitType :: Parser TypeExpr
 parseUnitType = UnitType <$ string "Unit"
@@ -310,9 +308,9 @@ parseRec = parseBlock ((,,)
                        <*> lexeme parseTypeExpr
                        <* symbol "where")
                       (const parseMatch)
-                      (\(pars, from,toRec) matches -> do
-                          (fromRec,matches) <- orderMatches from matches
-                          pure (withParameters pars Rec{..}))
+                      (\(parameters, from, motive) matches -> do
+                          (ductive,matches) <- orderMatches from matches
+                          pure Iter{..})
 
 parseCorec :: Parser Expr
 parseCorec = parseBlock ((,,)
@@ -323,13 +321,13 @@ parseCorec = parseBlock ((,,)
                          <*> lexeme parseTypeStrVarT
                          <* symbol "where")
                          (const parseMatch)
-                         (\(pars, fromCorec,to) matches -> do
-                             (toCorec,matches) <- orderMatches to matches
-                             pure (withParameters pars Corec{..}))
+                         (\(parameters, motive,to) matches -> do
+                             (ductive,matches) <- orderMatches to matches
+                             pure Iter{..})
 
-orderMatches :: Text -> [(Text,Expr)] -> Parser (Ductive,[Expr])
+orderMatches :: Text -> [(Text,Expr)] -> Parser (OpenDuctive,[Expr])
 orderMatches name matches = do
-  (_, ductive@Ductive{..}) <- (view defDuctives <$> get) >>= lookupP name
+  ductive@OpenDuctive{..} <- (view defDuctives <$> get) >>= lookupDuc name
   exprs <- orderExprs (map strName strDefs) ([],matches)
   pure (ductive,exprs)
   where
@@ -415,11 +413,6 @@ parseExprParametersNE = symbol "(" *> parseParametersRest
 parseExprParameters :: Parser [Expr]
 parseExprParameters = try parseExprParametersNE <|> pure []
 
-
-withParameters :: [TypeExpr] -> Expr -> Expr
-withParameters [] = id
-withParameters ps = WithParameters ps
-
 withLocalExprVars :: [Text] -> Parser a -> Parser a
 withLocalExprVars vars p =
   (localExprVars %= (++ vars))
@@ -435,9 +428,9 @@ withLocalTypeVar var p =
 
 withParVars :: [Text] -> Parser a -> Parser a
 withParVars vars p =
-  (parameters %= (++ vars))
+  (parameterNames %= (++ vars))
   *> p
-  <* (parameters %= \allVars ->
+  <* (parameterNames %= \allVars ->
         take (length allVars - length vars) allVars)
 
 -- | checks if name is already used.  We forbid name shadowing for now
@@ -458,6 +451,12 @@ lookupP var ctx =
   case lookup var ctx of
     Just t   -> pure t
     Nothing  -> singleFailure $ "Variable not defined: " <> var
+
+lookupDuc :: Text -> [OpenDuctive] -> Parser OpenDuctive
+lookupDuc var []         = singleFailure $ "Variable not defined: " <> var
+lookupDuc var (duc:ducs)
+  | nameDuc duc == var   = pure duc
+  | otherwise            = lookupDuc var ducs
 
 -- | The space consumer with newline
 scn :: Parsec Void Text ()

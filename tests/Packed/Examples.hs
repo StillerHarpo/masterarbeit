@@ -20,14 +20,11 @@ packedEx1DR = T.unlines [packedD, packedEx1D]
 packedEx2D = "packed2 = Pack<Nat> @ one"
 packedEx2DR = T.unlines [oneDR, packedD, packedEx2D]
 
-packedEx1Expr, packedEx1ExprI, packedEx2Expr, packedEx2ExprI :: Expr
-packedEx1Expr = WithParameters [UnitType] (Constructor packedDucA 0)
-                :@: UnitExpr
-packedEx1ExprI = Constructor (packedDuc UnitType) 0 :@: UnitExpr
-packedEx2Expr = WithParameters [GlobalTypeVar "Nat" []]
-                             (Constructor packedDucA 0)
+packedEx1Expr, packedEx2Expr, packedEx2ExprI :: Expr
+packedEx1Expr = packExpr UnitType :@: UnitExpr
+packedEx2Expr = packExpr (GlobalTypeVar "Nat" [])
                 :@: GlobalExprVar "one" [] []
-packedEx2ExprI = Constructor (packedDuc natExpr) 0 :@: oneExprI
+packedEx2ExprI = packExpr natExpr :@: oneExprI
 
 packedExTests :: Spec
 packedExTests = do

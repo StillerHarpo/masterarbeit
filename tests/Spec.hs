@@ -68,33 +68,31 @@ main = hspec $ do
                                        -- TODO this should work without brackets
                                        , "   C : ((x:Unit).Unit) -> A"])
       `shouldParse`
-      [ TypeDef { name = "A"
-                , parameterCtx = []
-                , typeExpr = In Ductive {
+      [ TypeDef $ OpenDuctive {
                     gamma = [],
+                    inOrCoin = IsIn,
+                    parameterCtx = [],
                     strDefs = [StrDef {
                       sigma = [],
                       a = Abstr UnitType UnitType,
                       gamma1 = [],
                       strName = "C"}],
-                    nameDuc = ""}
-                , kind = Nothing}]
+                    nameDuc = "A"}]
     it "parses a abstraction with multiple arguments" $
       parse parseProgram "" (T.unlines [ "data A : Set where"
                                        -- TODO this should work without brackets
                                        , "   C : ((x:Unit,y:Unit).Unit) -> A"])
       `shouldParse`
-      [ TypeDef { name = "A"
-                , parameterCtx = []
-                , typeExpr = In Ductive {
+      [ TypeDef $ OpenDuctive {
                     gamma = [],
+                    inOrCoin = IsIn,
+                    parameterCtx = [],
                     strDefs = [StrDef {
                       sigma = [],
                       a = Abstr UnitType (Abstr UnitType UnitType),
                       gamma1 = [],
                       strName = "C"}],
-                    nameDuc = ""}
-                , kind = Nothing}]
+                    nameDuc = "A"}]
     it "parse a application left associative" $
       parse parseProgram "" "() @ () @ ()"
       `shouldParse`
@@ -107,32 +105,35 @@ main = hspec $ do
       parse parseProgram "" "x = ()"
       `shouldParse`
       [ExprDef "x" [] [] UnitExpr Nothing]
-    let c = Ductive { gamma = []
-                    , strDefs = [StrDef {
-                          sigma = []
-                        , a = LocalTypeVar 0 "C"
-                        , gamma1 = []
-                        , strName = "C1"}]
-                    , nameDuc = "" }
+    let inC = OpenDuctive { gamma = []
+                          , inOrCoin = IsIn
+                          , parameterCtx = []
+                          , strDefs = [StrDef {
+                                sigma = []
+                              , a = LocalTypeVar 0 "C"
+                              , gamma1 = []
+                              , strName = "C1"}]
+                          , nameDuc = "C" }
+        coinC = inC { inOrCoin = IsCoin }
     it "parses data" $
       parse parseProgram "" "data C : Set where { C1 : C -> C }"
       `shouldParse`
-      [TypeDef "C" [] (In c) Nothing]
+      [TypeDef inC]
     it "parses codata" $
       parse parseProgram "" "codata C : Set where { C1 : C -> C }"
       `shouldParse`
-      [TypeDef "C" [] (Coin c) Nothing]
+      [TypeDef coinC]
     -- TODO Tests for constructors and destructors
     it "parses rec" $
-      parse parseProgram "" "data C : Set where { A : C -> C};rec C to Unit where { A x = () }"
+      parse parseProgram "" "data C : Set where { C1 : C -> C};rec C to Unit where { C1 x = () }"
       `shouldParse`
-      [ TypeDef "C" [] (In c) Nothing
-      , Expression $ Rec c UnitType [UnitExpr]]
+      [ TypeDef inC
+      , Expression $ Iter inC [] UnitType [UnitExpr]]
     it "parses corec" $
-      parse parseProgram "" "codata C : Set where { A : C -> C}; corec Unit to C where { A x = ()}"
+      parse parseProgram "" "codata C : Set where { C1 : C -> C}; corec Unit to C where { C1 x = ()}"
       `shouldParse`
-      [ TypeDef "C" [] (Coin c) Nothing
-      , Expression $ Corec UnitType c [UnitExpr]]
+      [ TypeDef coinC
+      , Expression $ Iter coinC [] UnitType [UnitExpr]]
     it "parses multiline program" $
       parse parseProgram "" "y = (); y"
       `shouldParse`
@@ -150,10 +151,10 @@ main = hspec $ do
                                        , "  C1 : (C @ ()) -> C ()"
                                        , "  C2 : (y:Unit) -> (C @ y) -> C ()"])
       `shouldParse`
-      [TypeDef { name = "C"
-               , parameterCtx = []
-               , typeExpr = In Ductive {
+      [TypeDef $ OpenDuctive {
                    gamma = [UnitType],
+                   inOrCoin = IsIn,
+                   parameterCtx = [],
                    strDefs = [ StrDef { sigma = [UnitExpr]
                                       , a = LocalTypeVar 0 "C" :@ UnitExpr
                                       , gamma1 = []
@@ -163,8 +164,7 @@ main = hspec $ do
                                              :@ LocalExprVar 0 "y"
                                       , gamma1 = [UnitType]
                                       , strName = "C2"}],
-                   nameDuc = ""}
-               , kind = Nothing}]
+                   nameDuc = "C"}]
     it "parses a program" $
       parse parseProgram "" (T.unlines [ "x = () @ ()"
                                        , "z = ()"
@@ -183,9 +183,9 @@ main = hspec $ do
                 , exprParameterCtx = []
                 , expr = UnitExpr
                 , ty = Nothing}
-      , TypeDef { name = "A"
-                , parameterCtx = []
-                , typeExpr = In $ Ductive {
+      , TypeDef $ OpenDuctive {
+                    parameterCtx = [],
+                    inOrCoin = IsIn,
                     gamma = [ UnitType],
                     strDefs = [ StrDef { sigma = [UnitExpr],
                                          a = LocalTypeVar 0 "A":@ UnitExpr,
@@ -194,9 +194,8 @@ main = hspec $ do
                               , StrDef { sigma = [UnitExpr],
                                          a = LocalTypeVar 0 "A" :@ LocalExprVar 0 "y",
                                          gamma1 = [UnitType],
-                                         strName = "C2"}]
-                ,   nameDuc = ""}
-                , kind = Nothing}
+                                         strName = "C2"}],
+                    nameDuc = "A"}
       , Expression $ GlobalExprVar "x" [] [] :@: GlobalExprVar "z" [] []]
     it "parses a rec programm" $
       parse parseProgram "" (T.unlines [ "data A : Set where"
@@ -205,46 +204,45 @@ main = hspec $ do
                                        , "  C x = C @ x"
                                        ])
       `shouldParse`
-      (let a = Ductive { gamma = []
-                       , strDefs = [ StrDef { sigma = []
-                                            , a = LocalTypeVar 0 "A"
-                                            , gamma1 = []
-                                            , strName = "C"} ]
-                       , nameDuc = "" }
-      in [ TypeDef { name = "A"
-                   , parameterCtx = []
-                   , typeExpr = In a
-                   , kind = Nothing}
-         , Expression Rec { fromRec = a
-                          , toRec = GlobalTypeVar "A" []
-                          , matches = [ Constructor a 0
-                                        :@: LocalExprVar 0 "x" ]}])
+      (let a = OpenDuctive { gamma = []
+                           , inOrCoin = IsIn
+                           , parameterCtx = []
+                           , strDefs = [ StrDef { sigma = []
+                                                , a = LocalTypeVar 0 "A"
+                                                , gamma1 = []
+                                                , strName = "C"} ]
+                           , nameDuc = "A" }
+      in [ TypeDef a
+         , Expression Iter { ductive = a
+                           , parameters = []
+                           , motive = GlobalTypeVar "A" []
+                           , matches = [ Structor a [] 0
+                                         :@: LocalExprVar 0 "x" ]}])
     it "parses context with spaces" $
        parse parseProgram "" "data A : (x : Unit, y : Unit) -> Set where"
        `shouldParse`
-       [ TypeDef { name = "A"
-                 , parameterCtx = []
-                 , typeExpr = In Ductive { gamma = [UnitType, UnitType]
-                                         , strDefs = []
-                                         , nameDuc = ""}
-                 , kind = Nothing }]
+       [ TypeDef $ OpenDuctive { parameterCtx = []
+                               , inOrCoin = IsIn
+                               , gamma = [UnitType, UnitType]
+                               , strDefs = []
+                               , nameDuc = "A"}]
     it "parses parameters of inductive type" $
       parse parseProgram "" (T.unlines [ "data A<B : Set> : Set where"
                                        , "  C : B -> A"
                                        , "C<Unit>@()"])
       `shouldParse`
-      let duc = Ductive { gamma = []
-                        , strDefs = [ StrDef { sigma = []
-                                             , a = Parameter 0 "B"
-                                             , gamma1 = []
-                                             , strName = "C"}]
-                        , nameDuc = "A"}
-      in [ TypeDef { name = "A"
-                   , parameterCtx = [[]]
-                   , typeExpr = In duc
-                   , kind = Nothing}
-         , Expression (WithParameters [UnitType] (Constructor { ductive = duc
-                                                              , num = 0})
+      let duc = OpenDuctive { gamma = []
+                            , inOrCoin = IsIn
+                            , parameterCtx = [[]]
+                            , strDefs = [ StrDef { sigma = []
+                                                 , a = Parameter 0 "B"
+                                                 , gamma1 = []
+                                                 , strName = "C"}]
+                            , nameDuc = "A"}
+      in [ TypeDef duc
+         , Expression (Structor { ductive = duc
+                                , parameters = [UnitType]
+                                , num = 0}
                        :@: UnitExpr)]
     it "parses parameters of coinductive type" $
       parse parseProgram "" (T.unlines [ "codata A<B : Set> : Set where"
@@ -252,19 +250,19 @@ main = hspec $ do
                                        , "corec<Unit> Unit to A where"
                                        , "  C x = ()"])
       `shouldParse`
-      let duc = Ductive { gamma = []
-                        , strDefs = [ StrDef { sigma = []
-                                             , a = Parameter 0 "B"
-                                             , gamma1 = []
-                                             , strName = "C"}]
-                        , nameDuc = "A" }
-      in [ TypeDef { name = "A"
-                   , parameterCtx = [[]]
-                   , typeExpr = Coin duc
-                   , kind = Nothing}
-         , Expression (WithParameters [UnitType] (Corec { fromCorec = UnitType
-                                                        , toCorec = duc
-                                                        , matches = [UnitExpr]}))]
+      let duc = OpenDuctive { gamma = []
+                            , inOrCoin = IsCoin
+                            , parameterCtx = [[]]
+                            , strDefs = [ StrDef { sigma = []
+                                                 , a = Parameter 0 "B"
+                                                 , gamma1 = []
+                                                 , strName = "C"}]
+                            , nameDuc = "A" }
+      in [ TypeDef duc
+         , Expression (Iter { motive = UnitType
+                            , parameters = [UnitType]
+                            , ductive = duc
+                            , matches = [UnitExpr]})]
     it "orders matches right" $
        parse parseProgram "" (T.unlines [ "data A : Set where"
                                         , "  C1 : A -> A"
@@ -278,84 +276,51 @@ main = hspec $ do
                                         , "  C1 x  = C1 @ x"
                                         ])
       `shouldParse`
-      (let a = Ductive { gamma = []
-                       , strDefs = [ StrDef { sigma = []
-                                            , a =  LocalTypeVar 0 "A"
-                                            , gamma1 = []
-                                            , strName = "C1"}
-                                   , StrDef { sigma = []
-                                            , a =  LocalTypeVar 0 "A"
-                                            , gamma1 =  [UnitType]
-                                            , strName = "C2"}
-                                   , StrDef { sigma = []
-                                            , a =  LocalTypeVar 0 "A"
-                                            , gamma1 = [UnitType, UnitType]
-                                            , strName = "C3"}
-                                   , StrDef { sigma = []
-                                            , a =  LocalTypeVar 0 "A"
-                                            , gamma1 = [UnitType, UnitType, UnitType]
-                                            , strName = "C4"}]
-                       , nameDuc = "" }
-      in [ TypeDef { name = "A"
-                   , parameterCtx = []
-                   , typeExpr = In a
-                   , kind = Nothing}
-         , Expression Rec { fromRec = a
-                          , toRec = GlobalTypeVar "A" []
-                          , matches = [ Constructor a 0
-                                        :@: LocalExprVar 0 "x"
-                                      , Constructor a 1
-                                        :@: LocalExprVar 1 "x"
-                                        :@: LocalExprVar 0 "y"
-                                      , Constructor a 2
-                                        :@: LocalExprVar 2 "x"
-                                        :@: LocalExprVar 1 "y"
-                                        :@: LocalExprVar 0 "z"
-                                      , Constructor a 3
-                                        :@: LocalExprVar 3 "x"
-                                        :@: LocalExprVar 2 "y"
-                                        :@: LocalExprVar 1 "z"
-                                        :@: LocalExprVar 0 "u"
-                                      ]}])
+      (let a = OpenDuctive { gamma = []
+                           , inOrCoin = IsIn
+                           , parameterCtx = []
+                           , strDefs = [ StrDef { sigma = []
+                                                , a =  LocalTypeVar 0 "A"
+                                                , gamma1 = []
+                                                , strName = "C1"}
+                                       , StrDef { sigma = []
+                                                , a =  LocalTypeVar 0 "A"
+                                                , gamma1 =  [UnitType]
+                                                , strName = "C2"}
+                                       , StrDef { sigma = []
+                                                , a =  LocalTypeVar 0 "A"
+                                                , gamma1 = [UnitType, UnitType]
+                                                , strName = "C3"}
+                                       , StrDef { sigma = []
+                                                , a =  LocalTypeVar 0 "A"
+                                                , gamma1 = [UnitType, UnitType, UnitType]
+                                                , strName = "C4"}]
+                           , nameDuc = "A" }
+      in [ TypeDef a
+         , Expression $ Iter { ductive = a
+                             , parameters = []
+                             , motive = GlobalTypeVar "A" []
+                             , matches = [ Structor a [] 0
+                                           :@: LocalExprVar 0 "x"
+                                         , Structor a [] 1
+                                           :@: LocalExprVar 1 "x"
+                                           :@: LocalExprVar 0 "y"
+                                         , Structor a [] 2
+                                           :@: LocalExprVar 2 "x"
+                                           :@: LocalExprVar 1 "y"
+                                          :@: LocalExprVar 0 "z"
+                                         , Structor a [] 3
+                                           :@: LocalExprVar 3 "x"
+                                           :@: LocalExprVar 2 "y"
+                                           :@: LocalExprVar 1 "z"
+                                           :@: LocalExprVar 0 "u"]}])
 
-  describe "Inlining works" $ do
-    let tyA = TypeDef { name = "A"
-                      , parameterCtx = []
-                      , typeExpr = UnitType
-                      , kind = Nothing}
-    it "inlines nested Global Var" $
-      shouldEvalInGlobCtx [tyA]
-                          (inlineTypeExpr $ GlobalTypeVar "A" [])
-                          UnitType
-    let tyB = TypeDef { name = "B"
-                      , parameterCtx = []
-                      , typeExpr = GlobalTypeVar "A" []
-                      , kind = Nothing}
-    it "inlines nested Global Var" $
-      shouldEvalInGlobCtx [tyA,tyB]
-                          (inlineTypeExpr $ GlobalTypeVar "A" [])
-                          UnitType
-    let tyC = TypeDef { name = "C"
-                      , parameterCtx = [[]]
-                      , typeExpr = Parameter 0 "X"
-                      , kind = Nothing}
-    it "inlines parameterized Global Var" $
-      shouldEvalInGlobCtx [tyC]
-                          (inlineTypeExpr $ GlobalTypeVar "C" [UnitType])
-                          UnitType
-    let a = ExprDef { name = "a"
-                    , tyParameterCtx = []
-                    , exprParameterCtx = []
-                    , expr = UnitExpr
-                    , ty = Nothing}
-    it "inlines Global var with unit expr" $
-      shouldEvalInGlobCtx [a]
-                          (inlineExpr $ GlobalExprVar "a" [] [])
-                          UnitExpr
-
-  let emptyDuc = Ductive { gamma = []
-                         , strDefs = []
-                         , nameDuc = ""}
+  let emptyInDuc = OpenDuctive { gamma = []
+                               , inOrCoin = IsIn
+                               , parameterCtx = []
+                               , strDefs = []
+                               , nameDuc = ""}
+      emptyCoinDuc = emptyInDuc { inOrCoin = IsCoin}
 
   describe "Shifting of free variables works" $ do
     it "shift free vars doesn't change UnitType" $ hedgehog $ do
@@ -370,6 +335,86 @@ main = hspec $ do
         Abstr UnitType UnitType
 
   describe "Substitution Works" $ do
+    it "substitutes unit expression in expression" $
+      substExpr 0 UnitExpr (LocalExprVar 0 "")
+      `shouldBe`
+      UnitExpr
+    it "substitutes variable in expression" $
+      substExpr 0 (LocalExprVar 0 "") (LocalExprVar 0 "")
+      `shouldBe`
+      LocalExprVar 0 ""
+    it "substitutes variable in expression with offset 1" $
+      substExpr 1 (LocalExprVar 0 "") (LocalExprVar 1 "")
+      `shouldBe`
+      LocalExprVar 0 ""
+    it "substitutes expression which is bound by abstraction" $
+      substTypeExpr 0 (LocalExprVar 2 "") (Abstr UnitType
+                                                (UnitType
+                                                 :@ (LocalExprVar 0 ""
+                                                     :@: LocalExprVar 1 "")))
+      `shouldBe`
+      Abstr UnitType (UnitType :@ (LocalExprVar 0 ""
+                                   :@: LocalExprVar 3 ""))
+    it "substitutes expression which is bound by abstraction with offset 1" $
+      substTypeExpr 1 (LocalExprVar 2 "") (Abstr UnitType
+                                                (UnitType
+                                                 :@ (LocalExprVar 0 ""
+                                                     :@: LocalExprVar 2 "")))
+      `shouldBe`
+      Abstr UnitType (UnitType :@ (LocalExprVar 0 ""
+                                   :@: LocalExprVar 3 ""))
+
+    it "substitutes multible expressions " $
+       substExprs 0 [LocalExprVar 2 ""
+                    , LocalExprVar 3 ""] (LocalExprVar 0 ""
+                                          :@: LocalExprVar 1 "")
+       `shouldBe`
+       (LocalExprVar 2 "" :@: LocalExprVar 3 "")
+    let ducBound = emptyInDuc {strDefs = [StrDef { gamma1 = [UnitType, UnitType]
+                                                 , a  = UnitType
+                                                 , sigma = []
+                                                 , strName = ""}]}
+        iterBound = Iter { ductive = ducBound
+                         , parameters = []
+                         , motive = UnitType
+                         , matches = []}
+    it "substitue expression which is bound by Iteration" $
+      substExpr 0 (LocalExprVar 2 "")
+                  (iterBound {matches = [LocalExprVar 1 ""
+                                         :@: LocalExprVar 3 ""]})
+      `shouldBe`
+      iterBound {matches = [LocalExprVar 1 "" :@: LocalExprVar 5 ""]}
+    it "substitue expression which is bound by Iteration with offset one" $
+      substExpr 1 (LocalExprVar 3 "")
+                  (iterBound {matches = [LocalExprVar 4 ""
+                                         :@: LocalExprVar 5 ""]})
+      `shouldBe`
+      iterBound {matches = [LocalExprVar 6 "" :@: LocalExprVar 5 ""]}
+
+    it ("substitue multible expressions in expression which is"
+        <> "bound by Iteration") $
+      substExprs 0 [LocalExprVar 2 "", LocalExprVar 3 ""]
+                  (iterBound {matches = [LocalExprVar 4 ""
+                                         :@: LocalExprVar 3 ""]})
+      `shouldBe`
+      iterBound {matches = [LocalExprVar 6 "" :@: LocalExprVar 5 ""]}
+    it "substitute type expression" $
+      substType 0 UnitType (LocalTypeVar 0 "")
+      `shouldBe`
+      UnitType
+    let emptyStrDef = StrDef { gamma1 = []
+                             , a = UnitType
+                             , sigma = []
+                             , strName = ""}
+        emptyDuc = Ductive { openDuctive = emptyInDuc
+                           , parametersTyExpr = []}
+    it "substitutes a bound type expression" $
+      substType 0 (LocalTypeVar 2 "")
+                  (emptyDuc {openDuctive = emptyInDuc { strDefs = [ emptyStrDef {a = LocalTypeVar 0 ""}
+                                                      , emptyStrDef {a = LocalTypeVar 1 ""}]}})
+      `shouldBe`
+      emptyDuc {openDuctive = emptyInDuc {strDefs = [ emptyStrDef {a = LocalTypeVar 0 ""}
+                                                    , emptyStrDef {a = LocalTypeVar 3 ""}]}}
     it "substitutes Parameter" $
       substPar 0 UnitType (Parameter 0 "")
       `shouldBe`
@@ -382,19 +427,75 @@ main = hspec $ do
       substParInCtx 0 UnitType [Parameter 0 "", Parameter 1 ""]
       `shouldBe`
       [UnitType, Parameter 1 ""]
-    let ducWith x = Ductive { gamma = [x]
+    it "substitue parameters in global variable" $
+      substPar 0 UnitType (GlobalTypeVar "" [Parameter 0 ""])
+      `shouldBe`
+      GlobalTypeVar "" [UnitType]
+    it "substitue parameter in openDuctive" $
+      substOpenDuctivePar 0 UnitType
+        (OpenDuctive { gamma = [Parameter 0 "x"]
+                     , parameterCtx = []
+                     , inOrCoin = IsIn
+                     , strDefs = []
+                     , nameDuc = ""})
+      `shouldBe`
+      (OpenDuctive { gamma = [UnitType]
+                   , parameterCtx = []
+                   , inOrCoin = IsIn
+                   , strDefs = []
+                   , nameDuc = ""})
+    let ducWith x =
+          Ductive {
+              openDuctive =
+                OpenDuctive { gamma = [x]
+                            , parameterCtx = []
+                            , inOrCoin = IsIn
                             , strDefs = [StrDef { sigma = []
                                                 , a     = x
                                                 , gamma1 = [x]
                                                 , strName = ""}]
                             , nameDuc = ""}
+            , parametersTyExpr = []}
     it "substitute Parameter with Unit in ductive" $
-       substPar 0 UnitType (In (ducWith (Parameter 0 "")))
+       substPar 0 UnitType (ducWith (Parameter 0 ""))
        `shouldBe`
-       In (ducWith UnitType)
+       ducWith UnitType
+    it "substitute Parameter in parameters of type" $
+       substPar 0 UnitType (emptyDuc {parametersTyExpr = [Parameter 0 ""]})
+       `shouldBe`
+       emptyDuc {parametersTyExpr = [UnitType]}
 
   let shouldEval :: (HasCallStack, Show a, Eq a) => Eval ann a -> a -> Expectation
       shouldEval eval = shouldEvalIn eval emptyEvalCtx
+
+  describe "Type Action works" $ do
+    let pairDuc = OpenDuctive { nameDuc = "Pair"
+                              , inOrCoin = IsCoin
+                              , parameterCtx = [[],[]]
+                              , gamma = []
+                              , strDefs = [ StrDef { strName = "Fst"
+                                                   , gamma1 = []
+                                                   , sigma = []
+                                                   , a = Parameter 1 "A"}
+                                          , StrDef { strName = "Fst"
+                                                   , gamma1 = []
+                                                   , sigma = []
+                                                   , a = Parameter 0 "B"}]}
+        pairUnits = Ductive { openDuctive = pairDuc
+                            , parametersTyExpr = [UnitType,UnitType]}
+    it "Type action on mu with parameters works" $
+      typeAction pairUnits [UnitExpr] [[]] [UnitType] [UnitType]
+      `shouldEval`
+      (Iter { ductive = pairDuc
+            , parameters = [UnitType, UnitType]
+            , motive = pairUnits
+            , matches = [ Structor { ductive = pairDuc
+                                   , parameters = [UnitType, UnitType]
+                                   , num = 0} :@: LocalExprVar 0 ""
+                        , Structor { ductive = pairDuc
+                                   , parameters = [UnitType, UnitType]
+                                   , num = 1} :@: LocalExprVar 0 "" ]}
+      :@: LocalExprVar 0 "")
 
   describe "Eval works" $ do
     it "evals unit type to unit type" $
@@ -410,33 +511,74 @@ main = hspec $ do
       `shouldEval`
       UnitType
     it "evals mu to mu" $
-      evalTypeExpr (In emptyDuc)
+      evalTypeExpr (Ductive emptyInDuc [])
       `shouldEval`
-      In emptyDuc
+      Ductive emptyInDuc []
     it "evals nu to nu" $
-      evalTypeExpr (Coin emptyDuc)
+      evalTypeExpr (Ductive emptyCoinDuc [])
       `shouldEval`
-      Coin emptyDuc
+      Ductive emptyCoinDuc []
     it "evals unit expression to Unit expression" $
       evalExpr UnitExpr
       `shouldEval`
       UnitExpr
     it "evals rec to rec" $
-      evalExpr (Rec { fromRec = emptyDuc
-                     , toRec = UnitType
+      evalExpr (Iter { ductive = emptyInDuc
+                     , parameters = []
+                     , motive = UnitType
                      , matches = []})
       `shouldEval`
-      Rec { fromRec = emptyDuc
-          , toRec = UnitType
-          , matches = []}
+      Iter { ductive = emptyInDuc
+           , parameters = []
+           , motive = UnitType
+           , matches = []}
     it "evals corec to corec" $
-      evalExpr (Corec { fromCorec = UnitType
-                       , toCorec = emptyDuc
-                       , matches = []})
+      evalExpr (Iter { motive = UnitType
+                     , ductive = emptyCoinDuc
+                     , parameters = []
+                     , matches = []})
       `shouldEval`
-      Corec { fromCorec = UnitType
-                       , toCorec = emptyDuc
-                       , matches = []}
+      Iter { motive = UnitType
+           , ductive = emptyCoinDuc
+           , parameters = []
+           , matches = []}
+
+  describe "Inlining works" $ do
+    let ducA = emptyInDuc {nameDuc = "A"}
+        tyA = TypeDef ducA
+    it "inlines Global Var" $
+      shouldEvalInGlobCtx [tyA]
+                          (inlineTypeExpr $ GlobalTypeVar "A" [])
+                          (Ductive (emptyInDuc {nameDuc = "A"}) [])
+    let ducB = emptyInDuc { gamma = [GlobalTypeVar "A" []]
+                          , nameDuc = "B"}
+        tyB = TypeDef ducB
+    it "inlines nested Global Var" $
+      shouldEvalInGlobCtx [tyA,tyB]
+                          (inlineTypeExpr $ GlobalTypeVar "B" [])
+                          (Ductive (ducB {gamma = [Ductive ducA []]}) [])
+    let ducC = emptyInDuc { gamma = [Parameter 0 "x"]
+                          , nameDuc = "C"}
+        tyC = TypeDef ducC
+    it "inlines parameterized Global Var" $
+      shouldEvalInGlobCtx [tyC]
+                          (inlineTypeExpr $ GlobalTypeVar "C" [UnitType])
+                          (Ductive ducC [UnitType])
+    it "inlines parameterized Global Var with Global Var as parameter" $
+      shouldEvalInGlobCtx
+        [tyC]
+        (inlineTypeExpr $ GlobalTypeVar "C"
+                                        [GlobalTypeVar "C" [UnitType]])
+        (Ductive ducC [Ductive ducC [UnitType]])
+    let a = ExprDef { name = "a"
+                    , tyParameterCtx = []
+                    , exprParameterCtx = []
+                    , expr = UnitExpr
+                    , ty = Nothing}
+    it "inlines Global var with unit expr" $
+      shouldEvalInGlobCtx [a]
+                          (inlineExpr $ GlobalExprVar "a" [] [])
+                          UnitExpr
 
   describe "Type Checker works" $ do
     let shouldCheck :: (HasCallStack, Show a, Eq a) => TI ann a -> a -> Expectation
@@ -454,11 +596,11 @@ main = hspec $ do
       `shouldCheck`
       []
     it "type checks mu" $
-      inferType (In emptyDuc)
+      inferType (Ductive emptyInDuc [])
       `shouldCheck`
       []
     it "type checks nu" $
-      inferType (Coin emptyDuc)
+      inferType (Ductive emptyCoinDuc [])
       `shouldCheck`
       []
     it "type checks unit expr" $
@@ -466,17 +608,19 @@ main = hspec $ do
       `shouldCheck`
       ([],UnitType)
     it "type checks rec" $
-      inferTerm (Rec { fromRec = emptyDuc
-                     , toRec = UnitType
-                     , matches = []})
+      inferTerm (Iter { ductive = emptyInDuc
+                      , parameters = []
+                      , motive = UnitType
+                      , matches = []})
       `shouldCheck`
-      ([In emptyDuc],UnitType)
+      ([Ductive emptyInDuc []],UnitType)
     it "type checks corec" $
-      inferTerm (Corec { fromCorec = UnitType
-                       , toCorec = emptyDuc
-                       , matches = []})
+      inferTerm (Iter { motive = UnitType
+                      , parameters = []
+                      , ductive = emptyCoinDuc
+                      , matches = []})
       `shouldCheck`
-      ([UnitType], Coin emptyDuc)
+      ([UnitType], Ductive emptyCoinDuc [])
 
   -- Complete programs
   Bool.tests

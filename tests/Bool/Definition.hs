@@ -18,27 +18,26 @@ boolD = T.unlines
   , "  False  : Unit -> Bool"
   ]
 
-boolDuc :: Ductive
-boolDuc = Ductive { gamma = []
-                  , strDefs = [ StrDef { sigma = []
-                                       , a = UnitType
-                                       , gamma1 = []
-                                       , strName = "True"}
-                              , StrDef { sigma = []
-                                       , a = UnitType
-                                       , gamma1 = []
-                                       , strName = "False"}]
-                  , nameDuc = "Bool" }
+boolDuc :: OpenDuctive
+boolDuc = OpenDuctive { gamma = []
+                      , inOrCoin = IsIn
+                      , parameterCtx = []
+                      , strDefs = [ StrDef { sigma = []
+                                           , a = UnitType
+                                           , gamma1 = []
+                                           , strName = "True"}
+                                  , StrDef { sigma = []
+                                           , a = UnitType
+                                           , gamma1 = []
+                                           , strName = "False"}]
+                      , nameDuc = "Bool" }
 
-boolExpr = In boolDuc
+boolExpr :: TypeExpr
+boolExpr = Ductive { openDuctive = boolDuc
+                   , parametersTyExpr = []}
 
 boolTest :: Spec
 boolTest =
   it "Parses the definition of Bool" $
     shouldParseWithDefs [] boolD
-      [ TypeDef { name = "Bool"
-                , parameterCtx = []
-                , typeExpr = boolExpr
-                , kind = Nothing}]
-
-
+      [ TypeDef boolDuc ]

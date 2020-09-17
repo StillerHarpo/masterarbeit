@@ -6,8 +6,6 @@
 
 module TypeChecker where
 
-import           Debug.Trace
-
 import           Control.Monad.Except
 import           Control.Monad.Reader
 import           Control.Monad.State
@@ -72,14 +70,10 @@ checkProgramPTI (ExprDef{..} : stmts)    = do
   expr <- evalInPTI $ evalExpr expr
   modify (ExprDef{..} :)
   checkProgramPTI stmts
-checkProgramPTI (TypeDef{..} : stmts)    = do
-  tiInPTI $ checkParCtx parameterCtx
-  kind <- Just <$> tiInPTI (local (set parCtx parameterCtx)
-                                  (inferType typeExpr
-                                   >>= (evalInTI .evalCtx)))
-  typeExpr <- evalInPTI $ evalTypeExpr typeExpr
-  modify (TypeDef{..} :)
-  checkProgramPTI stmts
+checkProgramPTI (TypeDef duc : stmts)    =
+  tiInPTI (checkTypeDuctive duc)
+  >> modify (TypeDef duc :)
+  >> checkProgramPTI stmts
 checkProgramPTI (Expression expr : stmts) =
   (:) <$> (TypedExpr <$> evalInPTI (evalExpr expr)
                      <*> tiInPTI (inferTerm expr
@@ -161,18 +155,28 @@ inferType tyExpr = catchError (inferType' tyExpr)
           pure $ substCtx 0 t gamma2
     inferType' (Abstr tyX b)          =
       (tyX:) <$> local (ctx %~ (tyX:)) (inferType b)
-    inferType' (In d)                 =
-      local (ctx .~ []) (inferTypeDuctive d)
-    inferType' (Coin d)               =
-      local (ctx .~ []) (inferTypeDuctive d)
+    inferType' Ductive{..}            =
+      checkParKinds parametersTyExpr (parameterCtx openDuctive)
+      >> local (ctx .~ [])
+               (inferTypeDuctiveWithPars parametersTyExpr openDuctive)
 
-inferTypeDuctive :: Ductive -> TI ann Kind
-inferTypeDuctive Ductive{..} = mapM_ checkStrDef strDefs >> pure gamma
-  where
-    checkStrDef :: StrDef -> TI ann ()
-    checkStrDef StrDef{..} =
-      checkContextMorph sigma gamma1 gamma
-      >> local (over tyCtx (++[gamma]) . set ctx gamma1) (checkType a [])
+inferTypeDuctiveWithPars :: [TypeExpr] -> OpenDuctive -> TI ann Kind
+inferTypeDuctiveWithPars pars od@OpenDuctive{..} =
+  checkParKinds pars parameterCtx
+  >> checkTypeDuctive od
+  >> pure (substParsInCtx 0 pars gamma)
+
+checkTypeDuctive :: OpenDuctive -> TI ann ()
+checkTypeDuctive OpenDuctive{..} =
+  local (over parCtx (parameterCtx++))
+        (mapM_ checkStrDef strDefs)
+    where
+      checkStrDef :: StrDef -> TI ann ()
+      checkStrDef StrDef{..} =
+        checkContextMorph sigma gamma1 gamma
+        >> local (over tyCtx (++[gamma]) . set ctx gamma1)
+                 (checkType a [])
+
 
 checkContextMorph :: [Expr] -> Ctx -> Ctx -> TI ann ()
 checkContextMorph exprs gamma1 gamma2 =
@@ -224,44 +228,50 @@ inferTerm expr = catchError (inferTerm' expr)
                    (substTypeExpr (length ctx2)
                                   (shiftFreeVarsExpr (length ctx2+1) 0 s)
                                    b))
-    inferTerm' (Constructor d@Ductive{..} i)    =
-      inferTypeDuctive d
-      >> pure (let StrDef{..} = strDefs !! i
-               in ( gamma1 ++ [substType 0 (In d) a]
-                  , shiftFreeVarsTypeExpr 1 0
-                    $ applyTypeExprArgs (In d , sigma)))
-    inferTerm' (Destructor d@Ductive{..} i)     =
-      inferTypeDuctive d
-      >> pure (let StrDef{..} = strDefs !! i
-               in ( gamma1 ++ [applyTypeExprArgs (Coin d, sigma)]
-                  , shiftFreeVarsTypeExpr 1 0 $ substType 0 (Coin d) a))
-    inferTerm' Rec{..}                          = do
-      valTo <- evalInTI $  evalTypeExpr toRec
-      valFrom <- evalInTI $ evalDuctive fromRec
-      gamma' <- inferType valTo
-      let Ductive{..} = valFrom
+    inferTerm' Structor{..}                     =
+      inferTypeDuctiveWithPars parameters ductive
+      >> pure (let StrDef{..} = strDefs ductive !! num
+                   openDuctive = ductive
+                   parametersTyExpr = parameters
+               in case inOrCoin ductive of
+                  IsIn -> ( gamma1 ++ [substType 0 Ductive{..}
+                                       $ substPars 0 (reverse parameters) a]
+                          , shiftFreeVarsTypeExpr 1 0
+                            $ applyTypeExprArgs (Ductive{..} , sigma))
+                  IsCoin -> ( gamma1 ++ [applyTypeExprArgs (Ductive{..}, sigma)]
+                            , shiftFreeVarsTypeExpr 1 0
+                              $ substType 0 Ductive{..}
+                              $ substPars 0 (reverse parameters) a))
+    inferTerm' Iter{..}                         = do
+      motive <- evalInTI $  evalTypeExpr motive
+      ductive <- evalInTI $ evalDuctive ductive
+      gamma' <- inferType motive
+      gamma <- inferTypeDuctiveWithPars parameters ductive
+      let OpenDuctive{..} = ductive
+          openDuctive = ductive
+          parametersTyExpr = parameters
       evalInTI $ betaeqCtx gamma' gamma
-      zipWithM_ (\StrDef{..} match ->
-                   local (over ctx (++gamma1++[substType 0 valTo a]))
-                         (checkTerm match ([],applyTypeExprArgs (valTo,sigma))))
-                strDefs matches
-      pure ( gamma ++ [applyTypeExprArgs (In valFrom, idCtx gamma)]
-           , applyTypeExprArgs ( valTo
+      case inOrCoin of
+        IsIn -> do
+         zipWithM_ (\StrDef{..} match ->
+                      local (over ctx (++gamma1++[substType 0 motive
+                                                  $ substPars 0 (reverse parameters) a ]))
+                            (checkTerm match ([],applyTypeExprArgs (motive,sigma))))
+                   strDefs matches
+         pure ( gamma ++ [applyTypeExprArgs (Ductive{..}, idCtx gamma)]
+              , applyTypeExprArgs ( motive
                                , map (shiftFreeVarsExpr 1 0) (idCtx gamma)))
-    inferTerm' Corec{..}                       = do
-      valTo <- evalInTI $ evalDuctive toCorec
-      valFrom <-evalInTI $  evalTypeExpr fromCorec
-      gamma' <- inferType valFrom
-      let Ductive{..} = valTo
-      evalInTI $ betaeqCtx gamma' gamma
-      zipWithM_ (\StrDef{..} match ->
-                    local (over ctx (++gamma1++[applyTypeExprArgs (valFrom,sigma)]))
-                          (checkTerm match ([], shiftFreeVarsTypeExpr 1 0 $ substType 0 valFrom a)))
-                strDefs matches
-      pure ( gamma ++ [applyTypeExprArgs (valFrom, idCtx gamma)]
-           , applyTypeExprArgs (Coin valTo
-                               , map (shiftFreeVarsExpr 1 0) (idCtx gamma)))
-    inferTerm' (WithParameters ps e) = inferTerm $ substParsInExpr 0 (reverse ps) e
+        IsCoin -> do
+          evalInTI $ betaeqCtx gamma' gamma
+          zipWithM_ (\StrDef{..} match ->
+                        local (over ctx (++gamma1++[applyTypeExprArgs (motive,sigma)]))
+                              (checkTerm match ([], shiftFreeVarsTypeExpr 1 0
+                                                    $ substType 0 motive
+                                                    $ substPars 0 (reverse parameters) a)))
+                    strDefs matches
+          pure ( gamma ++ [applyTypeExprArgs (motive, idCtx gamma)]
+               , applyTypeExprArgs ( Ductive{..}
+                                   , map (shiftFreeVarsExpr 1 0) (idCtx gamma)))
 
 lookupLocalVarTI :: Int -> Text -> [a] -> TI ann a
 lookupLocalVarTI i t ctx = lookupLocalVarTI' i (reverse ctx)
@@ -317,14 +327,14 @@ lookupDefKindTI t pars = view defCtx >>= lookupDefKindTI'
     lookupDefKindTI' :: [Statement] -> TI ann Kind
     lookupDefKindTI' []                  =
           throwError $ "Variable" <+> pretty t <+> "not defined"
-    lookupDefKindTI' (TypeDef{..}:stmts)
-      | t == name                        =
+    lookupDefKindTI' (TypeDef OpenDuctive{..}:stmts)
+      | t == nameDuc                     =
           do catchError (checkParKinds pars parameterCtx)
                         (throwError . (<> "\n while looking up variable "
                                        <+> pretty t
                                        <+> "with parameters"
                                        <+> pretty pars))
-             pure (fromJust kind)
+             pure gamma
       | otherwise                        =
           lookupDefKindTI' stmts
     lookupDefKindTI' (_:stmts)           =

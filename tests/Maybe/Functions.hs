@@ -15,18 +15,17 @@ import Maybe.Examples
 idD :: Text
 idD = T.unlines
   [ "id = rec<Unit> Maybe to Maybe<Unit> where"
-  , "       { Nothing x = Nothing<Unit> @ x"
+  , "       { Nothing x = Nothing<Unit> @ ()"
   , "       ; Just x = Just<Unit> @ x }"
   ]
 
 idExpr :: Expr
-idExpr = WithParameters [UnitType] $
-  Rec { fromRec = maybeDucA
-      , toRec = GlobalTypeVar "Maybe" [UnitType]
-      , matches = [ WithParameters [UnitType] (Constructor maybeDucA 0)
-                    :@: LocalExprVar 0 "x"
-                  , WithParameters [UnitType] (Constructor maybeDucA 1)
-                    :@: LocalExprVar 0 "x"]}
+idExpr =
+  Iter { ductive = maybeDuc
+       , parameters = [UnitType]
+       , motive = GlobalTypeVar "Maybe" [UnitType]
+       , matches = [ nothingExpr UnitType
+                   , justExpr UnitType :@: LocalExprVar 0 "x"]}
 
 idTests :: Spec
 idTests = do
@@ -45,10 +44,10 @@ idTests = do
       ([], GlobalTypeVar "Maybe" [UnitType])
   it "Evaluates id on Nothing to Nothing" $
     shouldEvalWithDefs [maybeD] (idExpr :@: maybeEx1Expr)
-      maybeEx1ExprI
+      maybeEx1Expr
   it "Type checks id on Just () to Maybe<Unit>" $
     shouldCheckWithDefs [maybeD] (idExpr :@: maybeEx2Expr)
       ([], GlobalTypeVar "Maybe" [UnitType])
   it "Evaluates id on Just () to Just ()" $
     shouldEvalWithDefs [maybeD] (idExpr :@: maybeEx2Expr)
-      maybeEx2ExprI
+      maybeEx2Expr

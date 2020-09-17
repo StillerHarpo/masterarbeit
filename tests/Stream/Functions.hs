@@ -17,11 +17,15 @@ import Stream.Definition
 import Stream.Examples
 
 first :: TypeExpr -> Expr -> Expr
-first ty str = Destructor (streamDuc ty) 0 :@: str
+first ty str = Structor { ductive = streamDuc
+                        , parameters = [ty]
+                        , num = 0 } :@: str
 
 second :: TypeExpr -> Expr-> Expr
-second ty str = Destructor (streamDuc ty) 0
-                :@: (Destructor (streamDuc ty) 1 :@: str)
+second ty str = first ty
+                      (Structor { ductive = streamDuc
+                                , parameters = [ty]
+                                , num = 1 } :@: str)
 
 destructorTests :: Spec
 destructorTests = do

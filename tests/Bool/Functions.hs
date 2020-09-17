@@ -18,15 +18,15 @@ import Pair.Examples
 idD :: Text
 idD = T.unlines
   [ "id = rec Bool to Bool where"
-  , "       { True x = True @ x"
-  , "       ; False x = False @ x }"
+  , "       { True x = True @ ()"
+  , "       ; False x = False @ () }"
   ]
 
 idExpr :: Expr
-idExpr = Rec { fromRec = boolDuc
-             , toRec = GlobalTypeVar "Bool" []
-             , matches = [ Constructor boolDuc 0 :@: LocalExprVar 0 "x"
-                         , Constructor boolDuc 1 :@: LocalExprVar 0 "x"]}
+idExpr = Iter { ductive = boolDuc
+              , parameters = []
+              , motive = GlobalTypeVar "Bool" []
+              , matches = [ trueExpr, falseExpr ]}
 
 idTests :: Spec
 idTests = do
@@ -56,15 +56,15 @@ idTests = do
 negD :: Text
 negD = T.unlines
   [ "neg = rec Bool to Bool where"
-  , "       { True x = False @ x"
-  , "       ; False x = True @ x }"
+  , "       { True x = False @ ()"
+  , "       ; False x = True @ ()}"
   ]
 
 negExpr :: Expr
-negExpr = Rec { fromRec = boolDuc
-              , toRec = GlobalTypeVar "Bool" []
-              , matches = [ Constructor boolDuc 1 :@: LocalExprVar 0 "x"
-                          , Constructor boolDuc 0 :@: LocalExprVar 0 "x"]}
+negExpr = Iter { ductive = boolDuc
+               , parameters = []
+               , motive = GlobalTypeVar "Bool" []
+               , matches = [ falseExpr, trueExpr ]}
 
 negTests :: Spec
 negTests = do
@@ -95,25 +95,25 @@ orD :: Text
 orD = T.unlines
   [ "or = rec<Pair<Bool,Bool>> Packed to Bool where"
   , "       Pack x = (rec Bool to Bool where"
-  , "                   { True u = True @ u "
+  , "                   { True u = True @ () "
   , "                   ; False u = Second<Bool,Bool> @ x}) @ (First<Bool,Bool> @ x)" ]
 
 orExpr :: Expr
-orExpr = WithParameters [GlobalTypeVar "Pair" [ GlobalTypeVar "Bool" []
-                                              , GlobalTypeVar "Bool" []]] $
-  Rec { fromRec = packedDucA
-      , toRec = GlobalTypeVar "Bool" []
-      , matches =
-          [Rec { fromRec = boolDuc
-               , toRec = GlobalTypeVar "Bool" []
-               , matches = [ Constructor boolDuc 0 :@: LocalExprVar 0 "u"
-                           , WithParameters [ GlobalTypeVar "Bool" []
-                                            , GlobalTypeVar "Bool" [] ]
-                                            (Destructor pairDucAB 1)
-                             :@: LocalExprVar 1 "x"]}
-           :@: (WithParameters [ GlobalTypeVar "Bool" []
-                               , GlobalTypeVar "Bool" []]
-                               (Destructor pairDucAB 0)
+orExpr =
+  Iter { ductive = packedDuc
+       , parameters = [GlobalTypeVar "Pair" [ GlobalTypeVar "Bool" []
+                                            , GlobalTypeVar "Bool" []]]
+       , motive = GlobalTypeVar "Bool" []
+       , matches =
+          [Iter { ductive = boolDuc
+                , parameters = []
+                , motive = GlobalTypeVar "Bool" []
+                , matches = [ trueExpr
+                            , sndExpr (GlobalTypeVar "Bool" [])
+                                      (GlobalTypeVar "Bool" [])
+                              :@: LocalExprVar 1 "x"]}
+           :@: (fstExpr (GlobalTypeVar "Bool" [])
+                        (GlobalTypeVar "Bool" [])
                :@: LocalExprVar 0 "x")]}
 
 orTests :: Spec
@@ -131,10 +131,8 @@ orTests = do
                                          , GlobalTypeVar "Bool" []])]
       , GlobalTypeVar "Bool" [])
   let boolPair x y =
-        Constructor (packedDuc (GlobalTypeVar "Pair"
-                                               [ GlobalTypeVar "Bool" []
-                                               , GlobalTypeVar "Bool" []]))
-                    0
+        packExpr (GlobalTypeVar "Pair" [ GlobalTypeVar "Bool" []
+                                        , GlobalTypeVar "Bool" []])
          :@: mkPairExpr (GlobalTypeVar "Bool" []) (GlobalTypeVar "Bool" []) x y
   it "Type checks or on true x true to Bool" $
     shouldCheckWithDefs [packedD, pairD, boolD] (orExpr

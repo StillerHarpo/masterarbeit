@@ -28,14 +28,15 @@ isZeroDR :: Text
 isZeroDR = T.unlines [packedD, conatDR, boolD, isZeroD]
 
 isZeroExpr :: Expr
-isZeroExpr = WithParameters [GlobalTypeVar "Conat" []] $
-  Rec { fromRec = packedDucA
-      , toRec = GlobalTypeVar "Bool" []
-      , matches = [ WithParameters [GlobalTypeVar "Conat" []]
-                      (Rec { fromRec = maybeDucA
-                           , toRec = GlobalTypeVar "Bool" []
-                           , matches = [ trueExpr, falseExpr]})
-                   :@: (Destructor conatDuc 0 :@: LocalExprVar 0 "x")]}
+isZeroExpr =
+  Iter { ductive = packedDuc
+       , parameters = [GlobalTypeVar "Conat" []]
+       , motive = GlobalTypeVar "Bool" []
+       , matches = [(Iter { ductive = maybeDuc
+                          , parameters = [GlobalTypeVar "Conat" []]
+                          , motive = GlobalTypeVar "Bool" []
+                          , matches = [ trueExpr, falseExpr]})
+                    :@: (prevExpr :@: LocalExprVar 0 "x")]}
 
 isZeroTests :: Spec
 isZeroTests = do
@@ -49,7 +50,7 @@ isZeroTests = do
   it "Type checks isZero to (Conat) -> Bool" $
     shouldCheckWithDefs [packedD, conatDR, boolD] isZeroExpr
       ([packedExpr (GlobalTypeVar "Conat" [])], GlobalTypeVar "Bool" [])
-  let packConat = Constructor (packedDuc conatExpr) 0
+  let packConat = packExpr conatExpr
   it "Type checks isZero on zero to Bool" $
     shouldCheckWithDefs [packedD, conatDR, boolD] (isZeroExpr :@: (packConat :@: zeroExpr))
       ([], GlobalTypeVar "Bool" [])

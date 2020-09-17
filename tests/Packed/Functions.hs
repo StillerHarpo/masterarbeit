@@ -19,11 +19,11 @@ idD ty = T.unlines
   ]
 
 idExpr :: TypeExpr -> Expr
-idExpr ty = WithParameters [ty] $
-  Rec { fromRec = packedDucA
-      , toRec = GlobalTypeVar "Packed" [ty]
-      , matches = [ WithParameters [ty] (Constructor packedDucA 0)
-                    :@: LocalExprVar 0 "x"]}
+idExpr ty =
+  Iter { ductive = packedDuc
+       , parameters = [ty]
+       , motive = GlobalTypeVar "Packed" [ty]
+       , matches = [ packExpr ty :@: LocalExprVar 0 "x"]}
 
 idTests :: Spec
 idTests = do
@@ -42,4 +42,4 @@ idTests = do
       ([], GlobalTypeVar "Packed" [UnitType])
   it "Evaluates id on packed () to packed ()" $
     shouldEvalWithDefs [packedD] (idExpr UnitType :@: packedEx1Expr)
-      packedEx1ExprI
+      packedEx1Expr

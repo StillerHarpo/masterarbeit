@@ -27,16 +27,13 @@ shiftFreeVarsExpr j k v@(LocalExprVar i n)
       v
   | otherwise                     =
       LocalExprVar (i+j) n
-shiftFreeVarsExpr j k r@Rec{..}   =
-    r { matches = zipWith (shiftFreeVarsExpr j) (map ((1+) . (k+)
-                                                       . length . gamma1)
-                                                (strDefs fromRec))
-                         matches }
-shiftFreeVarsExpr j k c@Corec{..} =
-    c { matches = zipWith (shiftFreeVarsExpr j) (map ((1+) . (k+)
-                                                      .  length . gamma1)
-                                               (strDefs toCorec))
-                         matches }
+shiftFreeVarsExpr j k i@Iter{..}   =
+    i { matches = zipWith (shiftFreeVarsExpr j)
+                          (map ((1+) . (k+) . length . gamma1)
+                               (strDefs ductive))
+                          matches
+      , ductive = overOpenDuctive (shiftFreeVarsFuns j k) ductive
+      , motive = overTypeExpr (shiftFreeVarsFuns j k) motive }
 shiftFreeVarsExpr j k e            =
   overExpr (shiftFreeVarsFuns j k) e
 
@@ -71,7 +68,7 @@ shiftFreeParsFuns :: Int -> Int -> OverFuns
 shiftFreeParsFuns j k =
   (overFuns (shiftFreeParsFuns j k))
     { fTyExpr = shiftFreeParsTypeExpr j k
-    , fExpr = shiftFreeParsExpr j k }
+    , fOpenDuctive = shiftFreeParsOpenDuctive j k }
 
 shiftFreeParsTypeExpr :: Int -> Int -> TypeExpr -> TypeExpr
 shiftFreeParsTypeExpr j k p@(Parameter i n)
@@ -79,9 +76,19 @@ shiftFreeParsTypeExpr j k p@(Parameter i n)
   | otherwise                  = Parameter (i+j) n
 shiftFreeParsTypeExpr j k e    = overTypeExpr (shiftFreeParsFuns j k) e
 
+shiftFreeParsOpenDuctive :: Int -> Int -> OpenDuctive -> OpenDuctive
+shiftFreeParsOpenDuctive j k od@OpenDuctive{..} =
+  let k' = k + length parameterCtx
+  in  od { parameterCtx = shiftFreeParsParCtx j k parameterCtx
+         , gamma = map (shiftFreeParsTypeExpr j k') gamma
+         , strDefs = map (overStrDef (shiftFreeParsFuns j k')) strDefs }
+
 shiftFreeParsExpr :: Int -> Int -> Expr -> Expr
-shiftFreeParsExpr j k (WithParameters pars expr) =
-  WithParameters (map (shiftFreeParsTypeExpr j k) pars)
-                 (shiftFreeParsExpr j (k + length pars) expr)
-shiftFreeParsExpr j k expr                       =
-  overExpr (shiftFreeParsFuns j k) expr
+shiftFreeParsExpr j k = overExpr (shiftFreeParsFuns j k)
+
+shiftFreeParsParCtx :: Int -> Int -> TyCtx -> TyCtx
+shiftFreeParsParCtx _ _ []               =
+  []
+shiftFreeParsParCtx j k (ctx : parCtx) =
+  overCtx (shiftFreeParsFuns j k) ctx
+  : shiftFreeParsParCtx j (k+1) parCtx

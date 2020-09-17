@@ -18,27 +18,31 @@ natD = T.unlines
   , "  Suc  : Nat -> Nat"
   ]
 
-natDuc :: Ductive
-natDuc = Ductive { gamma = []
-                 , strDefs = [ StrDef { sigma = []
-                                      , a = UnitType
-                                      , gamma1 = []
-                                      , strName = "Zero"}
-                             , StrDef { sigma = []
-                                      , a = LocalTypeVar 0 "Nat"
-                                      , gamma1 = []
-                                      , strName = "Suc"}]
-                 , nameDuc = "Nat"}
+natDuc :: OpenDuctive
+natDuc = OpenDuctive { gamma = []
+                     , inOrCoin = IsIn
+                     , parameterCtx = []
+                     , strDefs = [ StrDef { sigma = []
+                                          , a = UnitType
+                                          , gamma1 = []
+                                          , strName = "Zero"}
+                                 , StrDef { sigma = []
+                                          , a = LocalTypeVar 0 "Nat"
+                                          , gamma1 = []
+                                          , strName = "Suc"}]
+                     , nameDuc = "Nat"}
 
-natExpr = In natDuc
+natExpr :: TypeExpr
+natExpr = Ductive { openDuctive = natDuc
+                  , parametersTyExpr = []}
+
+sucExpr :: Expr
+sucExpr = Structor { ductive = natDuc
+                   , parameters = []
+                   , num = 1}
 
 natTest :: Spec
 natTest =
   it "Parses the definition of Nat" $
     shouldParseWithDefs [] natD
-      [ TypeDef { name = "Nat"
-                , parameterCtx = []
-                , typeExpr = natExpr
-                , kind = Nothing}]
-
-
+      [ TypeDef natDuc ]

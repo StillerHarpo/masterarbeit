@@ -21,15 +21,16 @@ import Pair.Examples
 idD :: Text
 idD = T.unlines
   [ "id = rec Nat to Nat where"
-  , "       { Zero x = Zero @ x"
+  , "       { Zero x = Zero @ ()"
   , "       ; Suc x = Suc @ x }"
   ]
 
 idExpr :: Expr
-idExpr = Rec { fromRec = natDuc
-             , toRec = GlobalTypeVar "Nat" []
-             , matches = [ Constructor natDuc 0 :@: LocalExprVar 0 "x"
-                         , Constructor natDuc 1 :@: LocalExprVar 0 "x"]}
+idExpr = Iter { ductive = natDuc
+              , parameters = []
+              , motive = GlobalTypeVar "Nat" []
+              , matches = [ zeroExpr
+                          , sucExpr :@: LocalExprVar 0 "x"]}
 
 idTests :: Spec
 idTests = do
@@ -66,7 +67,7 @@ idTests = do
       twoExprI
   it "id works for any number" $ hedgehog $ do
       n <- forAll $ Gen.integral (Range.linear 0 1000)
-      shouldEvalWithDefsP [packedD, pairD, zeroDR] (idExpr :@: (genNatExpr n))
+      shouldEvalWithDefsP [packedD, pairD, zeroDR] (idExpr :@: genNatExpr n)
         (genNatExpr n)
 
 plusD :: Text
@@ -77,22 +78,21 @@ plusD = T.unlines
   , "                     ; Suc n = Suc @ n}) @ (First<Nat,Nat> @ x)" ]
 
 plusExpr :: Expr
-plusExpr = WithParameters [GlobalTypeVar "Pair" [ GlobalTypeVar "Nat" []
-                                                , GlobalTypeVar "Nat" []]] $
-  Rec { fromRec = packedDucA
-      , toRec = GlobalTypeVar "Nat" []
-      , matches =
-          [Rec { fromRec = natDuc
-               , toRec = GlobalTypeVar "Nat" []
-               , matches = [ WithParameters [ GlobalTypeVar "Nat" []
-                                            , GlobalTypeVar "Nat" [] ]
-                                            (Destructor pairDucAB 1)
-                             :@: LocalExprVar 1 "x"
-                           , Constructor natDuc 1 :@: LocalExprVar 0 "n"]}
-           :@: (WithParameters [ GlobalTypeVar "Nat" []
-                               , GlobalTypeVar "Nat" []]
-                               (Destructor pairDucAB 0)
-               :@: LocalExprVar 0 "x")]}
+plusExpr =
+  Iter { ductive = packedDuc
+       , parameters = [GlobalTypeVar "Pair" [ GlobalTypeVar "Nat" []
+                                            , GlobalTypeVar "Nat" []]]
+       , motive = GlobalTypeVar "Nat" []
+       , matches =
+          [Iter { ductive = natDuc
+                , parameters = []
+                , motive = GlobalTypeVar "Nat" []
+                , matches = [ sndExpr (GlobalTypeVar "Nat" [])
+                                     (GlobalTypeVar "Nat" [])
+                              :@: LocalExprVar 1 "x"
+                             , sucExpr :@: LocalExprVar 0 "n"]}
+           :@: (fstExpr (GlobalTypeVar "Nat" []) (GlobalTypeVar "Nat" [])
+                :@: LocalExprVar 0 "x")]}
 
 plusTests :: Spec
 plusTests = do
@@ -109,11 +109,9 @@ plusTests = do
                                          , GlobalTypeVar "Nat" []])]
       , GlobalTypeVar "Nat" [])
   let natPair x y =
-        Constructor (packedDuc (GlobalTypeVar "Pair"
-                                               [ GlobalTypeVar "Nat" []
-                                               , GlobalTypeVar "Nat" []]))
-                    0
-         :@: mkPairExpr (GlobalTypeVar "Nat" []) (GlobalTypeVar "Nat" []) x y
+        packExpr (GlobalTypeVar "Pair" [ GlobalTypeVar "Nat" []
+                                       , GlobalTypeVar "Nat" []])
+        :@: mkPairExpr (GlobalTypeVar "Nat" []) (GlobalTypeVar "Nat" []) x y
   it "Type checks plus on zero x zero to Nat" $
     shouldCheckWithDefs [packedD, pairD, natD] (plusExpr
                                                  :@: natPair zeroExpr zeroExpr)

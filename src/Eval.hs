@@ -13,6 +13,9 @@ import ShiftFreeVars
 import Subst
 import TypeAction
 
+import           Data.Text.Prettyprint.Doc
+import           PrettyPrinter
+
 evalFuns :: OverFunsM (Eval ann)
 evalFuns = (overFunsM evalFuns)
              { fTyExprM = evalTypeExpr
@@ -33,47 +36,61 @@ evalCtx = overCtxM evalFuns
 evalType :: Type -> Eval ann Type
 evalType (ctx', tyExpr) = (,) <$> evalCtx ctx' <*> evalTypeExpr tyExpr
 
-evalDuctive :: Ductive -> Eval ann Ductive
-evalDuctive = overDuctiveM evalFuns
-
 evalExpr :: Expr -> Eval ann Expr
 evalExpr (f :@: arg)                       = do
   valF <- evalExpr f
   valArg <- evalExpr arg
   case (valF, valArg) of
     -- TODO Should we check if _ = sigma_k\circ \tau
-    (getExprArgs -> (r@Rec{..}, sigmaktau), getExprArgs -> (Constructor _ i, constrArgs))
-      | length sigmaktau == length (gamma fromRec) -> do
-      let gamma1' = gamma1 $ strDefs fromRec !! i
-      recEval <- typeAction (a $ strDefs fromRec !! i)
-                            [applyExprArgs (r, idCtx (gamma fromRec))
+    (getExprArgs -> (r@Iter{..}, sigmaktau), getExprArgs -> (Structor{num = i, ductive = duc2}, constrArgs))
+      | length sigmaktau == length (gamma ductive)
+        && inOrCoin ductive == IsIn
+        && inOrCoin duc2 == IsIn -> do
+      let StrDef{..} = strDefs ductive !! i
+          openDuctive = ductive
+          parametersTyExpr = parameters
+      recEval <- typeAction (substPars 0 (reverse parameters) a)
+                            -- TODO shift idCtx by one
+                            [applyExprArgs (r, idCtx (gamma ductive))
                             :@: LocalExprVar 0 ""]
-                            [gamma1']
-                            [In fromRec]
-                            [toRec]
-      evalExpr $ shiftFreeVarsExpr ((-1) - length gamma1')
-                                   (1 + length gamma1')
+                            [gamma1]
+                            [Ductive{..}]
+                            [motive]
+      evalExpr $ shiftFreeVarsExpr ((-1) - length gamma1)
+                                   (1 + length gamma1)
                                    (substExprs 0 (reverse constrArgs)
                                                  (substExpr 0 recEval
                                                               (matches !! i)))
-    (getExprArgs -> (Destructor ductive i, tau) , getExprArgs -> (c@Corec{..}, args))
-      | length tau == length (gamma1 $ strDefs toCorec !! i) -> do
-      let gamma1' = gamma1 $ strDefs toCorec !! i
-      recEval <- typeAction (a $ strDefs toCorec !! i)
-                            [applyExprArgs (c, idCtx (gamma toCorec))
+    (getExprArgs -> (Structor{num=i, ductive = duc2}, tau) , getExprArgs -> (c@Iter{..}, args))
+      | inOrCoin ductive == IsCoin
+        && inOrCoin duc2 == IsCoin
+        && length tau == length (gamma1 $ strDefs ductive !! i) -> do
+      let StrDef{..} = strDefs ductive !! i
+          openDuctive = ductive
+          parametersTyExpr = parameters
+      recEval <- typeAction (substPars 0 (reverse parameters) a)
+                            -- TODO shift idCtx by one
+                            [applyExprArgs (c, idCtx (gamma ductive))
                             :@: LocalExprVar 0 ""]
-                            [gamma1']
-                            [fromCorec]
-                            [Coin toCorec]
-      evalExpr $ shiftFreeVarsExpr ((-1) - length gamma1')
-                                   (1 + length gamma1')
+                            [gamma1]
+                            [motive]
+                            [Ductive{..}]
+      let res =  shiftFreeVarsExpr ((-1) - length gamma1)
+                                   (1 + length gamma1)
+                                   (substExprs 0 (last args : reverse tau)
+                                                 (substExpr 0 (matches !! i)
+                                                              recEval))
+      evalExpr $ shiftFreeVarsExpr ((-1) - length gamma1)
+                                   (1 + length gamma1)
                                    (substExprs 0 (last args : reverse tau)
                                                  (substExpr 0 (matches !! i)
                                                               recEval))
     _ -> pure $ valF :@: valArg
-evalExpr (GlobalExprVar v tyPars exprPars) =
-  lookupDefExpr v tyPars exprPars >>= evalExpr
-evalExpr (WithParameters pars expr)        =
-  evalExpr $ substParsInExpr 0 (reverse pars) expr
+evalExpr val@(GlobalExprVar v tyPars exprPars) = do
+  res <- lookupDefExpr v tyPars exprPars
+  evalExpr res
 evalExpr e =
   overExprM evalFuns e
+
+evalDuctive :: OpenDuctive -> Eval ann OpenDuctive
+evalDuctive = overOpenDuctiveM evalFuns

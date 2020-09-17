@@ -18,8 +18,12 @@ falseD = "false = False @ ()"
 falseDR = T.unlines [boolD, falseD]
 
 trueExpr, falseExpr :: Expr
-trueExpr = Constructor boolDuc 0 :@: UnitExpr
-falseExpr = Constructor boolDuc 1 :@: UnitExpr
+trueExpr = Structor { ductive = boolDuc
+                    , parameters = []
+                    , num = 0 } :@: UnitExpr
+falseExpr = Structor { ductive = boolDuc
+                     , parameters = []
+                     , num = 1 } :@: UnitExpr
 
 boolExTests :: Spec
 boolExTests = do

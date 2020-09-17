@@ -7,6 +7,7 @@ import qualified Data.Text as T
 import Data.Text(Text)
 
 import AbstractSyntaxTree
+import TypeChecker
 
 import Lib
 
@@ -15,30 +16,35 @@ packedD = T.unlines
   [ "data Packed<A : Set> : Set where"
   , "  Pack : A -> Packed"]
 
-packedDuc :: TypeExpr -> Ductive
-packedDuc x = Ductive { gamma = []
-                      , strDefs = [ StrDef { sigma = []
-                                           , a = x
-                                           , gamma1 = []
-                                           , strName = "Pack"}]
-                      , nameDuc = "Packed"}
-
-packedDucA :: Ductive
-packedDucA = packedDuc (Parameter 0 "A")
+packedDuc :: OpenDuctive
+packedDuc = OpenDuctive { gamma = []
+                        , inOrCoin = IsIn
+                        , parameterCtx = [[]]
+                        , strDefs = [ StrDef { sigma = []
+                                             , a = Parameter 0 "A"
+                                             , gamma1 = []
+                                             , strName = "Pack"}]
+                        , nameDuc = "Packed"}
 
 packedExpr :: TypeExpr -> TypeExpr
-packedExpr = In . packedDuc
+packedExpr x = Ductive { openDuctive = packedDuc
+                       , parametersTyExpr = [x]}
 
-packedExprA :: TypeExpr
-packedExprA = In packedDucA
+packExpr :: TypeExpr -> Expr
+packExpr x = Structor { ductive = packedDuc
+                      , parameters = [x]
+                      , num = 0}
 
 packedTest :: Spec
-packedTest =
+packedTest = do
   it "parses definition" $
       shouldParseWithDefs [] packedD
-        [ TypeDef { name = "Packed"
-                  , parameterCtx = [[]]
-                  , kind = Nothing
-                  , typeExpr = packedExprA}]
+        [ TypeDef packedDuc ]
+  it "type checks Definition" $
+      shouldRunWithDefs [] (inferType (packedExpr UnitType))
+        []
+  it "type checks Constructor" $
+      shouldCheckWithDefs [] (packExpr UnitType)
+        ([UnitType], packedExpr UnitType)
 
 

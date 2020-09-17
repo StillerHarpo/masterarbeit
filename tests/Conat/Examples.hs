@@ -31,29 +31,37 @@ infinityD = T.unlines
 infinityDR = T.unlines [zeroDR, infinityD]
 
 zeroExpr, oneExpr, twoExpr, infinityExpr :: Expr
-zeroExpr = Corec { fromCorec = UnitType
-                 , toCorec = conatDuc
-                 , matches = [ WithParameters [UnitType]
-                                              (Constructor maybeDucA 0)
-                               :@: UnitExpr]} :@: UnitExpr
-oneExpr = Corec { fromCorec = GlobalTypeVar "Conat" []
-                , toCorec = conatDuc
-                , matches = [ WithParameters [GlobalTypeVar "Conat" []]
-                                             (Constructor maybeDucA 1)
-                              :@: GlobalExprVar "zero" [] []]}
-          :@: GlobalExprVar "zero" [] []
-twoExpr = Corec { fromCorec = GlobalTypeVar "Conat" []
-                , toCorec = conatDuc
-                , matches = [ WithParameters [GlobalTypeVar "Conat" []]
-                                             (Constructor maybeDucA 1)
-                              :@: GlobalExprVar "one" [] [] ]}
+zeroExpr = Iter { motive = UnitType
+                , ductive = conatDuc
+                , parameters = []
+                , matches = [Structor { ductive = maybeDuc
+                                      , parameters = [UnitType]
+                                      , num = 0}
+                              :@: UnitExpr]} :@: UnitExpr
+oneExpr = Iter { motive = GlobalTypeVar "Conat" []
+               , ductive = conatDuc
+               , parameters = []
+               , matches = [Structor { ductive = maybeDuc
+                                     , parameters = [GlobalTypeVar "Conat" []]
+                                     , num = 1}
+                             :@: GlobalExprVar "zero" [] []]}
+         :@: GlobalExprVar "zero" [] []
+twoExpr = Iter { motive = GlobalTypeVar "Conat" []
+               , ductive = conatDuc
+               , parameters = []
+               , matches = [Structor { ductive = maybeDuc
+                                     , parameters = [GlobalTypeVar "Conat" []]
+                                     , num = 1}
+                             :@: GlobalExprVar "one" [] [] ]}
           :@: GlobalExprVar "one" [] []
-infinityExpr = Corec { fromCorec = GlobalTypeVar "Conat" []
-                     , toCorec = conatDuc
-                     , matches = [ WithParameters [GlobalTypeVar "Conat" []]
-                                                  (Constructor maybeDucA 1)
-                                   :@: LocalExprVar 0 "x"]}
-          :@: GlobalExprVar "zero" [] []
+infinityExpr = Iter { motive = GlobalTypeVar "Conat" []
+                    , ductive = conatDuc
+                    , parameters = []
+                    , matches = [Structor { ductive = maybeDuc
+                                          , parameters = [GlobalTypeVar "Conat" []]
+                                          , num = 1}
+                                 :@: LocalExprVar 0 "x"]}
+                :@: GlobalExprVar "zero" [] []
 
 conatExTests :: Spec
 conatExTests = do

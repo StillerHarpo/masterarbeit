@@ -17,33 +17,37 @@ pairD = T.unlines
   , "  Second : Pair -> B"
   ]
 
-pairDuc :: TypeExpr -> TypeExpr -> Ductive
-pairDuc x y = Ductive { gamma = []
+pairDuc :: OpenDuctive
+pairDuc = OpenDuctive { gamma = []
+                      , inOrCoin = IsCoin
+                      , parameterCtx = [[],[]]
                       , strDefs = [ StrDef { sigma = []
-                                           , a = x
+                                           , a = Parameter 1 "A"
                                            , gamma1 = []
                                            , strName = "First"}
                                   , StrDef { sigma = []
-                                           , a = y
+                                           , a = Parameter 0 "B"
                                            , gamma1 = []
                                            , strName = "Second"}]
                       , nameDuc = "Pair" }
 
-pairDucAB :: Ductive
-pairDucAB = pairDuc (Parameter 1 "A") (Parameter 0 "B")
-
 pairExpr :: TypeExpr -> TypeExpr -> TypeExpr
-pairExpr x y = Coin $ pairDuc x y
+pairExpr x y = Ductive { openDuctive = pairDuc
+                       , parametersTyExpr = [x,y]}
 
-pairExprAB :: TypeExpr
-pairExprAB = Coin pairDucAB
+fstExpr :: TypeExpr -> TypeExpr -> Expr
+fstExpr x y = Structor { ductive = pairDuc
+                       , parameters = [x,y]
+                       , num = 0}
+
+sndExpr :: TypeExpr -> TypeExpr -> Expr
+sndExpr x y = Structor { ductive = pairDuc
+                       , parameters = [x,y]
+                       , num = 1}
 
 pairTest :: Spec
 pairTest =
   it "parses definition" $
       shouldParseWithDefs [] pairD
-        [ TypeDef { name = "Pair"
-                  , parameterCtx = [[],[]]
-                  , kind = Nothing
-                  , typeExpr = pairExprAB}]
+        [ TypeDef pairDuc ]
 

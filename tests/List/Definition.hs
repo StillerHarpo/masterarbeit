@@ -19,36 +19,39 @@ listD = T.unlines
   ]
 listDR = T.unlines [pairD, listD]
 
-listDuc :: TypeExpr -> Ductive
-listDuc x =
-  Ductive { gamma = []
-          , strDefs =
-              [ StrDef { sigma = []
-                       , a = UnitType
-                       , gamma1 = []
-                       , strName = "Nil" }
-              , StrDef { sigma = []
-                       , a = GlobalTypeVar "Pair" [ x
-                                                  , LocalTypeVar 0 "List"]
-                       , gamma1 = []
-                       , strName = "Cons"}]
-          , nameDuc = "List"}
-
-listDucA :: Ductive
-listDucA = listDuc (Parameter 0 "A")
+listDuc :: OpenDuctive
+listDuc =
+  OpenDuctive { gamma = []
+              , inOrCoin = IsIn
+              , parameterCtx = [[]]
+              , strDefs =
+                  [ StrDef { sigma = []
+                           , a = UnitType
+                           , gamma1 = []
+                           , strName = "Nil" }
+                  , StrDef { sigma = []
+                           , a = GlobalTypeVar "Pair" [ Parameter 0 "A"
+                                                      , LocalTypeVar 0 "List"]
+                           , gamma1 = []
+                           , strName = "Cons"}]
+              , nameDuc = "List"}
 
 listExpr :: TypeExpr -> TypeExpr
-listExpr = In . listDuc
+listExpr x = Ductive { openDuctive = listDuc
+                     , parametersTyExpr = [x]}
 
-listExprA :: TypeExpr
-listExprA = In listDucA
+consExpr :: TypeExpr -> Expr
+consExpr x = Structor { ductive = listDuc
+                      , parameters = [x]
+                      , num = 1}
+
+nilExpr :: TypeExpr -> Expr
+nilExpr x = Structor { ductive = listDuc
+                     , parameters = [x]
+                     , num = 0} :@: UnitExpr
 
 listTest :: Spec
 listTest =
   it "Parses the definition of List" $
     shouldParseWithDefs [pairD] listD
-      [ TypeDef { name = "List"
-                , parameterCtx = [[]]
-                , typeExpr = listExprA
-                , kind = Nothing}]
-
+      [ TypeDef listDuc ]

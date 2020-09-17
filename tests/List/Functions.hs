@@ -32,14 +32,14 @@ lengthD ty = T.unlines
   ]
 
 lengthExpr :: TypeExpr -> Expr
-lengthExpr ty = WithParameters [ty]
-  Rec { fromRec = listDucA
-      , toRec = GlobalTypeVar "Nat" []
-      , matches = [ Constructor natDuc 0 :@: UnitExpr
-                  , Constructor natDuc 1
-                    :@: (WithParameters [ty, GlobalTypeVar "Nat" []]
-                                        (Destructor pairDucAB 1)
-                         :@: LocalExprVar 0 "n")]}
+lengthExpr ty =
+  Iter { ductive = listDuc
+       , parameters = [ty]
+       , motive = GlobalTypeVar "Nat" []
+       , matches = [ zeroExpr
+                   , sucExpr
+                     :@: (sndExpr ty (GlobalTypeVar "Nat" [])
+                          :@: LocalExprVar 0 "n")]}
 
 lengthTest :: Spec
 lengthTest = do
@@ -93,16 +93,14 @@ headD ty = T.unlines
   , "         Cons n = Just<" <> ty <> "> @ (First<" <> ty <> ",Maybe<" <> ty <> ">> @ n)"]
 
 headExpr :: TypeExpr -> Expr
-headExpr ty = WithParameters [ty]
-  Rec { fromRec = listDucA
-      , toRec = GlobalTypeVar "Maybe" [ty]
-      , matches = [ WithParameters [ty] (Constructor maybeDucA 0)
-                    :@: UnitExpr
-                  , WithParameters [ty] (Constructor maybeDucA 1)
-                    :@: (WithParameters [ ty
-                                        , GlobalTypeVar "Maybe" [ty]]
-                                         (Destructor pairDucAB 0)
-                        :@: LocalExprVar 0 "n")]}
+headExpr ty =
+  Iter { ductive = listDuc
+       , parameters = [ty]
+       , motive = GlobalTypeVar "Maybe" [ty]
+       , matches = [ nothingExpr ty
+                   , justExpr ty
+                     :@: (fstExpr ty (GlobalTypeVar "Maybe" [ty])
+                          :@: LocalExprVar 0 "n")]}
 
 headTests :: Spec
 headTests = do
@@ -118,17 +116,17 @@ headTests = do
       ([listExpr UnitType], GlobalTypeVar "Maybe" [UnitType])
   it "Evaluates head on empty list to Nothing" $
     shouldEvalWithDefs [natD, listDR] (headExpr UnitType :@: listEx1Expr)
-      (Constructor (maybeDuc UnitType) 0 :@: UnitExpr)
+      (nothingExpr UnitType)
   it "Evaluates head on one element list to Just ()" $
     shouldEvalWithDefs [maybeD, listEx1DR] (headExpr UnitType :@: listEx2Expr)
-      (Constructor (maybeDuc UnitType) 1 :@: UnitExpr)
+      (justExpr UnitType :@: UnitExpr)
   modifyMaxSuccess (const 10) $ it "Evaluates head on any list" $ hedgehog $ do
       x <- forAll $ Gen.integral (Range.linear 0 5)
       xs <- forAll $ Gen.list (Range.linear 0 5) (Gen.integral (Range.linear 0 5))
       shouldEvalWithDefsP [pairD, natD, listD] (headExpr (GlobalTypeVar "Nat" [])
                                                  :@: genListExpr (GlobalTypeVar "Nat" [])
                                                                  (map genNatExpr (x:xs)))
-        (Constructor (maybeDuc (GlobalTypeVar "Nat" [])) 1 :@: genNatExpr x)
+        (justExpr (GlobalTypeVar "Nat" []) :@: genNatExpr x)
 
 appD :: Text -> Text
 appD ty = T.unlines
@@ -139,24 +137,22 @@ appD ty = T.unlines
   ]
 
 appExpr :: TypeExpr -> Expr
-appExpr ty = WithParameters [GlobalTypeVar "Pair" [ GlobalTypeVar "List" [ty]
-                                                  , GlobalTypeVar "List" [ty]]] $
-  Rec { fromRec = packedDucA
-      , toRec = GlobalTypeVar "List" [ty]
-      , matches =
-          [WithParameters [ty]
-             (Rec { fromRec = listDucA
-                  , toRec = GlobalTypeVar "List" [ty]
-                  , matches = [ WithParameters [ GlobalTypeVar "List" [ty]
-                                               , GlobalTypeVar "List" [ty] ]
-                                               (Destructor pairDucAB 1)
+appExpr ty =
+  Iter { ductive = packedDuc
+       , motive = GlobalTypeVar "List" [ty]
+       , parameters = [GlobalTypeVar "Pair" [ GlobalTypeVar "List" [ty]
+                                            , GlobalTypeVar "List" [ty]]]
+       , matches =
+           [Iter { ductive = listDuc
+                  , parameters = [ty]
+                  , motive = GlobalTypeVar "List" [ty]
+                  , matches = [ sndExpr (GlobalTypeVar "List" [ty])
+                                        (GlobalTypeVar "List" [ty])
                                 :@: LocalExprVar 1 "x"
-                               , WithParameters [ty] (Constructor listDucA 1)
-                                 :@: LocalExprVar 0 "n"]})
-              :@: (WithParameters [ GlobalTypeVar "List" [ty]
-                                  , GlobalTypeVar "List" [ty]]
-                                  (Destructor pairDucAB 0)
-                   :@: LocalExprVar 0 "x")]}
+                              , consExpr ty :@: LocalExprVar 0 "n"]}
+            :@: (fstExpr (GlobalTypeVar "List" [ty])
+                         (GlobalTypeVar "List" [ty])
+                 :@: LocalExprVar 0 "x")]}
 
 appTests :: Spec
 appTests = do
@@ -175,18 +171,16 @@ appTests = do
   let listPair x y ty =
         {-
         TODO This type checks but doesn't evaluate
-        Constructor (packedDuc (GlobalTypeVar "Pair"
+        Structor (packedDuc (GlobalTypeVar "Pair"
                                                [ GlobalTypeVar "List" [ty]
                                                , GlobalTypeVar "List" [ty]]))
                     0
         -}
-        WithParameters [GlobalTypeVar "Pair"
-                                      [ GlobalTypeVar "List" [ty]
-                                      , GlobalTypeVar "List" [ty]]]
-                       (Constructor packedDucA 0)
-         :@: mkPairExpr (GlobalTypeVar "List" [ty])
-                        (GlobalTypeVar "List" [ty])
-                        x y
+        packExpr (GlobalTypeVar "Pair" [ GlobalTypeVar "List" [ty]
+                                       , GlobalTypeVar "List" [ty]])
+        :@: mkPairExpr (GlobalTypeVar "List" [ty])
+                       (GlobalTypeVar "List" [ty])
+                       x y
       listPairExD = T.unlines
         [ "app @ (Pack<Pair<List<Unit>,List<Unit>>>"
         , "       @ (corec<List<Unit>,List<Unit>> Unit to Pair where"

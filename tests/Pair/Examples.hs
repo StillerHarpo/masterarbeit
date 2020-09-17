@@ -21,10 +21,10 @@ mkPairD tyX tyY x y = T.unlines
   , "   ; Second = " <> y <> "}) @ ())"]
 
 mkPairExpr :: TypeExpr -> TypeExpr -> Expr -> Expr -> Expr
-mkPairExpr tyX tyY x y = WithParameters [tyX, tyY]
-                                        (Corec { fromCorec = UnitType
-                                               , toCorec = pairDucAB
-                                               , matches = [x, y]})
+mkPairExpr tyX tyY x y = Iter { motive = UnitType
+                              , parameters = [tyX, tyY]
+                              , ductive = pairDuc
+                              , matches = [x, y]}
                          :@: UnitExpr
 
 pairEx1D, pairEx2D, pairEx3D, pairEx4D :: Text

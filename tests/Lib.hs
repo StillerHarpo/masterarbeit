@@ -210,4 +210,3 @@ shouldEvalSameWithDefs defs input1 input2 =
           val1 = first show (runEval (evalExpr input1) stateEval)
           val2 = first show (runEval (evalExpr input2) stateEval)
       in val1 `shouldBe` val2
-
