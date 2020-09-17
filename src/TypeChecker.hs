@@ -230,11 +230,13 @@ inferTerm expr = catchError (inferTerm' expr)
                    openDuctive = ductive
                    parametersTyExpr = parameters
                in case inOrCoin ductive of
-                  IsIn -> ( gamma1 ++ [substType 0 Ductive{..}
-                                       $ substPars 0 (reverse parameters) a]
+                  IsIn -> ( substParsInCtx 0 (reverse parameters) gamma1
+                            ++ [substType 0 Ductive{..}
+                                $ substPars 0 (reverse parameters) a]
                           , shiftFreeVarsTypeExpr 1 0
                             $ applyTypeExprArgs (Ductive{..} , sigma))
-                  IsCoin -> ( gamma1 ++ [applyTypeExprArgs (Ductive{..}, sigma)]
+                  IsCoin -> ( substParsInCtx 0 (reverse parameters) gamma1
+                              ++ [applyTypeExprArgs (Ductive{..}, sigma)]
                             , shiftFreeVarsTypeExpr 1 0
                               $ substType 0 Ductive{..}
                               $ substPars 0 (reverse parameters) a))
@@ -250,22 +252,26 @@ inferTerm expr = catchError (inferTerm' expr)
       case inOrCoin of
         IsIn -> do
          zipWithM_ (\StrDef{..} match ->
-                      local (over ctx (++gamma1++[substType 0 motive
-                                                  $ substPars 0 (reverse parameters) a ]))
+                      local (over ctx (++ substParsInCtx 0 (reverse parameters) gamma1
+                                       ++[substType 0 motive
+                                          $ substPars 0 (reverse parameters) a ]))
                             (checkTerm match ([],applyTypeExprArgs (motive,sigma))))
                    strDefs matches
-         pure ( gamma ++ [applyTypeExprArgs (Ductive{..}, idCtx gamma)]
+         pure ( substParsInCtx 0 (reverse parameters) gamma
+                ++ [applyTypeExprArgs (Ductive{..}, idCtx gamma)]
               , applyTypeExprArgs ( motive
                                , map (shiftFreeVarsExpr 1 0) (idCtx gamma)))
         IsCoin -> do
           evalInTI $ betaeqCtx gamma' gamma
           zipWithM_ (\StrDef{..} match ->
-                        local (over ctx (++gamma1++[applyTypeExprArgs (motive,sigma)]))
+                        local (over ctx (++ substParsInCtx 0 (reverse parameters) gamma1
+                                         ++[applyTypeExprArgs (motive,sigma)]))
                               (checkTerm match ([], shiftFreeVarsTypeExpr 1 0
                                                     $ substType 0 motive
                                                     $ substPars 0 (reverse parameters) a)))
                     strDefs matches
-          pure ( gamma ++ [applyTypeExprArgs (motive, idCtx gamma)]
+          pure ( substParsInCtx 0 (reverse parameters) gamma
+                 ++ [applyTypeExprArgs (motive, idCtx gamma)]
                , applyTypeExprArgs ( Ductive{..}
                                    , map (shiftFreeVarsExpr 1 0) (idCtx gamma)))
 
