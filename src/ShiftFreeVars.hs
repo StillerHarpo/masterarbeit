@@ -8,6 +8,7 @@ shiftFreeVarsFuns :: Int -> Int -> OverFuns
 shiftFreeVarsFuns j k =
   (overFuns (shiftFreeVarsFuns j k))
      { fTyExpr  = shiftFreeVarsTypeExpr j k
+     , fStrDef  = shiftFreeVarsInStrDef j k
      , fExpr    = shiftFreeVarsExpr j k
      , fCtx     = shiftFreeVarsCtx j k }
 
@@ -36,6 +37,13 @@ shiftFreeVarsExpr j k i@Iter{..}   =
       , motive = overTypeExpr (shiftFreeVarsFuns j k) motive }
 shiftFreeVarsExpr j k e            =
   overExpr (shiftFreeVarsFuns j k) e
+
+shiftFreeVarsInStrDef :: Int -> Int -> StrDef -> StrDef
+shiftFreeVarsInStrDef j k sd@StrDef{..} =
+  let k' = k + length gamma1
+  in sd { sigma = map (shiftFreeVarsExpr j k') sigma
+        , a = shiftFreeVarsTypeExpr j k' a
+        , gamma1 = shiftFreeVarsCtx j k gamma1 }
 
 shiftFreeVarsCtx :: Int -> Int -> Ctx -> Ctx
 shiftFreeVarsCtx _ _ []       = []
