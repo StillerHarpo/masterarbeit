@@ -336,7 +336,7 @@ lookupDefKindTI t pars = view defCtx >>= lookupDefKindTI'
                                        <+> pretty t
                                        <+> "with parameters"
                                        <+> pretty pars))
-             pure gamma
+             pure $ map (substPars 0 (reverse pars)) gamma
       | otherwise                        =
           lookupDefKindTI' stmts
     lookupDefKindTI' (_:stmts)           =
