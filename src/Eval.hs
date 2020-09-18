@@ -49,13 +49,16 @@ evalExpr (f :@: arg)                       = do
                             [gamma1]
                             [Ductive{..}]
                             [motive]
-      evalExpr $ substExprs 0
-                            (reverse constrArgs)
-                            (substExpr 0
-                                       recEval
-                                      (shiftFreeVarsExpr ((-1) - length gamma1)
-                                                  (1 + length gamma1)
-                                                  (matches !! i)))
+      evalExpr $ shiftFreeVarsExpr ((-1) - length gamma1)
+                                   (1 + length gamma1)
+                                   (substExprs 0 (map (shiftFreeVarsExpr (1 + length gamma1)
+                                                                         (1 + length gamma1))
+                                                      (reverse constrArgs))
+                                                 (substExpr 0
+                                                              (shiftFreeVarsExpr (1 + length gamma1)
+                                                                                 (1 + length gamma1)
+                                                                             recEval)
+                                                              (matches !! i)))
     (getExprArgs -> (Structor{num=i, ductive = duc2}, tau) , getExprArgs -> (c@Iter{..}, args))
       | inOrCoin ductive == IsCoin
         && inOrCoin duc2 == IsCoin
@@ -70,13 +73,15 @@ evalExpr (f :@: arg)                       = do
                             [gamma1]
                             [motive]
                             [Ductive{..}]
-      evalExpr $ substExprs 0
-                            (last args : reverse tau)
-                            (substExpr  0
-                                        (shiftFreeVarsExpr ((-1) - length gamma1)
-                                                           (1 + length gamma1)
-                                                           (matches !! i))
-                                        recEval)
+      evalExpr $ shiftFreeVarsExpr ((-1) - length gamma1)
+                                   (1 + length gamma1)
+                                   (substExprs 0 (map (shiftFreeVarsExpr (1 + length gamma1)
+                                                                         (1 + length gamma1))
+                                                      (last args : reverse tau))
+                                                 (substExpr 0 (matches !! i)
+                                                              (shiftFreeVarsExpr (1 + length gamma1)
+                                                                                 (1 + length gamma1)
+                                                                                 recEval)))
     _ -> pure $ valF :@: valArg
 evalExpr (GlobalExprVar v tyPars exprPars) = do
   valTyPars <- mapM evalTypeExpr tyPars
