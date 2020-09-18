@@ -72,7 +72,6 @@ typeAction Ductive{..}             terms gammas as bs =
                                 (gamma : gammas)
                                 (motive : as)
                                 (motive : bs )
-         -- TODO probably shift idDelta by one
            pure $ applyExprArgs (Structor{..}, idDelta)
                                  :@: recEval) -- g_k in paper
                                          idDeltas
@@ -110,6 +109,7 @@ typeAction Ductive{..}             terms gammas as bs =
                                         [0..]
          let ductive = OpenDuctive{..} { strDefs =  strDefsBs }
              parameters = map (substTypes 0 abstrBs) parametersTyExpr
+         -- TODO probably shift idCtx by one
          pure $ applyExprArgs (Iter {..}  ,idCtx gamma)
                 :@: LocalExprVar 0 False ""
 typeAction _                  _     _      _   _  =
