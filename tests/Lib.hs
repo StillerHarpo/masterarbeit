@@ -162,6 +162,23 @@ shouldCheckWithDefsP :: (HasCallStack, MonadTest m, MonadIO m)
                      -> m ()
 shouldCheckWithDefsP = shouldCheckWithDefs' (===)
 
+shouldKindCheckWithDefs' :: (HasCallStack, MonadIO m)
+                     => (Either String Kind -> Either String Kind -> m ())
+                     -> [Text]
+                     -> TypeExpr
+                     -> Kind
+                     -> m ()
+shouldKindCheckWithDefs' comp defs input =
+  shouldRunWithDefs' comp defs (inferType input)
+
+-- | first parses definition then check if type checking the expression
+--   matches the expected type in the parsed context
+shouldKindCheckWithDefs :: HasCallStack
+                        => [Text] -- ^ definitions to parse
+                        -> TypeExpr  -- ^ expression to type check
+                        -> Kind -- ^ expected type
+                        -> Expectation
+shouldKindCheckWithDefs = shouldKindCheckWithDefs' shouldBe
 
 shouldEvalWithDefs' :: (HasCallStack, MonadIO m)
                     => (Either String Expr -> Either String Expr -> m ())

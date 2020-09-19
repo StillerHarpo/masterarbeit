@@ -38,6 +38,7 @@ import qualified Pair
 import qualified Conat
 import qualified List
 import qualified Stream
+import qualified Vector
 
 pShow :: Show a => a -> T.Text
 pShow = T.pack . show
@@ -671,3 +672,4 @@ main = hspec $ do
   Conat.tests
   List.tests
   Stream.tests
+  Vector.tests
