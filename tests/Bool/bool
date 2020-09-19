@@ -1,0 +1,106 @@
+-- Comment are between "{-" and "-}" or in a line behind "--"
+
+{- We can define a inductive data type with the keyword "data
+   after that we write the name (here "Bool") and than the kind
+   after the colon.  Which is Set here (a kind wihout a context)
+   The constructor defnintions need to be indentet on the same
+   level.  We define two ("True" and "False") Constructors.  After
+   a colon we write the type.  We always need one type which can
+   contain a recursive occurence (which is not the case for bool).
+   For "data" the result type needs to be the defined type.  We
+   have to write it behind an arrow "->" at the end of the line
+   "Unit" is a primitve type with one inhabitant "()"-}
+data Bool : Set where
+  True : Unit -> Bool
+  False : Unit -> Bool
+
+-- we can bind expressions to names. "@" applys an expression to an nother
+true = True @ ()
+false = False @ ()
+
+{- we can iterate over a inductive type with the keyword "rec".
+   We have to give the the type we iterate(T1, here Bool) on and
+   the result type (T2, here also bool) the basic structure is
+   rec <T1> to T2 where
+   Next we have to list every constructor and varibales for their
+   arguments.  After an equal sign we write the solution in that
+   case -}
+neg = rec Bool to Bool where
+        True b = false
+        False b = true
+
+-- neg @ true
+
+{- we can abstract over variables in defintions.  For that we right a list
+   of variables and their types seperated by commas and enclosed in brackets
+   We can alse write blocks between "{" and "}" seperated by ";".  As for now
+   block parsing doesent work in nested expressions -}
+or(b1 : Bool, b2 : Bool) =
+  (rec Bool to Bool where
+     { True b = true
+     ; False b = b2}) @ b1
+
+-- or(true, false)
+
+and(b1 : Bool, b2 : Bool) =
+  (rec Bool to Bool where
+     { True b = b2
+     ; False b = false }) @ b1
+
+-- and(true, false)
+
+{- We can define coinductive types with the keyword "codata".  After the
+   Name of an type we can give a list of parameters.  They are enclosed
+   in "<" and ">" and are seperated by ",".  Parameters need to start
+   with an upper case letter.  We have to give the kinds of this parameters
+   behind colons.  After that we can use them everywehere, where a type is
+   expected.  Every (Con/De)structor can have a additional context 
+   writter directly after the colon, berfore an "->".  A context is a list
+   of expressions and their type between "(" and ")" seperated by "," -}
+codata Fun<A : Set, B : Set> : Set where
+  Ap : (x : A) -> Fun -> B
+
+
+{- With the keyword "corec" we can coiterate over an coinductive type.  For
+   types with parameters we have to give their instantiation fully behind
+   "corec" (or "rec") -}
+negF = corec<Bool,Bool> Unit to Fun where
+          { Ap b f1 = neg @ b } @ ()
+
+{- We have to write the paramters behind every constructors of a type whith
+   parameters -}
+-- Ap<Bool,Bool> @ true @ negF
+
+orF = corec<Bool,Fun<Bool,Bool>> Unit to Fun where
+          { Ap b1 f1 = corec<Bool,Bool> Unit to Fun where
+                       { Ap b2 f2 = or(b1,b2)} @ () } @ ()
+
+-- Ap<Bool,Bool> @ true @ (Ap<Bool,Fun<Bool,Bool>> @ false @ orF)
+
+andF = corec<Bool,Fun<Bool,Bool>> Unit to Fun where
+          { Ap b1 f1 = corec<Bool,Bool> Unit to Fun where
+                       { Ap b2 f2 = and(b1,b2)} @ () } @ ()
+
+-- Ap<Bool,Bool> @ true @ (Ap<Bool,Fun<Bool,Bool>> @ false @ andF)
+
+-- A kind can also have a context.  We write it before "-> Set"
+codata Pi<A : Set, B : (x : A) -> Set> : Set where
+  Ap2 : (x : A) -> Pi -> B @ x
+
+data Eq<A : Set> : (x : A, y : A) -> Set where
+  Refl : (x : A) -> Unit -> Eq x x
+
+{-
+negIdem = corec<Bool,(b : Bool).Eq<Bool> @ b @ (neg @ (neg @ b))> Unit to Pi where
+            { Ap2 b p = (rec Bool to Eq<Bool> @ b @ (neg @ (neg @ b)) where
+                          { True u = Refl<Bool> @ true @ ()
+                          ; False u = Refl<Bool> @ false @ () } @ b) @ () } @ ()
+-}
+
+{-
+orComm = corec<Bool,(b1 : Bool).Pi<Bool,(b2 : Bool).Eq @ or(b1,b2) @ or(b2,b1) >> Unit to Pi where
+           { Ap2 b1 p1 = corec<Bool,(b2 : Bool).Eq @ or(b1,b2) @ or(b2,b1)> Unit to Pi where
+              { Ap2 b2 p2 = rec Bool to Eq @ or(b1,b2) @ or(b2,b1) where
+                              
+-}
+
