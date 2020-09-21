@@ -114,12 +114,12 @@ checkCtx ctx' = catchError (checkCtx' ctx')
                            (throwError . (<> "\n in context"
                                           <+> pretty ctx'))
   where
+    checkCtx' :: Ctx -> TI ann ()
     checkCtx' []         =
       pure ()
-    checkCtx' (typ:ctx') =
-      local (over tyCtx (const []) . over ctx (const ctx'))
-            (checkType typ [])
-      >> checkCtx ctx'
+    checkCtx' (typ:ctx') = do
+      local (over ctx (typ:)) (checkCtx' ctx')
+      checkType typ []
 
 checkType :: TypeExpr -> Kind -> TI ann ()
 checkType e k = inferType e >>= (evalInTI . betaeqCtx k)
@@ -133,11 +133,11 @@ inferType tyExpr = catchError (inferType' tyExpr)
       pure []
     inferType' v@(LocalTypeVar idx _ _) =
       do ty <- view tyCtx >>= lookupLocalVarTI idx (T.pack $ show v)
-         view ctx >>= checkCtx
+         --view ctx >>= checkCtx
          pure ty
     inferType' v@(Parameter idx _ _)   =
       do ty <- view parCtx >>= lookupLocalVarTI idx (T.pack $ show v)
-         view ctx >>= checkCtx
+         --view ctx >>= checkCtx
          pure (shiftFreeParsKind (idx + 1) 0 ty)
     inferType' (GlobalTypeVar n pars) =
       lookupDefKindTI n pars
