@@ -89,7 +89,7 @@ vecDuc =
 
 vecExpr :: TypeExpr -> TypeExpr
 vecExpr x = Ductive { openDuctive = vecDuc
-                     , parametersTyExpr = [x]}
+                    , parametersTyExpr = [x]}
 
 consExpr :: TypeExpr -> Expr
 consExpr x = Structor { ductive = vecDuc
@@ -106,6 +106,6 @@ vecTest = do
   it "Parses the definition of vector" $
     shouldParseWithDefs [pairDR, zeroD] vecD
       [ TypeDef vecDuc ]
-  it "kind checks vector dfinition" $
+  it "kind checks vector definition" $
     shouldKindCheckWithDefs [pairDR, zeroD] (vecExpr UnitType)
       [ GlobalTypeVar "Nat" []]
