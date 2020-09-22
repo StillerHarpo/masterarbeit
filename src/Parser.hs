@@ -237,11 +237,9 @@ parseExprVar = do
   if   var `Set.member` _exprDefs
   then GlobalExprVar var <$> parseParameters
                          <*> parseExprParameters
-  else case elemIndex var _localExprVars of
+  else case elemIndex var (reverse _localExprVars) of
          Just idx ->
-           pure $ LocalExprVar (length _localExprVars - idx - 1)
-                               False
-                               var
+           pure $ LocalExprVar idx False var
          Nothing  ->
            fancyFailure $ Set.singleton $ ErrorFail "Name not defined"
 
@@ -258,11 +256,9 @@ parseTypeVar = do
   ParserState{..} <- get
   if   var `Set.member` _typeExprDefs
   then GlobalTypeVar var <$> parseParameters
-  else case elemIndex var _localTypeVars of
+  else case elemIndex var (reverse _localTypeVars) of
          Just idx ->
-           pure $ LocalTypeVar (length _localTypeVars - idx - 1)
-                               False
-                               var
+           pure $ LocalTypeVar idx False var
          Nothing  ->
            -- TODO maybe name shadowing could be a problem
            case elemIndex var _parameterNames of
