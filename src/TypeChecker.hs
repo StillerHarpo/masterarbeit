@@ -151,7 +151,7 @@ inferType tyExpr = catchError (inferType' tyExpr)
           evalInTI $ betaeq b b'
           pure $ substCtx 0 t gamma2
     inferType' (Abstr tyX b)          =
-      (tyX:) <$> local (ctx %~ (tyX:)) (inferType b)
+      (tyX:) <$> local (ctx %~ (++[tyX])) (inferType b)
     inferType' Ductive{..}            =
       checkParKinds parametersTyExpr (parameterCtx openDuctive)
       >> local (ctx .~ [])
