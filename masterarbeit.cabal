@@ -91,6 +91,7 @@ test-suite tests
                       Stream.Functions
                       Vector
                       Vector.Definition
+                      Vector.Examples
   hs-source-dirs:     tests
   type:               exitcode-stdio-1.0
   -- other-modules:    

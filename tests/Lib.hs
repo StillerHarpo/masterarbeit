@@ -1,8 +1,7 @@
 module Lib where
 
-import           Prelude                              hiding (unlines)
-
-import           Data.Text
+import qualified Data.Text                  as T
+import           Data.Text                                   (Text)
 import           Data.Bifunctor                              (first)
 
 import           Control.Monad.Except
@@ -33,7 +32,7 @@ shouldParseWithDefs :: HasCallStack
                     -> Expectation
 shouldParseWithDefs defs input expOutput =
   case parse (Strict.execStateT (many parseStatement <* eof) emptyState)
-             "" (unlines defs) of
+             "" (T.unlines defs) of
     Left err     ->
       error . show $ errorBundlePretty err
     Right pState ->
@@ -116,7 +115,7 @@ shouldRunWithDefs' :: (HasCallStack, Show a, Eq a, MonadIO m)
                    -> a
                    -> m ()
 shouldRunWithDefs' comp defs action expOutput =
-  case parse parseProgram "" (unlines defs) of
+  case parse parseProgram "" (T.unlines defs) of
     Left err      ->
       liftIO $ error . show $ errorBundlePretty err
     Right defCtx' ->
@@ -161,6 +160,26 @@ shouldCheckWithDefsP :: (HasCallStack, MonadTest m, MonadIO m)
                      -> Type -- ^ expected type
                      -> m ()
 shouldCheckWithDefsP = shouldCheckWithDefs' (===)
+
+shouldCheckStmtWithDefs :: HasCallStack
+                        => [Text] -- ^ definitions to parse
+                        -> Statement  -- ^ Statement to type check
+                        -> Type -- ^ expected type
+                        -> Expectation
+shouldCheckStmtWithDefs defs stmt expTy =
+  case parse parseProgram "" (T.unlines defs) of
+    Left err     ->
+      error . show $ errorBundlePretty err
+    Right defCtx' ->
+      case runState (runExceptT $ checkProgramPTI
+                                $ defCtx' ++ [stmt]) [] of
+        (Left err, _                      ) ->
+          error $ show err
+        (_       , ExprDef{ty = Just ty}:_) ->
+          ty `shouldBe` expTy
+        (_       , stmt                 :_) ->
+          error $ "First of statements is not a expression \nit ist"
+                  <> show stmt
 
 shouldKindCheckWithDefs' :: (HasCallStack, MonadIO m)
                      => (Either String Kind -> Either String Kind -> m ())
@@ -216,7 +235,7 @@ shouldEvalSameWithDefs :: HasCallStack
                        -> Expr -- ^ expected expression
                        -> Expectation
 shouldEvalSameWithDefs defs input1 input2 =
-   case parse parseProgram "" (unlines defs) of
+   case parse parseProgram "" (T.unlines defs) of
     Left err      ->
       liftIO $ error . show $ errorBundlePretty err
     Right defCtx' ->

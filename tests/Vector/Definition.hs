@@ -64,15 +64,15 @@ vecD = T.unlines
   , "  Nil : Unit -> Vec zero"
   , "  Cons : (n : Nat) -> Pair<A, Vec> @ n -> Vec (Suc @ n)"
   ]
-vecDR = T.unlines [pairDR, vecD]
+vecDR = T.unlines [pairDR, zeroD, vecD]
 
-vecDuc :: OpenDuctive
-vecDuc =
+vecDucGen :: Expr -> OpenDuctive
+vecDucGen x =
   OpenDuctive { gamma = [GlobalTypeVar "Nat" []]
               , inOrCoin = IsIn
               , parameterCtx = [[]]
               , strDefs =
-                  [ StrDef { sigma = [GlobalExprVar "zero" [] []]
+                  [ StrDef { sigma = [x]
                            , a = UnitType
                            , gamma1 = []
                            , strName = "Nil" }
@@ -87,9 +87,16 @@ vecDuc =
                            , strName = "Cons"}]
               , nameDuc = "Vec"}
 
+vecDuc :: OpenDuctive
+vecDuc = vecDucGen $ GlobalExprVar "zero" [] []
+
 vecExpr :: TypeExpr -> TypeExpr
 vecExpr x = Ductive { openDuctive = vecDuc
                     , parametersTyExpr = [x]}
+
+vecExprI :: TypeExpr -> TypeExpr
+vecExprI x = Ductive { openDuctive = vecDucGen zeroExpr
+                     , parametersTyExpr = [x]}
 
 consExpr :: TypeExpr -> Expr
 consExpr x = Structor { ductive = vecDuc
