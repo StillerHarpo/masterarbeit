@@ -256,20 +256,28 @@ inferTerm expr = catchError (inferTerm' expr)
                       local (over ctx (++ substParsInCtx 0 (reverse parameters) gamma1
                                        ++[substType 0 motive
                                           $ substPars 0 (reverse parameters) a ]))
-                            (checkTerm match ([],applyTypeExprArgs (motive,sigma))))
+                            (catchError
+                              (checkTerm
+                                 match
+                                 ([],applyTypeExprArgs ( motive
+                                                       , map (shiftFreeVarsExpr 1 0)
+                                                             sigma)))
+                              (throwError . (<> "\n in match" <+> pretty match))))
                    strDefs matches
          pure ( substParsInCtx 0 (reverse parameters) gamma
                 ++ [applyTypeExprArgs (Ductive{..}, idCtx gamma)]
               , applyTypeExprArgs ( motive
-                               , map (shiftFreeVarsExpr 1 0) (idCtx gamma)))
+                                  , map (shiftFreeVarsExpr 1 0) (idCtx gamma)))
         IsCoin -> do
           evalInTI $ betaeqCtx gamma' gamma
           zipWithM_ (\StrDef{..} match ->
                         local (over ctx (++ substParsInCtx 0 (reverse parameters) gamma1
                                          ++[applyTypeExprArgs (motive,sigma)]))
-                              (checkTerm match ([], shiftFreeVarsTypeExpr 1 0
+                              (catchError
+                                (checkTerm match ([], shiftFreeVarsTypeExpr 1 0
                                                     $ substType 0 motive
-                                                    $ substPars 0 (reverse parameters) a)))
+                                                    $ substPars 0 (reverse parameters) a))
+                                (throwError . (<> "\n in match" <+> pretty match))))
                     strDefs matches
           pure ( substParsInCtx 0 (reverse parameters) gamma
                  ++ [applyTypeExprArgs (motive, idCtx gamma)]
@@ -314,7 +322,7 @@ lookupDefTypeTI t tyPars exprPars = view defCtx >>= lookupDefTypeTI'
              pure ( map (substPars 0 (reverse tyPars))
                     $ substExprsInCtx 0 (reverse exprPars) ctx'
                   , substPars 0 (reverse tyPars)
-                    $ substTypeExprs 0 (reverse exprPars) res)
+                    $ substTypeExprs (length ctx') (reverse exprPars) res)
       | otherwise                        =
           lookupDefTypeTI' stmts
     lookupDefTypeTI' (_:stmts)           =
