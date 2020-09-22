@@ -30,22 +30,28 @@ runEval :: Eval ann a -> EvalCtx -> Either (Doc ann) a
 runEval eval = runReader (runExceptT eval)
 
 typeAction :: TypeExpr
+           -> Int
            -> [Expr]
            -> [Ctx]
            -> [TypeExpr]
            -> [TypeExpr]
            -> Eval ann Expr
-typeAction (LocalTypeVar i _ _) terms _      _   _ =
+typeAction (LocalTypeVar i _ _) _  terms _      _   _ =
    pure $  terms !! i
-typeAction Parameter{}          _     _      _   _ =
+typeAction Parameter{}          _  _     _      _   _ =
   error "Internatal error: parameter in type action"
-typeAction (GlobalTypeVar n vars) terms gammas as' bs  = do
+typeAction (GlobalTypeVar n vars) j terms gammas as' bs  = do
   tyExpr <- lookupDefTypeExpr n vars
-  typeAction tyExpr terms gammas as' bs
-typeAction (c :@ s)           terms gammas as' bs =
-  flip (substExpr 0) s <$> typeAction c terms gammas as' bs
-typeAction (Abstr _ c) terms gammas as' bs = typeAction c terms gammas as' bs
-typeAction Ductive{..}             terms gammas as bs =
+  typeAction tyExpr j terms gammas as' bs
+typeAction (c :@ s)               j terms gammas as' bs =
+  -- TODO Make sure j is right in all cases
+  -- maybe variable in s should be marked until type action
+  -- is finished (didn't work for one test)
+  flip (substExpr j) s
+  <$> typeAction c (j+1) terms gammas as' bs
+typeAction (Abstr _ c)            j terms gammas as' bs =
+  typeAction c (j-1) terms gammas as' bs
+typeAction Ductive{..}            _ terms gammas as bs =
   let OpenDuctive{..} = openDuctive
       abstrAs = zipWith abstrArgs as gammas -- R_a in paper
       abstrBs = zipWith abstrArgs bs gammas -- R_b in paper
@@ -66,8 +72,7 @@ typeAction Ductive{..}             terms gammas as bs =
                { parametersTyExpr = map (substTypes 0 abstrBs) parametersTyExpr }
          matches <- sequence $ zipWith3 (\idDelta dk num -> do
            recEval <- typeAction dk
-                                 -- TODO is this the right variable?
-                                -- Could be bound by wrong binder.
+                                 1
                                 (LocalExprVar 0 False "" : terms)
                                 (gamma : gammas)
                                 (motive : as)
@@ -82,8 +87,9 @@ typeAction Ductive{..}             terms gammas as bs =
                                          [0..]
          let parameters = map (substTypes 0 abstrAs) parametersTyExpr
              ductive = OpenDuctive{..} { strDefs =  strDefsAs }
-         -- TODO probably shift idCtx by one
-         pure $  applyExprArgs (Iter {..}  , idCtx gamma) :@: LocalExprVar 0 False ""
+         pure $ applyExprArgs ( Iter {..}
+                               , map (shiftFreeVarsExpr 1 0) $ idCtx gamma)
+                :@: LocalExprVar 0 False ""
        IsCoin -> do
          let parameters = map (substTypes 0 abstrAs) parametersTyExpr
              ductive = OpenDuctive{..} { strDefs =  strDefsAs }
@@ -92,8 +98,7 @@ typeAction Ductive{..}             terms gammas as bs =
                { parametersTyExpr = map (substTypes 0 abstrAs) parametersTyExpr }
          matches <- sequence $ zipWith3 (\idDelta dk num -> do
            recEval <- typeAction dk
-                                 -- TODO is this the right variable?
-                                 -- Could be bound by wrong binder.
+                                 1
                                  (LocalExprVar 0 False "" : terms )
                                  (gamma : gammas )
                                  (motive : as)
@@ -109,10 +114,10 @@ typeAction Ductive{..}             terms gammas as bs =
                                         [0..]
          let ductive = OpenDuctive{..} { strDefs =  strDefsBs }
              parameters = map (substTypes 0 abstrBs) parametersTyExpr
-         -- TODO probably shift idCtx by one
-         pure $ applyExprArgs (Iter {..}  ,idCtx gamma)
+         pure $ applyExprArgs ( Iter {..}
+                              , map (shiftFreeVarsExpr 1 0) $ idCtx gamma)
                 :@: LocalExprVar 0 False ""
-typeAction _                  _     _      _   _  =
+typeAction _                  _ _     _      _   _  =
   pure $ LocalExprVar 0 False ""
 
 -- | splits up a chain of left associative applications to a expression

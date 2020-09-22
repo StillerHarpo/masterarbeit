@@ -525,7 +525,7 @@ main = hspec $ do
         pairUnits = Ductive { openDuctive = pairDuc
                             , parametersTyExpr = [UnitType,UnitType]}
     it "Type action on mu with parameters works" $
-      typeAction pairUnits [UnitExpr] [[]] [UnitType] [UnitType]
+      typeAction pairUnits 1 [UnitExpr] [[]] [UnitType] [UnitType]
       `shouldEval`
       (Iter { ductive = pairDuc
             , parameters = [UnitType, UnitType]

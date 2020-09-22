@@ -34,7 +34,6 @@ evalExpr (f :@: arg)                       = do
   valF <- evalExpr f
   valArg <- evalExpr arg
   case (valF, valArg) of
-    -- TODO Should we check if _ = sigma_k\circ \tau
     (getExprArgs -> (r@Iter{..}, sigmaktau), getExprArgs -> (Structor{num = i, ductive = duc2}, constrArgs))
       | length sigmaktau == length (gamma ductive)
         && inOrCoin ductive == IsIn
@@ -43,8 +42,9 @@ evalExpr (f :@: arg)                       = do
           openDuctive = ductive
           parametersTyExpr = parameters
       recEval <- typeAction (substPars 0 (reverse parameters) a)
-                            -- TODO shift idCtx by one
-                            [applyExprArgs (r, idCtx (gamma ductive))
+                            1
+                            [applyExprArgs (r, map (shiftFreeVarsExpr 1 0)
+                                               $ idCtx (gamma ductive))
                             :@: LocalExprVar 0 False ""]
                             [gamma1]
                             [Ductive{..}]
@@ -57,7 +57,7 @@ evalExpr (f :@: arg)                       = do
                                                  (substExpr 0
                                                               (shiftFreeVarsExpr (1 + length gamma1)
                                                                                  (1 + length gamma1)
-                                                                             recEval)
+                                                                                  recEval)
                                                               (matches !! i)))
     (getExprArgs -> (Structor{num=i, ductive = duc2}, tau) , getExprArgs -> (c@Iter{..}, args))
       | inOrCoin ductive == IsCoin
@@ -67,8 +67,9 @@ evalExpr (f :@: arg)                       = do
           openDuctive = ductive
           parametersTyExpr = parameters
       recEval <- typeAction (substPars 0 (reverse parameters) a)
-                            -- TODO shift idCtx by one
-                            [applyExprArgs (c, idCtx (gamma ductive))
+                            1
+                            [applyExprArgs (c, map (shiftFreeVarsExpr 1 0)
+                                               $ idCtx (gamma ductive))
                             :@: LocalExprVar 0 False ""]
                             [gamma1]
                             [motive]
