@@ -69,6 +69,10 @@ substExprs :: Int -> [Expr] -> Expr -> Expr
 substExprs i exprs =
   unmarkInExpr . substMult substExpr i (map markInExpr exprs)
 
+substExprsInCtx :: Int -> [Expr] -> Ctx -> Ctx
+substExprsInCtx i exprs =
+  unmarkInCtx . substMult substCtx i (map markInExpr exprs)
+
 substTypeExprs :: Int -> [Expr] -> TypeExpr -> TypeExpr
 substTypeExprs  i exprs =
   unmarkInTyExpr . substMult substTypeExpr i (map markInExpr exprs)

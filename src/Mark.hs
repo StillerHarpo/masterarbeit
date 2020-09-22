@@ -39,3 +39,9 @@ unmarkInDuc = overOpenDuctive unmarkFuns
 
 unmarkInStrDef :: StrDef -> StrDef
 unmarkInStrDef = overStrDef unmarkFuns
+
+markInCtx :: Ctx -> Ctx
+markInCtx = overCtx markFuns
+
+unmarkInCtx :: Ctx -> Ctx
+unmarkInCtx = overCtx unmarkFuns

@@ -21,6 +21,7 @@ import           Data.Text.Prettyprint.Doc
 
 import           AbstractSyntaxTree
 import           ShiftFreeVars
+import           Mark
 import           Subst
 import           TypeAction
 import           Eval
@@ -297,29 +298,55 @@ lookupDefTypeTI t tyPars exprPars = view defCtx >>= lookupDefTypeTI'
          throwError $ "Variable" <+> pretty t <+> "not defined"
     lookupDefTypeTI' (ExprDef{..}:stmts)
       | t == name                        =
-          do parsKinds <- mapM inferType tyPars
-             catchError (evalInTI $ betaeqTyCtx parsKinds tyParameterCtx)
+          do catchError (tyExprsForParCtx tyPars tyParameterCtx)
                         (throwError . (<> "\n while looking up variable "
                                        <+> pretty t
                                        <+> "with type parameters"
                                        <+> pretty tyPars))
-             parsTypes <- mapM inferTerm exprPars
-             assert (all (null . fst) parsTypes)
-                    "types expression parameters should have empty ctxts"
-             catchError (evalInTI $ betaeqCtx (map snd parsTypes)
-                                   (map (substPars 0 (reverse tyPars))
-                                         exprParameterCtx))
+             catchError (exprsForCtx exprPars
+                                     (map (substPars 0 (reverse tyPars))
+                                          exprParameterCtx))
                         (throwError . (<> "\n while looking up variable "
                                        <+> pretty t
                                        <+> "with expr parameters"
                                        <+> pretty exprPars))
              let (ctx',res) = fromJust ty
-             pure ( map (substPars 0 (reverse tyPars)) ctx'
-                  , substPars 0 (reverse tyPars) res)
+             pure ( map (substPars 0 (reverse tyPars))
+                    $ substExprsInCtx 0 (reverse exprPars) ctx'
+                  , substPars 0 (reverse tyPars)
+                    $ substTypeExprs 0 (reverse exprPars) res)
       | otherwise                        =
           lookupDefTypeTI' stmts
     lookupDefTypeTI' (_:stmts)           =
           lookupDefTypeTI' stmts
+
+tyExprsForParCtx :: [TypeExpr] -> TyCtx -> TI ann ()
+tyExprsForParCtx [] [] = pure ()
+tyExprsForParCtx (tyExprPar:tyExprPars) (kind:kinds) = do
+  parKind <- inferType tyExprPar
+  evalInTI $ betaeqCtx parKind kind
+  tyExprsForParCtx tyExprPars
+                   (map (substParInCtx 0 (markInTyExpr tyExprPar))
+                        kinds)
+tyExprsForParCtx _      _        =
+  throwError "length of parameters does not match expected one"
+
+exprsForCtx :: [Expr] -> Ctx -> TI ann ()
+exprsForCtx []                 []       = pure ()
+exprsForCtx (exprPar:exprPars) (ty':tys) = do
+  parsType <- inferTerm exprPar
+  assert (null $ fst parsType)
+          "types expression parameters should have empty ctxts"
+  evalInTI $ betaeq (snd parsType) ty'
+  exprsForCtx  exprPars (substCtxNoShift 0 exprPar tys)
+    where
+      -- subst in context but doesn't shift vars
+      substCtxNoShift :: Int -> Expr -> Ctx -> Ctx
+      substCtxNoShift _ _ []        = []
+      substCtxNoShift i e (ty':tys) = substTypeExpr i e ty'
+                                      : substCtxNoShift (i+1) e tys
+exprsForCtx _      _        =
+  throwError "length of parameters does not match expected one"
 
 lookupDefKindTI :: Text -- ^ name of type var
                 -> [TypeExpr] -- ^ parameters to check
