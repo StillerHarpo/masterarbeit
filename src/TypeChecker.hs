@@ -118,7 +118,7 @@ checkCtx ctx' = catchError (checkCtx' ctx')
     checkCtx' []         =
       pure ()
     checkCtx' (typ:ctx') = do
-      local (over ctx (typ:)) (checkCtx' ctx')
+      local (over ctx (++[typ])) (checkCtx' ctx')
       checkType typ []
 
 checkType :: TypeExpr -> Kind -> TI ann ()
