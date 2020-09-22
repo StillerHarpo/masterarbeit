@@ -244,7 +244,7 @@ inferTerm expr = catchError (inferTerm' expr)
       motive <- evalInTI $  evalTypeExpr motive
       ductive <- evalInTI $ evalDuctive ductive
       gamma' <- inferType motive
-      gamma <- inferTypeDuctiveWithPars parameters ductive
+      void $ inferTypeDuctiveWithPars parameters ductive
       let OpenDuctive{..} = ductive
           openDuctive = ductive
           parametersTyExpr = parameters
