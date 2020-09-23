@@ -36,10 +36,10 @@ lengthExpr ty =
   Iter { ductive = listDuc
        , parameters = [ty]
        , motive = GlobalTypeVar "Nat" []
-       , matches = [ zeroExpr
-                   , sucExpr
-                     :@: (sndExpr ty (GlobalTypeVar "Nat" [])
-                          :@: LocalExprVar 0 False "n")]}
+       , matches = [ (["n"], zeroExpr)
+                   , (["n"], sucExpr
+                             :@: (sndExpr ty (GlobalTypeVar "Nat" [])
+                                  :@: LocalExprVar 0 False "n"))]}
 
 lengthTest :: Spec
 lengthTest = do
@@ -97,10 +97,10 @@ headExpr ty =
   Iter { ductive = listDuc
        , parameters = [ty]
        , motive = GlobalTypeVar "Maybe" [ty]
-       , matches = [ nothingExpr ty
-                   , justExpr ty
-                     :@: (fstExpr ty (GlobalTypeVar "Maybe" [ty])
-                          :@: LocalExprVar 0 False "n")]}
+       , matches = [ (["n"], nothingExpr ty)
+                   , (["n"], justExpr ty
+                           :@: (fstExpr ty (GlobalTypeVar "Maybe" [ty])
+                                :@: LocalExprVar 0 False "n"))]}
 
 headTests :: Spec
 headTests = do
@@ -143,16 +143,16 @@ appExpr ty =
        , parameters = [GlobalTypeVar "Pair" [ GlobalTypeVar "List" [ty]
                                             , GlobalTypeVar "List" [ty]]]
        , matches =
-           [Iter { ductive = listDuc
-                  , parameters = [ty]
-                  , motive = GlobalTypeVar "List" [ty]
-                  , matches = [ sndExpr (GlobalTypeVar "List" [ty])
-                                        (GlobalTypeVar "List" [ty])
-                                :@: LocalExprVar 1 False "x"
-                              , consExpr ty :@: LocalExprVar 0 False "n"]}
-            :@: (fstExpr (GlobalTypeVar "List" [ty])
-                         (GlobalTypeVar "List" [ty])
-                 :@: LocalExprVar 0 False "x")]}
+           [(["x"], Iter { ductive = listDuc
+                         , parameters = [ty]
+                         , motive = GlobalTypeVar "List" [ty]
+                         , matches = [ (["n"], sndExpr (GlobalTypeVar "List" [ty])
+                                                       (GlobalTypeVar "List" [ty])
+                                               :@: LocalExprVar 1 False "x")
+                                     , (["n"], consExpr ty :@: LocalExprVar 0 False "n")]}
+                   :@: (fstExpr (GlobalTypeVar "List" [ty])
+                                (GlobalTypeVar "List" [ty])
+                        :@: LocalExprVar 0 False "x"))]}
 
 appTests :: Spec
 appTests = do
@@ -184,8 +184,8 @@ appTests = do
       listPairExD = T.unlines
         [ "app @ (Pack<Pair<List<Unit>,List<Unit>>>"
         , "       @ (corec<List<Unit>,List<Unit>> Unit to Pair where"
-        , "            { First x = Nil<Unit> @ ()"
-        , "            ; Second x = Nil<Unit> @ () } @ ()))"]
+        , "            { First = Nil<Unit> @ ()"
+        , "            ; Second = Nil<Unit> @ () } @ ()))"]
   it "Parses app<Unit> on [] x []" $
     shouldParseWithDefs [packedD, pairD, listD, appD "Unit"] listPairExD
       [Expression (GlobalExprVar "app" [] []

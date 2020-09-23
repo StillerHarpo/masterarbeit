@@ -268,7 +268,7 @@ inferTerm expr = catchError (inferTerm' expr)
                                                        , map (shiftFreeVarsExpr 1 0)
                                                              sigma)))
                               (throwError . (<> "\n in match" <+> pretty match))))
-                   strDefs matches
+                   strDefs (map snd matches)
          pure ( substParsInCtx 0 (reverse parameters) gamma
                 ++ [applyTypeExprArgs (Ductive{..}, idCtx gamma)]
               , applyTypeExprArgs ( motive
@@ -289,7 +289,7 @@ inferTerm expr = catchError (inferTerm' expr)
                                                                      motive)
                                                     $ substPars 0 (reverse parameters) a))
                                 (throwError . (<> "\n in match" <+> pretty match))))
-                    strDefs matches
+                    strDefs (map snd matches)
           pure ( substParsInCtx 0 (reverse parameters) gamma
                  ++ [applyTypeExprArgs (motive, idCtx gamma)]
                , applyTypeExprArgs ( Ductive{..}

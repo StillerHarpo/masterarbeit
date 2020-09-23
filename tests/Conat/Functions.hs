@@ -32,11 +32,13 @@ isZeroExpr =
   Iter { ductive = packedDuc
        , parameters = [GlobalTypeVar "Conat" []]
        , motive = GlobalTypeVar "Bool" []
-       , matches = [(Iter { ductive = maybeDuc
-                          , parameters = [GlobalTypeVar "Conat" []]
-                          , motive = GlobalTypeVar "Bool" []
-                          , matches = [ trueExpr, falseExpr]})
-                    :@: (prevExpr :@: LocalExprVar 0 False "x")]}
+       , matches = [( ["x"]
+                    , Iter { ductive = maybeDuc
+                           , parameters = [GlobalTypeVar "Conat" []]
+                           , motive = GlobalTypeVar "Bool" []
+                           , matches = [ (["x"], trueExpr)
+                                       , (["x"], falseExpr)]}
+                      :@: (prevExpr :@: LocalExprVar 0 False "x"))]}
 
 isZeroTests :: Spec
 isZeroTests = do

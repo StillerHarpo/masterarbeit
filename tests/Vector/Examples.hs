@@ -37,8 +37,10 @@ mkPairStmt =
                         , parameters = [ Parameter 1 False "A"
                                        , Parameter 0 False "B"]
                         , motive = Parameter 0 False "B"
-                        , matches = [ LocalExprVar 3 False "x"
-                                    , LocalExprVar 0 False "p"]}
+                        , matches = [ ( ["n", "p"]
+                                      , LocalExprVar 3 False "x")
+                                    , ( ["n", "p"]
+                                      , LocalExprVar 0 False "p")]}
                    :@: LocalExprVar 2 False "n"
                    :@: LocalExprVar 0 False "y"
           , ty = Nothing }

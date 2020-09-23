@@ -41,25 +41,25 @@ unitStreamExpr, zeroStreamExpr, oneStreamExpr, twoStreamExpr :: Expr
 unitStreamExpr = Iter { motive = UnitType
                       , ductive = streamDuc
                       , parameters = [UnitType]
-                      , matches = [UnitExpr, UnitExpr]}
+                      , matches = [(["x"], UnitExpr), (["x"], UnitExpr)]}
                  :@: UnitExpr
 zeroStreamExpr = Iter { motive = UnitType
                       , ductive = streamDuc
                       , parameters = [GlobalTypeVar "Nat" []]
-                      , matches = [ GlobalExprVar "zero" [] []
-                                  , UnitExpr]}
+                      , matches = [ (["x"], GlobalExprVar "zero" [] [])
+                                  , (["x"], UnitExpr)]}
                  :@: UnitExpr
 oneStreamExpr = Iter { motive = UnitType
                      , ductive = streamDuc
                      , parameters = [GlobalTypeVar "Nat" []]
-                     , matches = [ GlobalExprVar "one" [] []
-                                 , UnitExpr]}
+                     , matches = [ (["x"], GlobalExprVar "one" [] [])
+                                 , (["x"], UnitExpr)]}
                  :@: UnitExpr
 twoStreamExpr = Iter { motive = UnitType
                      , parameters = [GlobalTypeVar "Nat" []]
                      , ductive = streamDuc
-                     , matches = [ GlobalExprVar "two" [] []
-                                 , UnitExpr]}
+                     , matches = [ (["x"], GlobalExprVar "two" [] [])
+                                 , (["x"], UnitExpr)]}
                 :@: UnitExpr
 
 streamExTests :: Spec

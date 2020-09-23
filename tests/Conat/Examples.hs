@@ -34,33 +34,39 @@ zeroExpr, oneExpr, twoExpr, infinityExpr :: Expr
 zeroExpr = Iter { motive = UnitType
                 , ductive = conatDuc
                 , parameters = []
-                , matches = [Structor { ductive = maybeDuc
-                                      , parameters = [UnitType]
-                                      , num = 0}
-                              :@: UnitExpr]} :@: UnitExpr
+                , matches = [(["x"], Structor { ductive = maybeDuc
+                                              , parameters = [UnitType]
+                                              , num = 0}
+                                     :@: UnitExpr)]} :@: UnitExpr
 oneExpr = Iter { motive = GlobalTypeVar "Conat" []
                , ductive = conatDuc
                , parameters = []
-               , matches = [Structor { ductive = maybeDuc
-                                     , parameters = [GlobalTypeVar "Conat" []]
-                                     , num = 1}
-                             :@: GlobalExprVar "zero" [] []]}
+               , matches = [( ["x"]
+                            , Structor { ductive = maybeDuc
+                                       , parameters =
+                                           [GlobalTypeVar "Conat" []]
+                                       , num = 1}
+                             :@: GlobalExprVar "zero" [] [])]}
          :@: GlobalExprVar "zero" [] []
 twoExpr = Iter { motive = GlobalTypeVar "Conat" []
                , ductive = conatDuc
                , parameters = []
-               , matches = [Structor { ductive = maybeDuc
-                                     , parameters = [GlobalTypeVar "Conat" []]
-                                     , num = 1}
-                             :@: GlobalExprVar "one" [] [] ]}
+               , matches = [( ["x"]
+                            , Structor { ductive = maybeDuc
+                                       , parameters =
+                                           [GlobalTypeVar "Conat" []]
+                                       , num = 1}
+                             :@: GlobalExprVar "one" [] [])]}
           :@: GlobalExprVar "one" [] []
 infinityExpr = Iter { motive = GlobalTypeVar "Conat" []
                     , ductive = conatDuc
                     , parameters = []
-                    , matches = [Structor { ductive = maybeDuc
-                                          , parameters = [GlobalTypeVar "Conat" []]
-                                          , num = 1}
-                                 :@: LocalExprVar 0 False "x"]}
+                    , matches = [( ["x"]
+                                 , Structor { ductive = maybeDuc
+                                            , parameters =
+                                                [GlobalTypeVar "Conat" []]
+                                            , num = 1}
+                                 :@: LocalExprVar 0 False "x")]}
                 :@: GlobalExprVar "zero" [] []
 
 conatExTests :: Spec

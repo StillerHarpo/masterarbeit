@@ -59,7 +59,7 @@ evalExpr (f :@: arg)                       = do
                                                               (shiftFreeVarsExpr (1 + length gamma1)
                                                                                  (1 + length gamma1)
                                                                                   recEval)
-                                                              (matches !! i)))
+                                                              (snd $ matches !! i)))
     (getExprArgs -> (Structor{num=i, ductive = duc2}, tau) , getExprArgs -> (c@Iter{..}, args))
       | inOrCoin ductive == IsCoin
         && inOrCoin duc2 == IsCoin
@@ -80,7 +80,7 @@ evalExpr (f :@: arg)                       = do
                                    (substExprs 0 (map (shiftFreeVarsExpr (1 + length gamma1)
                                                                          (1 + length gamma1))
                                                       (last args : reverse tau))
-                                                 (substExpr 0 (matches !! i)
+                                                 (substExpr 0 (snd $ matches !! i)
                                                               (shiftFreeVarsExpr (1 + length gamma1)
                                                                                  (1 + length gamma1)
                                                                                  recEval)))

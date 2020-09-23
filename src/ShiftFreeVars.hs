@@ -2,6 +2,8 @@
 
 module ShiftFreeVars where
 
+import Data.Bifunctor     (second)
+
 import AbstractSyntaxTree
 
 shiftFreeVarsFuns :: Int -> Int -> OverFuns
@@ -29,7 +31,7 @@ shiftFreeVarsExpr j k v@(LocalExprVar i m n)
   | otherwise                     =
       LocalExprVar (i+j) m n
 shiftFreeVarsExpr j k i@Iter{..}   =
-    i { matches = zipWith (shiftFreeVarsExpr j)
+    i { matches = zipWith (second . shiftFreeVarsExpr j)
                           (map ((1+) . (k+) . length . gamma1)
                                (strDefs ductive))
                           matches

@@ -26,7 +26,7 @@ idExpr :: Expr
 idExpr = Iter { ductive = boolDuc
               , parameters = []
               , motive = GlobalTypeVar "Bool" []
-              , matches = [ trueExpr, falseExpr ]}
+              , matches = [ (["x"], trueExpr), (["x"], falseExpr) ]}
 
 idTests :: Spec
 idTests = do
@@ -64,7 +64,7 @@ negExpr :: Expr
 negExpr = Iter { ductive = boolDuc
                , parameters = []
                , motive = GlobalTypeVar "Bool" []
-               , matches = [ falseExpr, trueExpr ]}
+               , matches = [ (["x"], falseExpr), (["x"], trueExpr) ]}
 
 negTests :: Spec
 negTests = do
@@ -105,16 +105,16 @@ orExpr =
                                             , GlobalTypeVar "Bool" []]]
        , motive = GlobalTypeVar "Bool" []
        , matches =
-          [Iter { ductive = boolDuc
-                , parameters = []
-                , motive = GlobalTypeVar "Bool" []
-                , matches = [ trueExpr
-                            , sndExpr (GlobalTypeVar "Bool" [])
-                                      (GlobalTypeVar "Bool" [])
-                              :@: LocalExprVar 1 False "x"]}
-           :@: (fstExpr (GlobalTypeVar "Bool" [])
-                        (GlobalTypeVar "Bool" [])
-               :@: LocalExprVar 0 False "x")]}
+          [(["x"], Iter { ductive = boolDuc
+                        , parameters = []
+                        , motive = GlobalTypeVar "Bool" []
+                        , matches = [ (["u"], trueExpr)
+                                    , (["u"], sndExpr (GlobalTypeVar "Bool" [])
+                                                      (GlobalTypeVar "Bool" [])
+                                              :@: LocalExprVar 1 False "x")]}
+                   :@: (fstExpr (GlobalTypeVar "Bool" [])
+                                (GlobalTypeVar "Bool" [])
+                       :@: LocalExprVar 0 False "x"))]}
 
 orTests :: Spec
 orTests = do

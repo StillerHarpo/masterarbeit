@@ -3,6 +3,7 @@
 
 module PrettyPrinter where
 
+import Data.Text                 (Text)
 import Data.Text.Prettyprint.Doc
 
 import AbstractSyntaxTree
@@ -89,14 +90,15 @@ instance PrettyPresc Expr where
          : prettyMatches strDefs matches
 
 prettyMatches :: [StrDef]
-              -> [Expr] -- Matches
+              -> [([Text],Expr)] -- Matches
               -> [Doc ann]
 prettyMatches = zipWith prettyMatch
   where
-    prettyMatch :: StrDef -> Expr -> Doc ann
-    prettyMatch StrDef{..} match =
+    prettyMatch :: StrDef -> ([Text], Expr) -> Doc ann
+    prettyMatch StrDef{..} (vars, match) =
       pretty strName
-      <+> hsep ["x" <> pretty i | i <- [0..(length gamma1)]]
+      <+> hsep (map pretty vars)
+      <+> hsep ["x" <> pretty i | i <- [0..(length gamma1 - length vars)]]
       <+> "="
       <+> pretty match
 

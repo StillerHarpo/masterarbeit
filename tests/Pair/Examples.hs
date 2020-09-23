@@ -24,7 +24,7 @@ mkPairExpr :: TypeExpr -> TypeExpr -> Expr -> Expr -> Expr
 mkPairExpr tyX tyY x y = Iter { motive = UnitType
                               , parameters = [tyX, tyY]
                               , ductive = pairDuc
-                              , matches = [x, y]}
+                              , matches = [([],x), ([],y)]}
                          :@: UnitExpr
 
 pairEx1D, pairEx2D, pairEx3D, pairEx4D :: Text

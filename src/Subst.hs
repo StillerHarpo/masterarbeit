@@ -2,10 +2,11 @@
 
 module Subst where
 
+import Data.Bifunctor     (second)
+
 import AbstractSyntaxTree
 import ShiftFreeVars
 import Mark
-import Lib
 
 substExprFuns :: Int -> Expr -> OverFuns
 substExprFuns i r =
@@ -54,7 +55,7 @@ substExpr i r iter@Iter{..}  =
           , parameters = map (substTypeExpr i r) parameters
           , motive = substTypeExpr i r motive
           , matches  =
-              zipWith (\j m -> substExpr (i+j) (shiftFreeVarsExpr j 0 r) m)
+              zipWith (\j -> second (substExpr (i+j) (shiftFreeVarsExpr j 0 r)))
                       (map ((+1) . length . gamma1) strDefs)
                       matches}
 substExpr i r e           =

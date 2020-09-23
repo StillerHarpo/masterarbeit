@@ -7,6 +7,8 @@ import           Data.Text              (Text)
 
 import           Control.Monad.Identity
 
+import           Lib
+
 type Type = (Ctx,TypeExpr) -- Ctx = Gamma, TypeExpr = A in "Gamma -> A"
 type Kind = Ctx -- Ctx = Gamma in "Gamma -> *"
 
@@ -82,7 +84,7 @@ data Expr = UnitExpr -- verum value
           | Iter { ductive :: OpenDuctive
                  , parameters :: [TypeExpr]
                  , motive :: TypeExpr
-                 , matches :: [Expr]
+                 , matches :: [([Text],Expr)]
                  }
   deriving (Show)
 
@@ -217,7 +219,7 @@ overExprM OverFunsM{..} Iter{..}                        =
   do ductive <- fOpenDuctiveM ductive
      parameters <- mapM fTyExprM parameters
      motive <- fTyExprM motive
-     matches <- mapM fExprM matches
+     matches <- mapM (secondM fExprM) matches
      pure Iter{..}
 overExprM OverFunsM{..} atom                            =
   pure atom

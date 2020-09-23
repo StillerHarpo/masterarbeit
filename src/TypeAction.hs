@@ -77,8 +77,8 @@ typeAction Ductive{..}            _ terms gammas as bs =
                                 (gamma : gammas)
                                 (motive : as)
                                 (motive : bs )
-           pure $ applyExprArgs (Structor{..}, idDelta)
-                                 :@: recEval) -- g_k in paper
+           pure ([], applyExprArgs (Structor{..}, idDelta)
+                                    :@: recEval)) -- g_k in paper
                                          idDeltas
                                          (map (substPars 0 (reverse
                                                             $ map (shiftFreeTypeVars 1 0)
@@ -103,9 +103,9 @@ typeAction Ductive{..}            _ terms gammas as bs =
                                  (gamma : gammas )
                                  (motive : as)
                                  (motive : bs )
-           pure $ substExpr 0 (applyExprArgs ( Structor{..} , idDelta)
-                               :@: LocalExprVar 0 False "")
-                              recEval)
+           pure ([], substExpr 0 (applyExprArgs ( Structor{..} , idDelta)
+                                  :@: LocalExprVar 0 False "")
+                                 recEval))
                                         idDeltas
                                         (map (substPars 0 (reverse
                                                            $ map (shiftFreeTypeVars 1 0)

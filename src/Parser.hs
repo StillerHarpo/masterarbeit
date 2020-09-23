@@ -320,7 +320,9 @@ parseCorec = parseBlock ((,,)
                              (ductive,matches) <- orderMatches to matches
                              pure Iter{..})
 
-orderMatches :: Text -> [(Text,Expr)] -> Parser (OpenDuctive,[Expr])
+orderMatches :: Text
+             -> [(Text,([Text],Expr))]
+             -> Parser (OpenDuctive,[([Text],Expr)])
 orderMatches name matches = do
   ductive@OpenDuctive{..} <- (view defDuctives <$> get) >>= lookupDuc name
   exprs <- orderExprs (map strName strDefs) ([],matches)
@@ -342,13 +344,13 @@ orderMatches name matches = do
       orderExprs s (m:mf,ms)
 
 
-parseMatch :: Parser (Text,Expr)
+parseMatch :: Parser (Text,([Text],Expr))
 parseMatch = lineFold $ do
   structorName <- lexeme parseTypeStrVarT
   vars <- manyLexeme parseExprVarT
   void $ symbol "="
   matchExpr <- withLocalExprVars vars parseExpr
-  pure (structorName,matchExpr)
+  pure (structorName,(vars,matchExpr))
 
 -- | parses a non empty context
 parseCtxNE :: Parser CtxP

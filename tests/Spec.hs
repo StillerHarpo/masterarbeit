@@ -130,12 +130,12 @@ main = hspec $ do
       parse parseProgram "" "data C : Set where { C1 : C -> C};rec C to Unit where { C1 x = () }"
       `shouldParse`
       [ TypeDef inC
-      , Expression $ Iter inC [] UnitType [UnitExpr]]
+      , Expression $ Iter inC [] UnitType [(["x"], UnitExpr)]]
     it "parses corec" $
       parse parseProgram "" "codata C : Set where { C1 : C -> C}; corec Unit to C where { C1 x = ()}"
       `shouldParse`
       [ TypeDef coinC
-      , Expression $ Iter coinC [] UnitType [UnitExpr]]
+      , Expression $ Iter coinC [] UnitType [(["x"], UnitExpr)]]
     it "parses multiline program" $
       parse parseProgram "" "y = (); y"
       `shouldParse`
@@ -218,8 +218,10 @@ main = hspec $ do
          , Expression Iter { ductive = a
                            , parameters = []
                            , motive = GlobalTypeVar "A" []
-                           , matches = [ Structor a [] 0
-                                         :@: LocalExprVar 0 False "x" ]}])
+                           , matches =
+                               [ (["x"]
+                                 , Structor a [] 0
+                                   :@: LocalExprVar 0 False "x")]}])
     it "parses context with spaces" $
        parse parseProgram "" "data A : (x : Unit, y : Unit) -> Set where"
        `shouldParse`
@@ -264,7 +266,7 @@ main = hspec $ do
          , Expression (Iter { motive = UnitType
                             , parameters = [UnitType]
                             , ductive = duc
-                            , matches = [UnitExpr]})]
+                            , matches = [(["x"],UnitExpr)]})]
     it "orders matches right" $
        parse parseProgram "" (T.unlines [ "data A : Set where"
                                         , "  C1 : A -> A"
@@ -302,20 +304,24 @@ main = hspec $ do
          , Expression $ Iter { ductive = a
                              , parameters = []
                              , motive = GlobalTypeVar "A" []
-                             , matches = [ Structor a [] 0
-                                           :@: LocalExprVar 0 False "x"
-                                         , Structor a [] 1
-                                           :@: LocalExprVar 1 False "x"
-                                           :@: LocalExprVar 0 False "y"
-                                         , Structor a [] 2
-                                           :@: LocalExprVar 2 False "x"
-                                           :@: LocalExprVar 1 False "y"
-                                          :@: LocalExprVar 0 False "z"
-                                         , Structor a [] 3
-                                           :@: LocalExprVar 3 False "x"
-                                           :@: LocalExprVar 2 False "y"
-                                           :@: LocalExprVar 1 False "z"
-                                           :@: LocalExprVar 0 False "u"]}])
+                             , matches = [ ( ["x"]
+                                           , Structor a [] 0
+                                             :@: LocalExprVar 0 False "x")
+                                         , ( ["x", "y"]
+                                           , Structor a [] 1
+                                             :@: LocalExprVar 1 False "x"
+                                             :@: LocalExprVar 0 False "y")
+                                         , ( ["x", "y", "z"]
+                                           , Structor a [] 2
+                                             :@: LocalExprVar 2 False "x"
+                                             :@: LocalExprVar 1 False "y"
+                                          :@: LocalExprVar 0 False "z")
+                                         , ( ["x", "y", "z", "u"]
+                                           , Structor a [] 3
+                                             :@: LocalExprVar 3 False "x"
+                                             :@: LocalExprVar 2 False "y"
+                                             :@: LocalExprVar 1 False "z"
+                                             :@: LocalExprVar 0 False "u")]}])
 
   let emptyInDuc = OpenDuctive { gamma = []
                                , inOrCoin = IsIn
@@ -412,32 +418,40 @@ main = hspec $ do
                          , matches = []}
     it "substitute expression which is bound by Iteration" $
       substExpr 0 (LocalExprVar 2 False "")
-                  (iterBound {matches = [LocalExprVar 1 False ""
-                                         :@: LocalExprVar 3 False ""]})
+                  (iterBound {matches = [( []
+                                         , LocalExprVar 1 False ""
+                                           :@: LocalExprVar 3 False "")]})
       `shouldBe`
-      iterBound {matches = [LocalExprVar 1 False "" :@: LocalExprVar 5 False ""]}
+      iterBound {matches = [([], LocalExprVar 1 False ""
+                                 :@: LocalExprVar 5 False "")]}
     it "substitute expression which is bound by Iteration with offset one" $
       substExpr 1 (LocalExprVar 3 False "")
-                  (iterBound {matches = [LocalExprVar 4 False ""
-                                         :@: LocalExprVar 5 False ""]})
+                  (iterBound {matches = [( []
+                                         , LocalExprVar 4 False ""
+                                           :@: LocalExprVar 5 False "")]})
       `shouldBe`
-      iterBound {matches = [LocalExprVar 6 False "" :@: LocalExprVar 5 False ""]}
+      iterBound {matches = [([], LocalExprVar 6 False ""
+                                 :@: LocalExprVar 5 False "")]}
 
     it ("substitute multible expressions in expression which is"
         <> "bound by Iteration") $
       substExprs 0 [LocalExprVar 2 False "", LocalExprVar 3 False ""]
-                  (iterBound {matches = [LocalExprVar 4 False ""
-                                         :@: LocalExprVar 3 False ""]})
+                  (iterBound {matches = [( []
+                                         , LocalExprVar 4 False ""
+                                           :@: LocalExprVar 3 False "")]})
       `shouldBe`
-      iterBound {matches = [LocalExprVar 6 False "" :@: LocalExprVar 5 False ""]}
+      iterBound {matches = [([], LocalExprVar 6 False ""
+                                 :@: LocalExprVar 5 False "")]}
     it ("substitute multible expressions in expression which is"
         <> "bound by Iteration 2") $
       substExprs 0 [LocalExprVar 2 False "", LocalExprVar 3 False ""]
-                  (iterBound {matches = [ LocalExprVar 4 False ""
-                                          :@: LocalExprVar 2 False ""]}
+                  (iterBound {matches = [( []
+                                         , LocalExprVar 4 False ""
+                                           :@: LocalExprVar 2 False "")]}
                    :@: LocalExprVar 0 False "")
       `shouldBe`
-      (iterBound {matches = [LocalExprVar 6 False "" :@: LocalExprVar 2 False ""]}
+      (iterBound {matches = [([], LocalExprVar 6 False ""
+                                  :@: LocalExprVar 2 False "")]}
        :@: LocalExprVar 2 False "")
     it "substitute type expression" $
       substType 0 UnitType (LocalTypeVar 0 False "")
@@ -530,12 +544,16 @@ main = hspec $ do
       (Iter { ductive = pairDuc
             , parameters = [UnitType, UnitType]
             , motive = pairUnits
-            , matches = [ Structor { ductive = pairDuc
-                                   , parameters = [UnitType, UnitType]
-                                   , num = 0} :@: LocalExprVar 0 False ""
-                        , Structor { ductive = pairDuc
-                                   , parameters = [UnitType, UnitType]
-                                   , num = 1} :@: LocalExprVar 0 False "" ]}
+            , matches = [ ( []
+                          , Structor { ductive = pairDuc
+                                     , parameters = [UnitType, UnitType]
+                                     , num = 0}
+                            :@: LocalExprVar 0 False "")
+                        , ( []
+                          , Structor { ductive = pairDuc
+                                     , parameters = [UnitType, UnitType]
+                                     , num = 1}
+                            :@: LocalExprVar 0 False "")]}
       :@: LocalExprVar 0 False "")
 
   describe "Eval works" $ do

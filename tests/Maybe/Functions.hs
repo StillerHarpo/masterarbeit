@@ -24,8 +24,9 @@ idExpr =
   Iter { ductive = maybeDuc
        , parameters = [UnitType]
        , motive = GlobalTypeVar "Maybe" [UnitType]
-       , matches = [ nothingExpr UnitType
-                   , justExpr UnitType :@: LocalExprVar 0 False "x"]}
+       , matches = [ (["x"], nothingExpr UnitType)
+                   , ( ["x"]
+                     , justExpr UnitType :@: LocalExprVar 0 False "x")]}
 
 idTests :: Spec
 idTests = do

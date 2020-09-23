@@ -23,7 +23,7 @@ idExpr ty =
   Iter { ductive = packedDuc
        , parameters = [ty]
        , motive = GlobalTypeVar "Packed" [ty]
-       , matches = [ packExpr ty :@: LocalExprVar 0 False "x"]}
+       , matches = [(["x"], packExpr ty :@: LocalExprVar 0 False "x")]}
 
 idTests :: Spec
 idTests = do
