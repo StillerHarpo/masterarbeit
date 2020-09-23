@@ -19,7 +19,8 @@ evalTypeExpr (f :@ arg) = do
   valF <- evalTypeExpr f
   valArg <- evalExpr arg
   case (valF, valArg) of
-    (Abstr _ expr,_) -> evalTypeExpr $ substTypeExpr 0 valArg expr
+    (Abstr _ expr,_) -> evalTypeExpr $ substTypeExpr 0 valArg
+                                     $ shiftFreeVarsTypeExpr (-1) 1 expr
     _ -> pure $ valF :@ valArg
 evalTypeExpr e          = overTypeExprM evalFuns e
 

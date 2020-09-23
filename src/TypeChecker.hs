@@ -243,6 +243,7 @@ inferTerm expr = catchError (inferTerm' expr)
                               $ substPars 0 (reverse parameters) a))
     inferTerm' Iter{..}                         = do
       motive <- evalInTI $  evalTypeExpr motive
+      -- TODO do we have to disallow free variables here
       ductive <- evalInTI $ evalDuctive ductive
       gamma' <- inferType motive
       void $ inferTypeDuctiveWithPars parameters ductive
@@ -254,12 +255,16 @@ inferTerm expr = catchError (inferTerm' expr)
         IsIn -> do
          zipWithM_ (\StrDef{..} match ->
                       local (over ctx (++ substParsInCtx 0 (reverse parameters) gamma1
-                                       ++[substType 0 motive
+                                       ++[substType 0 (shiftFreeVarsTypeExpr
+                                                         (length gamma1)
+                                                         0 motive)
                                           $ substPars 0 (reverse parameters) a ]))
                             (catchError
                               (checkTerm
                                  match
-                                 ([],applyTypeExprArgs ( motive
+                                 ([],applyTypeExprArgs ( shiftFreeVarsTypeExpr
+                                                           (length gamma1 + 1)
+                                                           0 motive
                                                        , map (shiftFreeVarsExpr 1 0)
                                                              sigma)))
                               (throwError . (<> "\n in match" <+> pretty match))))
@@ -272,10 +277,16 @@ inferTerm expr = catchError (inferTerm' expr)
           evalInTI $ betaeqCtx gamma' gamma
           zipWithM_ (\StrDef{..} match ->
                         local (over ctx (++ substParsInCtx 0 (reverse parameters) gamma1
-                                         ++[applyTypeExprArgs (motive,sigma)]))
+                                         ++[applyTypeExprArgs ( shiftFreeVarsTypeExpr
+                                                                  (length gamma1)
+                                                                  0 motive
+                                                              , sigma)]))
                               (catchError
                                 (checkTerm match ([], shiftFreeVarsTypeExpr 1 0
-                                                    $ substType 0 motive
+                                                    $ substType 0 (shiftFreeVarsTypeExpr
+                                                                     (length gamma1 + 1)
+                                                                     0
+                                                                     motive)
                                                     $ substPars 0 (reverse parameters) a))
                                 (throwError . (<> "\n in match" <+> pretty match))))
                     strDefs matches
