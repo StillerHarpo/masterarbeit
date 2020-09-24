@@ -17,8 +17,9 @@ shiftFreeVarsFuns j k =
 shiftFreeVarsTypeExpr :: Int -- ^ how much should they be shifted
                       -> Int -- ^ offset for free vars
                       -> TypeExpr -> TypeExpr
-shiftFreeVarsTypeExpr j k (Abstr ty body) =
-  Abstr (shiftFreeVarsTypeExpr j k ty) (shiftFreeVarsTypeExpr j (k+1) body)
+shiftFreeVarsTypeExpr j k (Abstr n ty body) =
+  Abstr n (shiftFreeVarsTypeExpr j k ty)
+          (shiftFreeVarsTypeExpr j (k+1) body)
 shiftFreeVarsTypeExpr j k e               =
   overTypeExpr (shiftFreeVarsFuns j k) e
 

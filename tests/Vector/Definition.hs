@@ -54,8 +54,8 @@ pairTest = do
       [ TypeDef pairDuc ]
   it "kind checks pair definition" $
     shouldKindCheckWithDefs [natD] (pairExpr UnitType
-                                             (Abstr (GlobalTypeVar "Nat" [])
-                                                     UnitType))
+                                             (Abstr "" (GlobalTypeVar "Nat" [])
+                                                       UnitType))
       [ GlobalTypeVar "Nat" []]
 
 vecD, vecDR :: Text

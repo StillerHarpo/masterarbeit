@@ -289,10 +289,10 @@ parseUnitExpr = UnitExpr <$ string "()"
 
 parseAbstr :: Parser TypeExpr
 parseAbstr = do
-  (vars,ty1:tys) <- unzip <$> parseCtxNE
+  (var:vars,ty1:tys) <- unzip <$> parseCtxNE
   void $ lexeme $ char '.'
-  expr <- withLocalExprVars vars parseTypeExpr
-  pure $ foldr Abstr (Abstr ty1 expr) tys
+  expr <- withLocalExprVars (var:vars) parseTypeExpr
+  pure $ foldr (uncurry Abstr) (Abstr var ty1 expr) (zip vars tys)
 
 parseRec :: Parser Expr
 parseRec = parseBlock ((,,)

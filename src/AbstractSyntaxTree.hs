@@ -36,7 +36,7 @@ data TypeExpr = UnitType -- verum type
               | LocalTypeVar Int Bool Text
               | Parameter Int Bool Text
               | GlobalTypeVar Text [TypeExpr]
-              | Abstr TypeExpr TypeExpr
+              | Abstr Text TypeExpr TypeExpr
               | Ductive { openDuctive :: OpenDuctive
                         , parametersTyExpr :: [TypeExpr]}
   deriving (Show)
@@ -47,7 +47,7 @@ instance Eq TypeExpr where
   (LocalTypeVar i1 _ _) == (LocalTypeVar i2 _ _) = i1 == i2
   (Parameter i1 _ _)    == (Parameter i2 _ _)    = i1 == i2
   (GlobalTypeVar n1 p1) == (GlobalTypeVar n2 p2) = n1 == n2 && p1 == p2
-  (Abstr ty1 e1)        == (Abstr ty2 e2)        = ty1 == ty2 && e1 == e2
+  (Abstr _ ty1 e1)      == (Abstr _ ty2 e2)      = ty1 == ty2 && e1 == e2
   (Ductive oDuc1 pars1) == (Ductive oDuc2 pars2) = oDuc1 == oDuc2
                                                    && pars1 == pars2
   _                     == _                     = False
@@ -159,8 +159,8 @@ overTypeExprM OverFunsM{..} (tyExpr :@ expr)          =
   (:@) <$> fTyExprM tyExpr <*> fExprM expr
 overTypeExprM OverFunsM{..} (GlobalTypeVar n tyExprs) =
   GlobalTypeVar n <$> mapM fTyExprM tyExprs
-overTypeExprM OverFunsM{..} (Abstr tyExpr1 tyExpr2)   =
-  Abstr <$> fTyExprM tyExpr1 <*> fTyExprM tyExpr2
+overTypeExprM OverFunsM{..} (Abstr n tyExpr1 tyExpr2) =
+  Abstr n <$> fTyExprM tyExpr1 <*> fTyExprM tyExpr2
 overTypeExprM OverFunsM{..} Ductive{..}               =
   do openDuctive <- fOpenDuctiveM openDuctive
      parametersTyExpr <- mapM fTyExprM parametersTyExpr

@@ -76,7 +76,7 @@ main = hspec $ do
                     parameterCtx = [],
                     strDefs = [StrDef {
                       sigma = [],
-                      a = Abstr UnitType UnitType,
+                      a = Abstr "x" UnitType UnitType,
                       gamma1 = [],
                       strName = "C"}],
                     nameDuc = "A"}]
@@ -91,7 +91,7 @@ main = hspec $ do
                     parameterCtx = [],
                     strDefs = [StrDef {
                       sigma = [],
-                      a = Abstr UnitType (Abstr UnitType UnitType),
+                      a = Abstr "x" UnitType (Abstr "y" UnitType UnitType),
                       gamma1 = [],
                       strName = "C"}],
                     nameDuc = "A"}]
@@ -338,9 +338,9 @@ main = hspec $ do
     it "shift free vars doesn't change Abstraction" $ hedgehog $ do
       n <- forAll $ Gen.integral (Range.linear 0 100)
       m <- forAll $ Gen.integral (Range.linear 0 100)
-      shiftFreeVarsTypeExpr n m (Abstr UnitType UnitType)
+      shiftFreeVarsTypeExpr n m (Abstr "" UnitType UnitType)
         ===
-        Abstr UnitType UnitType
+        Abstr "" UnitType UnitType
 
   describe "(un)marking works" $ do
     it "marks every variable" $
@@ -370,21 +370,21 @@ main = hspec $ do
       `shouldBe`
       LocalExprVar 0 False ""
     it "substitutes expression which is bound by abstraction" $
-      substTypeExpr 0 (LocalExprVar 2 False "") (Abstr UnitType
+      substTypeExpr 0 (LocalExprVar 2 False "") (Abstr "" UnitType
                                                 (UnitType
                                                  :@ (LocalExprVar 0 False ""
                                                      :@: LocalExprVar 1 False "")))
       `shouldBe`
-      Abstr UnitType (UnitType :@ (LocalExprVar 0 False ""
-                                   :@: LocalExprVar 3 False ""))
+      Abstr "" UnitType (UnitType :@ (LocalExprVar 0 False ""
+                                     :@: LocalExprVar 3 False ""))
     it "substitutes expression which is bound by abstraction with offset 1" $
-      substTypeExpr 1 (LocalExprVar 2 False "") (Abstr UnitType
+      substTypeExpr 1 (LocalExprVar 2 False "") (Abstr "" UnitType
                                                 (UnitType
                                                  :@ (LocalExprVar 0 False ""
                                                      :@: LocalExprVar 2 False "")))
       `shouldBe`
-      Abstr UnitType (UnitType :@ (LocalExprVar 0 False ""
-                                   :@: LocalExprVar 3 False ""))
+      Abstr "" UnitType (UnitType :@ (LocalExprVar 0 False ""
+                                      :@: LocalExprVar 3 False ""))
 
     it "substitutes multible expressions " $
        substExprs 0 [LocalExprVar 2 False ""
@@ -562,11 +562,11 @@ main = hspec $ do
       `shouldEval`
        UnitType
     it "evals abstraction to abstraction" $
-      evalTypeExpr (Abstr UnitType UnitType)
+      evalTypeExpr (Abstr "" UnitType UnitType)
       `shouldEval`
-      Abstr UnitType UnitType
+      Abstr "" UnitType UnitType
     it "evals \\T -> T @ () to T" $
-      evalTypeExpr (Abstr UnitType UnitType :@ UnitExpr)
+      evalTypeExpr (Abstr "" UnitType UnitType :@ UnitExpr)
       `shouldEval`
       UnitType
     it "evals mu to mu" $
@@ -647,11 +647,11 @@ main = hspec $ do
       `shouldCheck`
       []
     it "type checks abstraction" $
-      inferType (Abstr UnitType UnitType)
+      inferType (Abstr "" UnitType UnitType)
       `shouldCheck`
       [UnitType]
     it "type checks application" $
-      inferType (Abstr UnitType UnitType :@ UnitExpr)
+      inferType (Abstr "" UnitType UnitType :@ UnitExpr)
       `shouldCheck`
       []
     it "type checks mu" $

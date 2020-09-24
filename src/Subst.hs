@@ -18,9 +18,9 @@ substExprFuns i r =
     , fCtx         = substCtx i r }
 
 substTypeExpr :: Int -> Expr -> TypeExpr -> TypeExpr
-substTypeExpr i r1 (Abstr t r2) =
-  Abstr (substTypeExpr i r1 t)
-        (substTypeExpr (i+1) (shiftFreeVarsExpr 1 0 r1) r2)
+substTypeExpr i r1 (Abstr n t r2) =
+  Abstr n (substTypeExpr i r1 t)
+          (substTypeExpr (i+1) (shiftFreeVarsExpr 1 0 r1) r2)
 substTypeExpr i r  e            =
   overTypeExpr (substExprFuns i r) e
 

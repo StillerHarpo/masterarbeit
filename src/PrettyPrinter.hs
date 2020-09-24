@@ -45,8 +45,10 @@ instance PrettyPresc TypeExpr where
   prettyPresc _ (GlobalTypeVar n par) =
     pretty n <> angles (hsep . punctuate comma $ map pretty par)
   -- TODO find name of variable if defined
-  prettyPresc _ (Abstr ty body)       =
-    "\\?:" <> pretty ty <> " -> " <> prettyParens body
+  prettyPresc _ (Abstr n ty body)       =
+    "(" <> pretty n <+> ":" <+> pretty ty <> f body
+      where f (Abstr n ty body) = "," <> pretty n <+> pretty ty <> f body
+            f body = ")." <> prettyParens body
   prettyPresc _ Ductive{..}           =
      pretty openDuctive <> prettyPars parametersTyExpr
 

@@ -49,7 +49,7 @@ typeAction (c :@ s)               j terms gammas as' bs =
   -- is finished (didn't work for one test)
   flip (substExpr j) s
   <$> typeAction c (j+1) terms gammas as' bs
-typeAction (Abstr _ c)            j terms gammas as' bs =
+typeAction (Abstr _ _ c)         j terms gammas as' bs =
   typeAction c (j-1) terms gammas as' bs
 typeAction Ductive{..}            _ terms gammas as bs =
   let OpenDuctive{..} = openDuctive
@@ -130,7 +130,7 @@ applyExprArgs :: (Expr,[Expr]) -> Expr
 applyExprArgs (f,args) = foldl (:@:) f args
 
 abstrArgs :: TypeExpr -> [TypeExpr] -> TypeExpr
-abstrArgs = foldr Abstr
+abstrArgs expr = foldr (uncurry Abstr) expr . zip (repeat "")
 
 idCtx :: Ctx -> [Expr]
 idCtx []  = []
