@@ -19,13 +19,23 @@ prettyParens :: PrettyPresc a => a -> Doc ann
 prettyParens = prettyPresc True
 
 instance Pretty TypedExpr where
-  pretty (TypedExpr expr ([], typeExpr)) =
-    pretty expr <> " :: " <> pretty typeExpr
-  pretty (TypedExpr expr (ctx, typeExpr)) =
-    pretty expr <> " :: "
-                <> encloseSep lparen rparen comma (map pretty ctx)
-                <> " -> "
-                <> pretty typeExpr
+  pretty (TypedExpr expr ty) =
+    pretty expr <+> "::" <+> prettyType ty
+
+prettyType :: Type -> Doc ann
+prettyType ([], tyExpr) =
+  pretty tyExpr
+prettyType (ctx, tyExpr) =
+  encloseSep lparen rparen comma (map pretty ctx)
+  <+> "->"
+  <+> pretty tyExpr
+
+prettyKind :: Kind -> Doc ann
+prettyKind [] =
+  "*"
+prettyKind ctx =
+  encloseSep lparen rparen comma (map pretty ctx)
+  <+> "-> *"
 
 instance PrettyPresc TypeExpr where
   prettyPresc _ UnitType              =

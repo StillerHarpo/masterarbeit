@@ -25,7 +25,12 @@ executable masterarbeit
                        masterarbeit,
                        megaparsec,
                        prettyprinter,
-                       prettyprinter-ansi-terminal
+                       prettyprinter-ansi-terminal,
+                       containers,
+                       microlens-platform,
+                       mtl,
+                       repline,
+                       optparse-applicative
   hs-source-dirs:      src-exe
   default-language:    Haskell2010
 

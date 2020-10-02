@@ -43,6 +43,9 @@ runTI ti = runReader (runExceptT ti)
 -- | Program type inference monad
 type PTI ann = ExceptT (Doc ann) (State [Statement])
 
+runPTI :: PTI ann a -> [Statement] -> (Either (Doc ann) a, [Statement])
+runPTI pti = runState (runExceptT pti)
+
 evalPTI :: PTI ann a -> [Statement] -> Either (Doc ann) a
 evalPTI pti = evalState (runExceptT pti)
 
