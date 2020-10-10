@@ -26,7 +26,7 @@ import           List.Examples
 lengthD :: Text -> Text
 lengthD ty = T.unlines
   -- TODO make this generic after implementing it
-  [ "length = rec<" <> ty <> "> List to Nat where"
+  [ "length = rec List<" <> ty <> "> to Nat where"
   , "           Nil n = Zero @ ()"
   , "           Cons n = Suc @ (Second<" <> ty <> ",Nat> @ n)"
   ]
@@ -88,7 +88,7 @@ lengthTest = do
 
 headD :: Text -> Text
 headD ty = T.unlines
-  [ "head = rec<" <> ty <> "> List to Maybe<Unit> where"
+  [ "head = rec List<" <> ty <> "> to Maybe<Unit> where"
   , "         Nil n = Nothing<" <> ty <> "> @ ()"
   , "         Cons n = Just<" <> ty <> "> @ (First<" <> ty <> ",Maybe<" <> ty <> ">> @ n)"]
 
@@ -130,8 +130,8 @@ headTests = do
 
 appD :: Text -> Text
 appD ty = T.unlines
-  [ "app = rec<Pair<List<" <> ty <> ">,List<" <> ty <> ">>> Packed to List<" <> ty <> "> where"
-  , "        Pack x = (rec<" <> ty <> "> List to List<" <> ty <> "> where"
+  [ "app = rec Packed<Pair<List<" <> ty <> ">,List<" <> ty <> ">>> to List<" <> ty <> "> where"
+  , "        Pack x = (rec List<" <> ty <> "> to List<" <> ty <> "> where"
   , "                    { Nil n = Second<List<" <> ty <> ">,List<" <> ty <> ">> @ x"
   , "                    ; Cons n = Cons<" <> ty <> "> @ n}) @ (First<List<" <> ty <> ">,List<" <> ty <> ">> @ x)"
   ]
@@ -183,7 +183,7 @@ appTests = do
                        x y
       listPairExD = T.unlines
         [ "app @ (Pack<Pair<List<Unit>,List<Unit>>>"
-        , "       @ (corec<List<Unit>,List<Unit>> Unit to Pair where"
+        , "       @ (corec Unit to Pair<List<Unit>,List<Unit>> where"
         , "            { First = Nil<Unit> @ ()"
         , "            ; Second = Nil<Unit> @ () } @ ()))"]
   it "Parses app<Unit> on [] x []" $

@@ -16,22 +16,22 @@ import Nat.Examples
 unitStreamD, unitStreamDR, zeroStreamD, zeroStreamDR :: Text
 oneStreamD, oneStreamDR, twoStreamD, twoStreamDR :: Text
 unitStreamD = T.unlines
-  [ "unitStream = (corec<Unit> Unit to Stream where"
+  [ "unitStream = (corec Unit to Stream<Unit> where"
   , "                { Head x = ()"
   , "                ; Tail x = ()}) @ ()"]
 unitStreamDR = T.unlines [streamD, unitStreamD]
 zeroStreamD = T.unlines
-  [ "zeroStream = (corec<Nat> Unit to Stream where"
+  [ "zeroStream = (corec Unit to Stream<Nat> where"
   , "                { Head x = zero"
   , "                ; Tail x = ()}) @ ()"]
 zeroStreamDR = T.unlines [streamD, zeroDR, zeroStreamD]
 oneStreamD = T.unlines
-  [ "oneStream = (corec<Nat> Unit to Stream where"
+  [ "oneStream = (corec Unit to Stream<Nat> where"
   , "               { Head x = one"
   , "               ; Tail x = ()}) @ ()"]
 oneStreamDR = T.unlines [streamD, oneDR, oneStreamD]
 twoStreamD = T.unlines
-  [ "twoStream = (corec<Nat> Unit to Stream where"
+  [ "twoStream = (corec Unit to Stream<Nat> where"
   , "               { Head x = two"
   , "               ; Tail x = ()}) @ ()"]
 twoStreamDR = T.unlines [streamD, twoDR, twoStreamD]

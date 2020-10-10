@@ -18,8 +18,8 @@ import Bool.Examples
 
 isZeroD :: Text
 isZeroD = T.unlines
-  [ "isZero = rec<Conat> Packed to Bool where"
-  , "           Pack x = (rec<Conat> Maybe to Bool where"
+  [ "isZero = rec Packed<Conat> to Bool where"
+  , "           Pack x = (rec Maybe<Conat> to Bool where"
   , "                       { Nothing x = True @ ()"
   , "                       ; Just x = False @ ()} @ (Prev @ x))"
   ]

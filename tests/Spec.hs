@@ -251,7 +251,7 @@ main = hspec $ do
     it "parses parameters of coinductive type" $
       parse parseProgram "" (T.unlines [ "codata A<B : Set> : Set where"
                                        , "  C : A -> B"
-                                       , "corec<Unit> Unit to A where"
+                                       , "corec Unit to A<Unit> where"
                                        , "  C x = ()"])
       `shouldParse`
       let duc = OpenDuctive { gamma = []

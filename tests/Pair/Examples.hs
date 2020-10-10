@@ -16,7 +16,7 @@ import Pair.Definition
 mkPairD :: Text -> Text -> Text -> Text -> Text
 mkPairD tyX tyY x y = T.unlines
   -- TODO make block parsing work in nested cases
-  [ "((corec<" <> tyX <> "," <> tyY <> "> Unit to Pair where"
+  [ "((corec Unit to Pair<" <> tyX <> "," <> tyY <> "> where"
   , "   { First = " <> x
   , "   ; Second = " <> y <> "}) @ ())"]
 

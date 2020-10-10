@@ -297,26 +297,26 @@ parseAbstr = do
 parseRec :: Parser Expr
 parseRec = parseBlock ((,,)
                        <$ symbol "rec"
-                       <*> lexeme parseParameters
                        <*> lexeme parseTypeStrVarT
+                       <*> lexeme parseParameters
                        <* symbol "to"
                        <*> lexeme parseTypeExpr
                        <* symbol "where")
                       (const parseMatch)
-                      (\(parameters, from, motive) matches -> do
+                      (\(from, parameters, motive) matches -> do
                           (ductive,matches) <- orderMatches from matches
                           pure Iter{..})
 
 parseCorec :: Parser Expr
 parseCorec = parseBlock ((,,)
                          <$ symbol "corec"
-                         <*> lexeme parseParameters
                          <*> lexeme parseTypeExpr
                          <* symbol "to"
                          <*> lexeme parseTypeStrVarT
+                         <*> lexeme parseParameters
                          <* symbol "where")
                          (const parseMatch)
-                         (\(parameters, motive,to) matches -> do
+                         (\(motive, to, parameters) matches -> do
                              (ductive,matches) <- orderMatches to matches
                              pure Iter{..})
 

@@ -20,7 +20,7 @@ mkPairD, mkPairDR :: Text
 mkPairD = T.unlines
   -- TODO make block parsing work in nested cases
   [ "mkPair<A : Set, B : (n: Nat) -> Set>(n : Nat, x : A, y : B @ n) ="
-  , "  ((corec<A,B> B to Pair where"
+  , "  ((corec B to Pair<A,B> where"
   , "     { First n p = x"
   , "     ; Second n p = p}) @ n @ y)"]
 mkPairDR = T.unlines [pairDR, mkPairD]

@@ -93,7 +93,7 @@ negTests = do
 
 orD :: Text
 orD = T.unlines
-  [ "or = rec<Pair<Bool,Bool>> Packed to Bool where"
+  [ "or = rec Packed<Pair<Bool,Bool>> to Bool where"
   , "       Pack x = (rec Bool to Bool where"
   , "                   { True u = True @ () "
   , "                   ; False u = Second<Bool,Bool> @ x}) @ (First<Bool,Bool> @ x)" ]

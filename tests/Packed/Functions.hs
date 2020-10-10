@@ -14,7 +14,7 @@ import Packed.Examples
 
 idD :: Text -> Text
 idD ty = T.unlines
-  [ "id = rec<" <> ty <> "> Packed to Packed<" <> ty <> "> where"
+  [ "id = rec Packed<" <> ty <> "> to Packed<" <> ty <> "> where"
   , "       { Pack x = Pack<" <> ty <> "> @ x }"
   ]
 

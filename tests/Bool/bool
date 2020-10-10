@@ -64,21 +64,21 @@ codata Fun<A : Set, B : Set> : Set where
 {- With the keyword "corec" we can coiterate over an coinductive type.  For
    types with parameters we have to give their instantiation fully behind
    "corec" (or "rec") -}
-negF = corec<Bool,Bool> Unit to Fun where
+negF = corec Unit to Fun<Bool,Bool> where
           { Ap b f1 = neg @ b } @ ()
 
 {- We have to write the paramters behind every constructors of a type whith
    parameters -}
 -- Ap<Bool,Bool> @ true @ negF
 
-orF = corec<Bool,Fun<Bool,Bool>> Unit to Fun where
-          { Ap b1 f1 = corec<Bool,Bool> Unit to Fun where
+orF = corec Unit to Fun<Bool,Fun<Bool,Bool>> where
+          { Ap b1 f1 = corec Unit to Fun<Bool,Bool> where
                        { Ap b2 f2 = or(b1,b2)} @ () } @ ()
 
 -- Ap<Bool,Bool> @ true @ (Ap<Bool,Fun<Bool,Bool>> @ false @ orF)
 
-andF = corec<Bool,Fun<Bool,Bool>> Unit to Fun where
-          { Ap b1 f1 = corec<Bool,Bool> Unit to Fun where
+andF = corec Unit to Fun<Bool,Fun<Bool,Bool>> where
+          { Ap b1 f1 = corec Unit to Fun<Bool,Bool> where
                        { Ap b2 f2 = and(b1,b2)} @ () } @ ()
 
 -- Ap<Bool,Bool> @ true @ (Ap<Bool,Fun<Bool,Bool>> @ false @ andF)
@@ -91,14 +91,14 @@ data Eq<A : Set> : (x : A, y : A) -> Set where
   Refl : (x : A) -> Unit -> Eq x x
 
 {-
-negIdem = corec<Bool,(b : Bool).Eq<Bool> @ b @ (neg @ (neg @ b))> Unit to Pi where
+negIdem = corec Unit to Pi<Bool,(b : Bool).Eq<Bool> @ b @ (neg @ (neg @ b))> where
             { Ap2 b p = (rec Bool to Eq<Bool> @ b @ (neg @ (neg @ b)) where
                           { True u = Refl<Bool> @ true @ ()
                           ; False u = Refl<Bool> @ false @ () } @ b) @ () } @ ()
 -}
 
 {-
-orComm = corec<Bool,(b1 : Bool).Pi<Bool,(b2 : Bool).Eq @ or(b1,b2) @ or(b2,b1) >> Unit to Pi where
+orComm = corec Unit to Pi<Bool,(b1 : Bool).Pi<Bool,(b2 : Bool).Eq @ or(b1,b2) @ or(b2,b1)>> where
            { Ap2 b1 p1 = corec<Bool,(b2 : Bool).Eq @ or(b1,b2) @ or(b2,b1)> Unit to Pi where
               { Ap2 b2 p2 = rec Bool to Eq @ or(b1,b2) @ or(b2,b1) where
                               

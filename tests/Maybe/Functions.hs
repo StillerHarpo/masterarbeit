@@ -14,7 +14,7 @@ import Maybe.Examples
 
 idD :: Text
 idD = T.unlines
-  [ "id = rec<Unit> Maybe to Maybe<Unit> where"
+  [ "id = rec Maybe<Unit> to Maybe<Unit> where"
   , "       { Nothing x = Nothing<Unit> @ ()"
   , "       ; Just x = Just<Unit> @ x }"
   ]

@@ -73,7 +73,7 @@ idTests = do
 
 plusD :: Text
 plusD = T.unlines
-  [ "plus = rec<Pair<Nat,Nat>> Packed to Nat where"
+  [ "plus = rec Packed<Pair<Nat,Nat>> to Nat where"
   , "         Pack x = (rec Nat to Nat where"
   , "                     { Zero u = Second<Nat,Nat> @ x"
   , "                     ; Suc n = Suc @ n}) @ (First<Nat,Nat> @ x)" ]
