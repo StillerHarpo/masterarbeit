@@ -811,14 +811,12 @@
     #+NAME: Abstract Syntax Tree for Statements
     #+begin_src haskell
       data Statement = ExprDef { name :: Text
+                               , tyParameterCtx :: TyCtx
+                               , exprParameterCtx :: Ctx
                                , expr :: Expr
                                , ty :: Maybe Type
                                }
-                     | TypeDef { name :: Text
-                               , parameterCtx :: TyCtx
-                               , typeExpr :: TypeExpr
-                               , kind :: Maybe Kind
-                               }
+                     | TypeDef OpenDuctive
                      | Expression Expr
     #+end_src
 *** Expressions
@@ -876,36 +874,41 @@
     #+name: abstract-syntax-tree-for-expressions
     #+caption: Abstract Syntax Tree for Expressions
     #+begin_src haskell
+      data TypeExpr = UnitType
+                    | TypeExpr :@ Expr
+                    | LocalTypeVar Int Bool Text
+                    | Parameter Int Bool Text
+                    | GlobalTypeVar Text [TypeExpr]
+                    | Abstr Text TypeExpr TypeExpr
+                    | Ductive { openDuctive :: OpenDuctive
+                              , parametersTyExpr :: [TypeExpr]}
+
+      data OpenDuctive = OpenDuctive { nameDuc :: Text
+                                     , inOrCoin :: InOrCoin
+                                     , parameterCtx :: TyCtx
+                                     , gamma :: Ctx
+                                     , strDefs :: [StrDef]
+                                     }
+
+      data StrDef = StrDef { sigma :: [Expr]
+                           , a :: TypeExpr
+                           , gamma1 :: Ctx
+                           , strName :: Text
+                           }
+
       data Expr = UnitExpr
-                | LocalExprVar Int (Maybe Text)
-                | GlobalExprVar Text
+                | LocalExprVar Int Bool Text
+                | GlobalExprVar Text [TypeExpr] [Expr]
                 | Expr :@: Expr
-                | Constructor { ductive :: Ductive
-                              , num :: Int
-                              , nameStr :: Maybe Text
-                              }
-                | Destructor { ductive :: Ductive
-                             , num :: Int
-                             , nameStr :: Maybe Text
-                             }
-                | Rec { fromRec :: Ductive
-                      , toRec :: TypeExpr
-                      , matches :: [Expr]
-                      }
-                | Corec { fromCorec :: TypeExpr
-                        , toCorec :: Ductive
-                        , matches :: [Expr]
-                        }
-                | WithParameters [TypeExpr] Expr
-
-
-            data TypeExpr = UnitType
-                          | TypeExpr :@ Expr
-                          | LocalTypeVar Int (Maybe Text)
-                          | GlobalTypeVar Text [TypeExpr]
-                          | Abstr TypeExpr TypeExpr
-                          | In Ductive
-                          | Coin Ductive
+                | Structor { ductive :: OpenDuctive
+                           , parameters :: [TypeExpr]
+                           , num :: Int
+                           }
+                | Iter { ductive :: OpenDuctive
+                       , parameters :: [TypeExpr]
+                       , motive :: TypeExpr
+                       , matches :: [([Text],Expr)]
+                       }
     #+end_src
 
 
