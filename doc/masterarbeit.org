@@ -1421,11 +1421,10 @@
     gets rewritten to
 
      \begin{prooftree}
-      \AxiomC{\colorbox{gray}{$\Theta(X)\rightsquigarrow\Gamma'\rat*$}}
+      \AxiomC{\colorbox{gray}{$\Theta(X)\rightsquigarrow\Gamma\rat*$}}
       \AxiomC{\colorbox{gray}{$\vdash \Gamma_1$ \Ctx}}
-      \AxiomC{\colorbox{gray}{$\Gamma'\equiv_\beta\Gamma$}}
       \RightLabel{\textbf{(TyVar-I)}}
-      \TrinaryInfC{$\Theta|$\colorbox{gray}{$\Gamma_1$}$\vdash X : \Gamma \rat *$}
+      \BinaryInfC{$\Theta|$\colorbox{gray}{$\Gamma_1$}$\vdash X : \Gamma \rat *$}
     \end{prooftree}
 
 *** Type instantiation
