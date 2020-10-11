@@ -12,8 +12,17 @@ resources/
 **/*.fdb_latexmk
 **/*.fls
 **/*.log
+**/*.bcf
+**/*.out
+**/*.xml
+**/*.xdv
+**/*.toc
+**/*~
 **/*.agdai
+**/.history
 **/auto/
 **/ltximg/
+**/result
+**/dist/
 TAGS
 .envrc
