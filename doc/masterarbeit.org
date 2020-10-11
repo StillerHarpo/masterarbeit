@@ -9,7 +9,7 @@
 #+LATEX_HEADER: \usepackage{lscape}
 #+LATEX_HEADER: \usepackage[T1]{fontenc}
 #+latex_header: \usepackage[citestyle=authoryear-icomp,bibstyle=authoryear, hyperref=true,backref=true,maxcitenames=3,url=true,backend=biber,natbib=true] {biblatex}
-#+latex_header: \addbibresource{~/Dokumente/bibliography/references.bib}
+#+latex_header: \addbibresource{./references.bib}
 #+LATEX_HEADER: \lstset{
 #+LATEX_HEADER:  basicstyle=\ttfamily,
 #+LATEX_HEADER:   mathescape

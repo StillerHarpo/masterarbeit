@@ -4,8 +4,6 @@ emacs \
    --batch \
    --eval '(require '\''org-ref)' \
    --eval '(setq org-latex-listings '\''minted)' \
-   --eval '(setq reftex-default-bibliography '\''("./references.bib"))' \
-   --eval '(setq org-ref-default-bibliography reftex-default-bibliography)' \
    --eval '(setq org-latex-prefer-user-labels '\''t)' \
    masterarbeit.org \
    -f org-latex-export-to-latex
