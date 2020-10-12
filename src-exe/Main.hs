@@ -104,6 +104,8 @@ cmd input = do
            [TypedExpr expr _] -> liftIO (putDoc $ pretty expr <> "\n")
            _                  -> pure ()
 
+clear :: [String] -> Repl ()
+clear = const (put [])
 
 getType :: [String] -> Repl ()
 getType input = do
@@ -201,7 +203,8 @@ help _ = liftIO . putStr $ unlines
   , "Type :l[oad] [file..] to load a file"
   , "Type :t[ype] <expr> to get the type of a expression"
   , "Type :k[ind] <expr> to get the kind of a expression"
-  , "Type :q[uit] <expr> to close the repl" ]
+  , "Type :c[lear] to clear defintions"
+  , "Type :q[uit] to close the repl" ]
 
 opts :: [(String, [String] -> Repl ())]
 opts = [
@@ -213,6 +216,8 @@ opts = [
   , ("t", getType) -- :t
   , ("kind", kind) -- :kind
   , ("k", kind) -- :k
+  , ("clear", clear) -- :clear
+  , ("c", clear) -- :c
   , ("quit", const abort) -- :quit
   , ("q", const abort) -- :q
   ]
