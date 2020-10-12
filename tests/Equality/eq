@@ -1,0 +1,2 @@
+data Eq<A : Set> : (x : A, y : A) -> Set where
+  Refl : (x : A) -> Unit -> Eq x x

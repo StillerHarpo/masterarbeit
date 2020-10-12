@@ -1,0 +1,29 @@
+-- You first have to load file ../Function/function to load this file
+-- For more details on the syntax see ../Bools/bool
+
+data Vec<A : Set> : (n : Nat) -> Set where
+  Nil : Unit -> Vec zero
+  Cons : (n : Nat, v : A) -> Vec @ n -> Vec (S @ n)
+
+nil<A : Set> = Nil<A> @ ()
+
+-- Examples
+v1 = Cons<Nat> @ zero @ one @ nil<Nat>
+v21 = Cons<Nat> @ one @ two @ v1
+v321 = Cons<Nat> @ two @ three @ v21
+
+
+app<A : Set>(n : Nat, xs : Vec<A> @ n, m : Nat, ys : Vec<A> @ m) =
+  rec Vec<A> to (n : Nat).Vec<A> @ plus(n,m) where
+    { Nil u = ys
+    ; Cons n x xs = Cons<A> @ plus(n,m) @ x @ xs } @ n @ xs
+
+snoc<A : Set>(n : Nat, x : A, xs : Vec<A> @ n) =
+  rec Vec<A> to (n:Nat).Vec<A> @ (S @ n) where
+    { Nil u = Cons<A> @ zero @ x @ nil<A>
+    ; Cons n x xs = Cons<A> @ (S @ n) @ x @ xs } @ n @ xs
+
+rev<A : Set>(n : Nat, xs : Vec<A> @ n) =
+  rec Vec<A> to Vec<A> where
+    { Nil u = nil<A>
+    ; Cons n x xs = snoc<A>(n, x, xs) } @ n @ xs

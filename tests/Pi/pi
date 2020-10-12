@@ -1,0 +1,3 @@
+-- A kind can also have a context.  We write it before "-> Set"
+codata Pi<A : Set, B : (x : A) -> Set> : Set where
+  Inst : (x : A) -> Pi -> B @ x

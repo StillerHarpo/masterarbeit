@@ -1,0 +1,14 @@
+{- We can define coinductive types with the keyword "codata".  After the
+   Name of an type we can give a list of parameters.  They are enclosed
+   in "<" and ">" and are seperated by ",".  Parameters need to start
+   with an upper case letter.  We have to give the kinds of this parameters
+   behind colons.  After that we can use them everywehere, where a type is
+   expected.  Every (Con/De)structor can have a additional context 
+   writter directly after the colon, berfore an "->".  A context is a list
+   of expressions and their type between "(" and ")" seperated by "," -}
+codata Fun<A : Set, B : Set> : Set where
+  Ap : (x : A) -> Fun -> B
+
+con<A : Set, B : Set, C : Set> (f : Fun<A,B>, g : Fun<B,C>) =
+  corec Unit to Fun<A,C> where
+    { Ap x f2 = Ap<B,C> @ (Ap<A,B> @ x @ f) @ g } @ ()

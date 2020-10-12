@@ -1,0 +1,31 @@
+-- You first have to load file ../Function/function to load this file
+-- For more details on the syntax see ../Bools/bool
+
+data Nat : Set where
+  Z : Unit -> Nat
+  S : Nat -> Nat
+
+zero = Z @ ()
+one = S @ zero
+two = S @ one
+three = S @ two
+four = S @ three
+five = S @ four
+
+plus(n : Nat, m : Nat) =
+  (rec Nat to Nat where
+     { Z n2 = m
+     ; S n2 = S @ n2 }) @ n
+
+mult(n : Nat, m : Nat) =
+  (rec Nat to Nat where
+     { Z n2 = zero
+     ; S n2 = plus(n2,m) }) @ n
+
+plusF = corec Unit to Fun<Nat,Fun<Nat,Nat>> where
+          { Ap n f1 = corec Unit to Fun<Nat,Nat> where
+                       { Ap m f2 = plus(n,m)} @ () } @ ()
+
+multF = corec Unit to Fun<Nat,Fun<Nat,Nat>> where
+          { Ap n f1 = corec Unit to Fun<Nat,Nat> where
+                       { Ap m f2 = mult(n,m)} @ () } @ ()

@@ -1,3 +1,5 @@
+-- You first have to load file ../Function/function to load this file
+
 -- Comment are between "{-" and "-}" or in a line behind "--"
 
 {- We can define a inductive data type with the keyword "data
@@ -49,18 +51,6 @@ and(b1 : Bool, b2 : Bool) =
 
 -- and(true, false)
 
-{- We can define coinductive types with the keyword "codata".  After the
-   Name of an type we can give a list of parameters.  They are enclosed
-   in "<" and ">" and are seperated by ",".  Parameters need to start
-   with an upper case letter.  We have to give the kinds of this parameters
-   behind colons.  After that we can use them everywehere, where a type is
-   expected.  Every (Con/De)structor can have a additional context 
-   writter directly after the colon, berfore an "->".  A context is a list
-   of expressions and their type between "(" and ")" seperated by "," -}
-codata Fun<A : Set, B : Set> : Set where
-  Ap : (x : A) -> Fun -> B
-
-
 {- With the keyword "corec" we can coiterate over an coinductive type.  For
    types with parameters we have to give their instantiation fully behind
    "corec" (or "rec") -}
@@ -82,13 +72,6 @@ andF = corec Unit to Fun<Bool,Fun<Bool,Bool>> where
                        { Ap b2 f2 = and(b1,b2)} @ () } @ ()
 
 -- Ap<Bool,Bool> @ true @ (Ap<Bool,Fun<Bool,Bool>> @ false @ andF)
-
--- A kind can also have a context.  We write it before "-> Set"
-codata Pi<A : Set, B : (x : A) -> Set> : Set where
-  Ap2 : (x : A) -> Pi -> B @ x
-
-data Eq<A : Set> : (x : A, y : A) -> Set where
-  Refl : (x : A) -> Unit -> Eq x x
 
 {-
 negIdem = corec Unit to Pi<Bool,(b : Bool).Eq<Bool> @ b @ (neg @ (neg @ b))> where
