@@ -729,11 +729,10 @@
    language specifcilly develobed to expolore them) by abel.  Later they got
    introduced to agda itself.
 
- of
-    types allow us to annote data with their size.  Functions can use this
-    sizes to check termination and productivity.
+   Sized types allow us to annote data with their size.  Functions can use this
+   sizes to check termination and productivity.
 
-    Termination Checking with sized types: https://agda.readthedocs.io/en/latest/language/sized-types.html
+   Termination Checking with sized types: https://agda.readthedocs.io/en/latest/language/sized-types.html
 
 * Coinductive Types in other languages
 * Type Theory base of dependent Inductive and Coinductive Types
@@ -745,7 +744,11 @@
   in universe $n+1$(This is how it is done in coq cite:sozeau2014universe  and
   agda cite:agdadocuniverselevels).  Therefor types can only depend on values,
   not on other types.  We only have funcitions on the type level.  We will see
-  that functions are definable on
+  that functions are definable on the term level.  We will give the rules for the
+  theory in section [[Typing rules]] along with the
+
+*** Type Action
+
 * Implementation
   In this section we look at the implementation details
 
@@ -757,58 +760,77 @@
    inductive and coinductive type a name. They will be defined via statements.
    We will also be able to bind expressions to names. This will be described in
    section [[Statements]] . In section [[Expressions]] we will define the syntax of
-   expressions. This will mostly be in 1 to 1 correspondence to the syntax of
-   the paper. Note however that we use the names of the constructors in the
-   matches. In the following section [[Examples]] we will see how the examples from
-   the paper look in our syntax.
+   expressions. This will mostly be in one to one correspondence with the syntax of
+   the paper. Note however that we use the names of the constructors instead of anonymous
+   constructors together with their type and number.  Also the order of the matches in
+   rec and corec is irrelevant.  We use the names of the Con/Destructors to identify them.
+   Here we can't write anonymous inductive and coinductive types.  We have to refer to the
+   previously defined types.  In the following section [[Examples]] we will see how the examples
+   from the paper look in our syntax.
 *** Statements
-    With the keywords data and codata we define inductive and coinductive types
-    respectively. After that we will write the name.  Behind that we can give a parameter context,
-    This is a type context.  This types can occur everywhere in the definition where a type is expected.
-    A (co)inductive Type can
-    have a context, which is written before an arrow. ~Set~ stands for type
+    The abstract syntax is given in figure [[syntax-for-statements]].
+    In the syntax "/Name/" , "$Constr_1\dots Contr_m$" and 
+    "$Destr_1\dots Destr_m$" are arbitrary distinct names. With the
+    keywords data and codata we define inductive and coinductive types
+    respectively. After that we will write the name. Behind that we can give a
+    parameter context. This is a type context. This types are not polymorphic.
+    They are merely macros to make the code more precise. If we want to use this
+    Type we have to fully instantiate this context. This types can occur
+    everywhere in the definition where a type is expected. A (co)inductive Type
+    can have a context, which is written before an arrow. ~Set~ stands for type
     (or * in the paper). If a type don't has a context we omit the arrow. We
-    will also give names to every constructor and destructor. Constuctors and
-    destructors also have context. Additionaly they have one argument which can
-    has a recursive occurence of the type we are defining. A constructor gives
-    back a value of the type, where its context is instatiated. This corresponds
-    to the sigmas in the paper. If we write a name before a equal sign we can
-    bind the following expression to the name.  Every such defined name can depend
-    on a parameter context and an argument context.  We write the parameter context
-    like in the case for data types behind the name.  After that we can give a term
-    context in between round parenthesis.
+    will also give names to every constructor and destructor. Constructors and
+    destructors also have contexts. Additionally they have one argument which
+    can has a recursive occurrence of the type we are defining. A constructor
+    gives back a value of the type, where its context is instantiated. This
+    instantiation corresponds to the sigmas in the paper. If we write a name
+    before a equal sign we can bind the following expression to the name. Every
+    such defined name can depend on a parameter context and an argument context.
+    We write the parameter context like in the case for data types behind the
+    name. After that we can give a term context between round parenthesis.
+
+    #+name: syntax-for-statements
+    \begin{figure}
     \begin{lstlisting}
     statement =
-      data Name<$C_1,\dots,C_n$> : $(x_1 : B_1,\dots,x_n : B_n)$ -> Set where
+      data Name<$C_1 : \Gamma_1$ -> *,$\dots$ ,$ C_n : \Gamma_n$ -> *> : $(x_1 : B_1,\dots,x_n : B_n)$ -> Set where
         $Constr_1$ : $(x_{1_1}:B_{1_1},\dots,x_{n_1}: B_{n_1})$ -> $A_1[Name/X]$ -> Name $\sigma_{1_1}\dots \sigma_{1_n}$
                $\vdots$                $\vdots$             $\vdots$            $\vdots$
         $Constr_m$ : $(x_{1_m}:B_{1_m},\dots,x_{n_m}: B_{n_m})$ -> $A_i[Name/X]$ -> Name $\sigma_{m_1}\dots \sigma_{m_n}$
-     | codata Name<$C_1,\dots,C_n$> : $(x_1 : B_1,\dots,x_n : B_n)$ -> Set where
+     | codata Name<$C_1 : \Gamma_1$ -> *,$\dots$ ,$ C_n : \Gamma_n$ -> *> : $(x_1 : B_1,\dots,x_n : B_n)$ -> Set where
         $Destr_1$ : $(x_{1_1}:B_{i_1},\dots,x_{n_1}: B_{n_1})$ -> Name $\sigma_{1_1}\dots \sigma_{1_n}$ -> $A_1[Name/X]$
                $\vdots$                $\vdots$             $\vdots$            $\vdots$
         $Destr_m$ : $(x_{1_m}:B_{1_m},\dots,x_{n_m}: B_{n_m})$ -> Name $\sigma_{m_1}\dots \sigma_{m_n}$ -> $A_i[Name/X]$
-     | name<$C_1,\dots,C_n$> $(x_1:A_1,\dots,x_n:A_n)$ = expr
+     | name<$C_1 : Gamma_1$ -> *,$\dots$ ,$ C_n : Gamma_n$ -> *> $(x_1:A_1,\dots,x_n:A_n)$ = expr
     \end{lstlisting}
+    \caption{Syntax for statements}
+    \end{figure}
 
-    "/Name/" , "$Constr_1\dots Contr_m$" and "$Destr_1\dots Destr_m$" are arbitrary distinct names
 
-    The statements correspond to $\rho(X:\Gamma\rat*;\vv\sigma;\vv{A}):\Gamma\rat*$ as follows.
+    The statements in Figure [[syntax-for-statements]] correspond to $\rho(X:\Gamma\rat*;\vv\sigma;\vv{A}):\Gamma\rat*$ as follows.
     + $x_1: B_1,\dots,x_n: B_n$ is $\Gamma$
     + /Name/ is X
-    + $Constr_1,\dots, Contr_m$ stands for $\alpha_1^{\mu(X:\Gamma\rat *;\vv\sigma;\vv A)},\dots,\alpha_m^{\mu(X:\Gamma\rat *;\vv\sigma;\vv A)}$
-    + $Destr_1,\dots, Destr_m$ stands for $\xi_1^{\mu(X:\Gamma\rat *;\vv\sigma;\vv A)},\dots,\xi_m^{\mu(X:\Gamma\rat *;\vv\sigma;\vv A)}$
+    + $Constr_1,\dots, Contr_m$ stands for
+      $\alpha_1^{\mu(X:\Gamma\rat *;\vv\sigma;\vv A)},\dots,\alpha_m^{\mu(X:\Gamma\rat *;\vv\sigma;\vv A)}$
+    + $Destr_1,\dots, Destr_m$ stands for
+      $\xi_1^{\mu(X:\Gamma\rat *;\vv\sigma;\vv A)},\dots,\xi_m^{\mu(X:\Gamma\rat *;\vv\sigma;\vv A)}$
     + $Name_i$ is $A_i[\Gamma/X]$
-    + $(x_{1_1}:B_{1_1},\dots,x_{n_1}: B_{n_1}),\dots,(x_{1_m}:B_{1_m},\dots,x_{n_m}:B_{n_m})$ stands for $\Gamma_1,\dots,\Gamma_m$
-    + $C_1\dots C_n$ have to be of *, they are for polymorphism.  If we call a constructor we have to give this types,
-      to relate the right type to it.
+    + $(x_{1_1}:B_{1_1},\dots,x_{n_1}: B_{n_1}),\dots,(x_{1_m}:B_{1_m},\dots,x_{n_m}:B_{n_m})$
+      stands for $\Gamma_1,\dots,\Gamma_m$
+    + <$C_1 : Gamma_1$ -> *,$\dots$ ,$ C_n : Gamma_n$ -> *> are the parameter contexts.
+      If we call a constructor we have to give this types, to relate the right type to it.
 
-    We will also need a extra context which relates constructors to their types.
-    This context will be generated by the parser. To parse the abstract syntax
-    we use megaparsec. The parser generates an abstract syntax tree, which is
-    given for statements in Listing [[Abstract Syntax Tree for Statements]]. The fields
-    ~ty~ in ~ExprDef~ and ~kind~ in ~TypeDef~ are used later in type checking.
-    The parser just fills them in with ~Nothing~. We omit the implementation
-    details for the parser, because we are manly focused on type checking.
+    To parse the abstract syntax we use megaparsec. The parser generates an
+    abstract syntax tree, which is given for statements in Listing
+    [[Abstract Syntax Tree for Statements]]. The field ~ty~ in ~ExprDef~ is used later in
+    type checking. The parser just fills them in with ~Nothing~. data and codata
+    definitions are both saved in ~TypeDef~. The haskell type ~OpenDuctive~ contains all the
+    information for inductive and coinductive types. It corresponds to $\mu$ and`
+    $\nu$ in the paper. We use an ~OpenDuctive~ where the field ~inOrCoin~ is ~IsIn~ 
+    for $ \mu$ and an ~OpenDuctive~ where the field ~inOrCoin~ is ~IsCoin~ for
+    $\nu$.  The haskell type ~StrDef~ ensures that the sigmas as and gamma1s have the
+    same length.  We omit the implementation details for the parser, because we
+    are manly focused on type checking.
 
     #+caption: Abstract Syntax Tree for Statements
     #+NAME: Abstract Syntax Tree for Statements
@@ -821,56 +843,78 @@
                                }
                      | TypeDef OpenDuctive
                      | Expression Expr
+
+      data OpenDuctive = OpenDuctive { nameDuc :: Text
+                                     , inOrCoin :: InOrCoin
+                                     , parameterCtx :: TyCtx
+                                     , gamma :: Ctx
+                                     , strDefs :: [StrDef]
+                                     }
+
+      data StrDef = StrDef { sigma :: [Expr]
+                           , a :: TypeExpr
+                           , gamma1 :: Ctx
+                           , strName :: Text
+                           }
     #+end_src
 *** Expressions
     The abstract syntax for expression is given in figure [[syntax-for-expressions]]
-    We will seperate expression in the expressions for terms and in one for
+    We will separate expression in expressions for terms and in expressions for
     types.  There are given as regular expressions in ~expr~ and ~typeExpr~ respectively.
 
-    Whith the keyword ~rec~ we can destruct an inductive types. We write ~expr
-    to exrp~ after ~rec~ to facilitate type checking. It says we want to
-    destruct a inductive type to a some other type . We have to list all the
-    constructor above one another. For each constructor we write an expression
-    behind the equal sign, which should be of type which we have given above. In
+    An ~expr~ is either the unit expression ~()~, an con/destructor, an
+    application ~@~, an ~rec~ or an ~corec~. All con/destructors have to be
+    instantiate with all variables in the parameter contexts of their types.
+    This is done by given types of the expected kinds separated by ',' enclosed
+    in '<' and '>'. With the keyword ~rec~ we can destruct an inductive types.
+    We write ~Type to typeExrp~, where ~Type~ is an previously defined inductive
+    type after ~rec~ to facilitate type checking. It says we want to destruct a
+    inductive type to some other type . We have to list all the constructor
+    above one another. For each constructor we write an expression behind the
+    equal sign, which should be of type ~TypeExpr~ which we have given above. In
     this expression we can use variables given in the match expression. The last
     one is the recursive occurrence. With the keyword ~corec~ we can do the same
-    thing to construct a coinductive type. Here we have to list the destructors.
-    We can also apply a expression to another with ~@~.  The only primitve
-    expression we have is the unit expression ~()~
+    thing to construct a coinductive type. Here we have to swap the ~Type~ and
+    the ~TypeExpr~ and list the destructors. We can also apply a expression to
+    another with ~@~. The only primitive expression we have is the unit
+    expression ~()~
 
-    The ~typeExpr~ is either the unit type ~Unit~, a lambda abstraction on types
-    or an application. In the lambda expression we have to give the type of the
-    variable. We apply a type to a term (types can only depend on terms) with
-    ~@~ The generated abstract syntax tree is given in listing
-    [[abstract-syntax-tree-for-expressions]]. The variables are for expressions are
-    seperated in ~LocalExprVar~ and ~GlobalExprVar~. ~LocalExprVar~ should refer
+    The ~typeExpr~ is either the unit type ~Unit~, a lambda abstraction on
+    types, an application or a variable. In the lambda expression we have to
+    give the type of the variable. We apply a type to a term (types can only
+    depend on terms) with ~@~. The unit type is the only primitive type
+    expression.
+
+    The generated abstract syntax tree is given in listing
+    [[abstract-syntax-tree-for-expressions]]. The variables for expressions are
+    separated in ~LocalExprVar~ and ~GlobalExprVar~. ~LocalExprVar~ should refer
     to variables which are only locally defined i.e. in ~Rec~ and ~Corec~. We
     use de-Brujin indexes for them. ~GlobalExprVar~ refers to variables from
     definitions. Here we just use names. We do the same thing for ~LocalTypeVar~
     and ~GlobalTypeVar~. In the abstract syntax tree we use anonymous
-    constructors like in the paper. The type ~Ductive~ contains all the
-    information for inductive and coinductive types. It corresponds to $\mu$ and
-    $\nu$ in the paper. We use ~In Ductive~ for $ \mu$ and ~Coin Ductive~ for
-    $\nu$ Constructor contains a field ~Ductive~ of this type. Here we know that
-    it has to be an inductive type, because we don't have constructors for
-    coinductive types. For Destructor, Rec and corec we also know if it is
-    coinductive or inductive. The field ~nameStr~ in ~Constructor~ and
-    ~Destructor~ are just for printing.
+    constructors like in the paper. Constructor contains a field ~Ductive~ of
+    this type. Here we know that it has to be an inductive type, because we
+    don't have constructors for coinductive types. For Destructor, Rec and corec
+    we also know if it is coinductive or inductive. The field ~nameStr~ in
+    ~Constructor~ and ~Destructor~ are just for printing.
 
     #+name: syntax-for-expressions
     \begin{figure}
-    \begin{verbatim}
+    \begin{lstlisting}
         expr :=
-          rec expr to expr where
+          rec Name<$C_1,\dots,C_n$> to typeExpr where
             match*
-        | corec expr to epxr where
+        | corec typeExpr to Name<$C_1,\dots,C_n$> where
             match*
         | expr @ expr | ()
 
         match := Name var* = expr
 
-        typeExpr := Unit | (var:typeExpr).typeExpr | typeExpr @ expr
-    \end{verbatim}
+        typeExpr := Unit
+                  | (var:typeExpr).typeExpr
+                  | typeExpr @ expr
+                  | Name
+    \end{lstlisting}
     \caption{Syntax for expressions}
     \end{figure}
 
@@ -885,19 +929,6 @@
                     | Abstr Text TypeExpr TypeExpr
                     | Ductive { openDuctive :: OpenDuctive
                               , parametersTyExpr :: [TypeExpr]}
-
-      data OpenDuctive = OpenDuctive { nameDuc :: Text
-                                     , inOrCoin :: InOrCoin
-                                     , parameterCtx :: TyCtx
-                                     , gamma :: Ctx
-                                     , strDefs :: [StrDef]
-                                     }
-
-      data StrDef = StrDef { sigma :: [Expr]
-                           , a :: TypeExpr
-                           , gamma1 :: Ctx
-                           , strName :: Text
-                           }
 
       data Expr = UnitExpr
                 | LocalExprVar Int Bool Text
@@ -914,362 +945,7 @@
                        }
     #+end_src
 
-
-*** Examples
-
-    In this section we reiterate the examples from the paper.  We use our
-    syntax, which is defined above.
-
-**** Terminal Object
-
-     The terminal object is a type which has exactly one value. In category
-     theory every object in the category has a unique morphism to it. We define
-     it as a coinductive type ~Terminal~ with one destructor ~Terminal~. It gets
-     a Terminal and returns a Terminal. To get a Terminal value we use
-     corecursion on the unit type, which is the first class terminal object.
-     #+begin_example
-     codata Terminal : Set where
-        Terminal : Terminal -> Terminal
-     terminal = (corec Unit to Terminal where
-                   Terminal x = x) @ ()
-
-     #+end_example
-
-**** Intial Object
-
-     The initial object is a type which has no values. In category theory it is
-     the object which has a unique morphism to every other object in the
-     category. We define it inductively as ~Intial~ with one constructor
-     ~Initial~. This constructor want's one value of the same type. We can't
-     have a value of this type, because to get one we already need one. An
-     shorter way to define this type would be a inductive type with no
-     arguments. If we could get something of type ~Intial~, we could generate
-     with ~exfalsum~ a value of arbitrary type ~C~.
-     #+begin_example
-     data Initial : Set where
-        Initial : Intial -> Intial
-     exfalsum<C> = rec Initial to C where
-                     Initial x = x
-     #+end_example
-
-**** Natural Numbers
-
-     We use the classical peano numbers to define natural numbers.  Therefor we use
-     the inductive type ~Nat~ with the constructors ~Zero~ and ~Suc~. ~Zero~ is
-     just the number zero. Every constructor has to have a argument, which can
-     contain a recursive occurrence. Every Type ~A~ is isomorphic to the
-     function type ~Terminal -> A~. So we use ~Terminal~ for this occurrence.
-     ~Suc~ is the successor. So the meaning of ~Suc n~ is $n+1$
-     #+begin_example
-     data Nat : Set where
-        Zero : Terminal -> Nat
-        Suc : Nat -> Nat
-     zero = Zero' @ ()
-     #+end_example
-
-**** Binary Product
-
-     The product is defined as a coinductive type.  It has two destructors.
-     The first gives back the first element.  And the second the second.
-     The types A and B have to be concrete types.  We don't have type
-     polymorphism in our language.
-     #+begin_example
-     codata Product<A,B> : Set where
-        Fst : Product -> A
-        Snd : Product -> B
-     pair<A,B> (x:A, y:B) = (corec Unit where
-                               Fst _ -> x
-                               Snd _ -> y) @ ()
-     #+end_example
-     For different types we have to define different Products.  We will write
-     ProductNat for a product of two nats. ProductNatUnit is the prodcuct,
-     where the first element is a Nat and the second a Unit.
-
-***** Swap funtion
-      We use the swap function on a product of 2 numbers, to illustrate
-      how evaluation on a coninductive type works.  The swap function is
-      defined as follows.
-      #+begin_example
-      swap = corec ProductNat to ProductNat where
-               Fst x -> Snd x
-               Snd x -> Fst x
-      #+end_example
-      This is a well typed function as shown by the following proof
-      \begin{prooftree}
-      \AxiomC{$\vdash$ ProductNat : $*$}
-      \AxiomC{(x:Nat) $\vdash$ Snd @ x : ProductNat \textcircled{a}}
-      \noLine
-      \UnaryInfC{(y : Nat) $\vdash$ Fst @ y : ProductNat \textcircled{b}}
-      \BinaryInfC{swap : (y : ProductNat) $\rat$ ProductNat}
-      \end{prooftree}
-      We show \textcircled{a} in the following proof.  \textcircled{b} works analog
-      \begin{prooftree}
-      \AxiomC{ProductNat : $*$}
-      \UnaryInfC{$\vdash$ Snd (y : Nat) $\rat$ ProductNat}
-      \AxiomC{Nat : $*$}
-      \BinaryInfC{(x : Nat) $\vdash$ Snd (y :Nat) $\rat$ ProductNat}
-      \AxiomC{Nat : $*$}
-      \UnaryInfC{(x : Nat) $\vdash$ x : Nat}
-      \BinaryInfC{(x : Nat) $\vdash$ Snd @ x : ProductNat}
-      \end{prooftree}
-
-**** Binary Coproduct
-
-     The Binary Coproduct corresponds to the Eiher type in haskell.  It is defined
-     as an inductive type.  It is either ~A~ or ~B~.  We have one constructor ~Left~
-     for ~A~ and one constructor Right for ~B~
-     #+begin_example
-     data Coproduct<A,B> : Set where
-        Left : A -> Coproduct
-        Right : B -> Coproduct
-     #+end_example
-
-**** Pi Type
-
-     The pi type is a generalization of the function type to dependent types.
-     The type of the codomain or result of a function can depend on the value
-     We define it as a coinductive type.  To destruct a function we just apply
-     it to a value.  So the Destructor is ~Apply~.  To construct a function we
-     use corecursion on on ~Unit~.  This is a lambda so we call it ~lambda~.
-
-     #+begin_example
-     codata Pi<A,B> : Set where
-        Apply : (x : A) -> Pi -> B
-     lambda<A,B> x g = (corec Unit to Pi<A,B> where
-                             Apply x _ = g) @ ()
-     apply<A,B> t x = Apply<A,B> @ x @ t
-     #+end_example
-
-***** identity function
-       The identity function on nats is defined like this
-       #+begin_example
-       id = lambda x x
-       #+end_example
-
-       Evaluation on 1 goes as follows
-
-      \begin{lstlisting}
-      apply (lambda n n)) 1
-      = Apply @ 1 @ (lampda n n)
-      = Apply @ 1 @ ((corec Pi to Unit where
-                         Apply n _ = n ) @ ())
-      $\succ \widehat{\text{Nat}}$ ($\underbrace{\text{(corec Pi to Unit where Apply' n \_ = n)@x}}_t$)[n/x][1,()]
-      = (rec Nat to Nat where
-           Zero x = Zero @ ($\widehat{()}$(t,x))
-           Succ x = Suc @ ($\widehat{Y}$(t,x)))@x[n/x][1,()]
-      = (rec Nat to Nat where
-           Zero x = Zero @ ($\widehat{()}$(t))
-           Succ x = Suc @ x)@x[n/x][1,()]
-      = (rec Nat to Nat where
-           Zero x = Zero @ ($\widehat{()}$())
-           Succ x = Suc @ x)@x[n/x][1,()]
-      = (rec Nat to Nat where
-           Zero x = Zero @ x
-           Succ x = Suc @ x)@x[n/x][1,()]
-      = (rec Nat to Nat where
-           Zero x = Zero @ x
-           Succ x = Suc @ x)@n[1,()]
-      = (rec Nat to Nat where
-           Zero x = Zero @ x
-           Succ x = Suc @ x)@1
-      = 1
-      \end{lstlisting}
-
-***** replicate function
-      The following function gets a number $n$ and returns an vector of units
-      with length $n$
-      #+begin_example
-      length = rec VectorUnit to Nat where
-                 NilUnit _ = zero
-                 ConsUnit k _ = Succ @ k
-      replicate = lambda_Nat_VectorUnit n ((rec Nat to VectorUnit where
-                                              Zero _ = NilUnit @ ()
-                                              Suc   m = ConsUnit @ (length @ m) @ m) @ n)
-      #+end_example
-      The following shows the steps for evaluating /replicate/ on 1.  We omit
-      the steps for /length/ and the inner /rec/, because we want to see how
-      /corec/ evaluation works.  We will call the /rec/ part in the definition of
-      /replicate/ /rep/.
-
-      \begin{lstlisting}
-      apply (lambda n (rep @ n)) 1
-      = Apply @ 1 @ (lampda n (rep @ n))
-      = Apply @ 1 @ ((corec Pi to Unit where
-                       Apply n _ = rep @ n)@())
-      $\succ$ $\widehat{\text{VecUnit}}(\underbrace{\text{corec Pi to Unit where \{ Apply n \_ = rep @ n \} @ x}}_t)$[rep@n/x][1,()]
-      = (rec VecUnit to VecUnit where
-           VecNil x = VecNil @ $\widehat{()}$(t,x)
-           VecCons n x = VecCons @ n @ $\widehat{(y).Y}$(t,x))@n@x[rep@n/x][1,()]
-      = (rec VecUnit to VecUnit where
-           VecNil x = VecNil @ $\widehat{()}$(t,x)
-           VecCons n x = VecCons @ n @ $\widehat{Y}$(t,x))@n@x[rep@n/x][1,()]
-      = (rec VecUnit to VecUnit
-           VecNil x = VecNil@()
-           VecCons n x = VecCons'@n@x)@n@x[rep@n/x][1,()]
-      = (rec VecUnit to VecUnit
-           VecNil x = VecNil@x
-           VecCons n x = VecCons@n@y)@n@(rep@n)[1,()]
-      = (rec VecUnit to VecUnit
-           VecNil x = VecNil@x
-           VecCons n x = VecCons@n@x)@1@(rep@1)
-      = ConsUnit @ (NilUnit @ ())
-      \end{lstlisting}
-
-**** Sigma Type
-
-     The sigma type is a dependent pair of two types.  The second type can depend on
-     the value of the first type.  It corresponds to to exists in logic.  We define
-     it as an inductive type and call the constructor ~Exists~.
-     #+begin_example
-     data Sigma<A,B> : Set where
-        Exists : (x:A) -> B -> Sigma
-     #+end_example
-
-**** Vectors
-
-     Vectors are a standard example for dependent type.  There are like lists, except
-     there type depends on there length. For example a vector ~[1;2]~ has type
-     ~Vector<Nat> 2~, because it length is 2. It has 2 constructors ~Nil~ and
-     ~Cons~ like lists. ~Nil~ gives back the empty vector. Because the length of
-     the empty vector is zero its return type is ~Vector 0~. The second
-     constructor ~Cons~ takes a natural number ~k~ and a pair. The pair consists
-     of ~A~ and a vector of length ~k~, a ~Vector k~. It returns a new vector.
-     Its haed is the first argument of the pair and its tail the second. So the
-     results lenght is one more then the second argument of the pair. Therfor it
-     is ~Vector (Suc k)~
-
-     #+begin_example
-     data Vector<A> : (n:Nat) -> Set where
-       Nil : Unit -> Vector 0
-       Cons : (k:Nat) -> Product<A,Vector k> -> Vector (Suc k)
-     nil<A> = Nil<A> @ ()
-     #+end_example
-
-***** Tail Function
-
-      We use a function, which extends a vector of units to the front of a
-      vector, to show how evaluation on a vector works.
-      This tail function returns the empty vector for the empty vector,
-      because every function has to be total in our language.  To keep
-      things simple we use Unit for $A$. We also simplify "Product Unit
-      (VectorUnit k)" to just "VectorUnit k"
-      #+begin_example
-      extend = rec VecUnit to ((x).Vec @ (Suc x) where
-                 NilUnit' _ = ConsUnit @ 0 @ (NilUnit' @ ())
-                 ConsA k v = ConsUnit @ (Suc @ k) @ v
-      #+end_example
-      The type checking of this function goes as follows
-      \begin{scprooftree}{0.8}
-      \AxiomC{$\vdash$ (x).(VecUnit @ (Suc @ x)) : (k: Nat)}
-      \noLine
-      \UnaryInfC{(\_ : Unit) $\vdash$ ConsUnit @ 0 @ (NilUnit' @ ()) : (x).(VecUnit @ (Suc @ x)) @ 0}
-      \noLine
-      \UnaryInfC{(k : Nat, v : (x).(Vec @ (Suc @ x)) @ k) $\vdash$ ConsUnit @ (Suc @ k) @ v : (x).(Vec @ (Suc @ x)) @ (Suc @ k)}
-      \UnaryInfC{$\vdash$ app : (k:Nat,y : (x).Vec (Suc x)) $\rat$ (x).(Vec @ (Suc x)) @ k}
-      \end{scprooftree}
-      As an example we evaluate a vector of length 1 with this function.  We choose length one
-      to see all rec cases.
-      \begin{align*}
-        &\text{extend}@ 1 @ (\text{ConsUnit} @ 0 @ (\text{NilUnit'} @ ()))\\
-        &= \text{extend}@(\text{Suc} @ k \bullet 0) @ (\text{ConsUnit} @ 0 @ (\text{NilUnit'} @ ()))\\
-        &\succ \text{ConsUnit} @ (\text{Suc} @ k) @ v \left[ \hat{X}(\text{extend} @ n @ x)/v \right][0,\text{NilUnit'} @ ()]\\
-        &= \text{ConsUnit} @ (\text{Suc} @ k) @ v \left[ \text{extend} @ n @ x/v \right][0, \text{NilUnit'} @ ()]\\
-        &= \text{ConsUnit} @ (\text{Suc} @ 0) @ (\text{extend} @ n @ x) [0,\text{NilUnit'} @ ()]\\
-        &= \text{ConsUnit} @ (\text{Suc} @ 0) @ (\text{extend} @ 0 @ (\text{NilUnit'} @ ()))\\
-        &= \text{ConsUnit} @ 1 @ (\text{extend} @ (0 \bullet 0) @ (\text{NilUnit'} @ ()))\\
-        &\succ \text{ConsUnit} @ 1 @ (\text{ConsUnit} @ 0 @ (\text{NilUnit'} @ ()))\left[ \hat{()}(\text{extend} @ k @ x) / \_  \right][()]\\
-        &= \text{ConsUnit} @ 1 @ (\text{ConsUnit} @ 0 @ (\text{NilUnit'} @ ()))[()]\\
-        &= \text{ConsUnit} @ 1 @ (\text{ConsUnit} @ 0 @ (\text{NilUnit'} @ ()))
-      \end{align*}
-
-**** Extended Naturals
-
-     We will now define extended naturals.  There are needed for the definitions
-     of streams.  There are natural numbers with an additional value, infinty.  We
-     define it coinductively with the predecessor as it only destructor.  The predecessor
-     is either not defined (there is no predecessor of 0 in the natural numbers) or
-     another natural number.  So we use a coproduct of ~Unit~ (which should mean: "has no
-     predecessor") and another ~ExNat~.  We can define the successor as a corecursion.
-     The predecessor of the successor of ~x~ is just ~x~.  So the only case of corec returns
-     a ~Right x~ (remember Prec returns a coproduct not a number).
-     #+begin_example
-     codata ExNat : Set where
-        Prec : ExNat -> Coproduct<Unit,ExNat>
-     succE = corec ExNat where
-               Prec x -> Right x
-     #+end_example
-
-**** Streams
-
-     With extended naturals defined, we can now define partial streams.  This are streams
-     which depend on there defintion depth.  Like non-dependent
-     streams they are coinductive and have 2 destructors for head and tail.
-     #+begin_example
-     codata PStr<A>: (n: ExNat) -> Set where
-        hd : (k : ExNat) -> PStr A (succE k) -> A
-        tl : (k : ExNat) -> PStr A (succE k) -> PStr A k
-     #+end_example
-**** List
-     ListA descripes a list of type elements with type A.  It is defined
-     as follows
-
-     \begin{equation*}
-     ListA =  \mu(X:*;\epsilon_2;(\textbf{1},A\times X))
-     \end{equation*}
-     where $\Gamma_1=\emptyset$ and $\Gamma_2\vdash A:*$
-
-     In the implemented syntax is written like this
-     #+begin_example
-     data A : ...
-     data ProductAListA : Set where
-       Fst : Product -> A
-       Snd : Product -> ListA
-     data ListA : Set where
-        NilA : Terminal -> ListA
-        ConsA : ProductAListA -> ListA
-     nilA = NilA @ ()
-     #+end_example
-
-**** Length function on lists of Units
-     \begin{align*}
-     \text{length} = \text{rec} &((y_k:\top).\alpha_1^\textbf{N}@\langle\rangle\\
-                  &,(x:\top,y_k:\mu(X:*;\epsilon_2(\mathbf{1},X)))).\alpha_2^\textbf{N} @ y_k\\
-     \end{align*}
-***** Type checking
-
-      \begin{scprooftree}{0.6}
-      \AxiomC{$\vdash\textbf{N}:*$}
-      \AxiomC{$\vdash\alpha_1^\textbf{N}: (x:\textbf{1})\rightarrow\textbf{N}$}
-      \RightLabel{\textbf{(Term-Weak)}}
-      \UnaryInfC{$y_k:\textbf{1}\vdash\alpha_1^\textbf{N}: (x:\textbf{1})\rightarrow\textbf{N}$}
-      \AxiomC{$\vdash\langle\rangle':\textbf{1}$}
-      \RightLabel{\textbf{(Term-Weak)}}
-      \UnaryInfC{$y_k:\textbf{1}\vdash\langle\rangle':\textbf{1}$}
-      \RightLabel{\textbf{(Inst)}}
-      \BinaryInfC{$y_k:\textbf{1}\vdash \alpha_1^\textbf{N}@\langle\rangle':\textbf{N}$}
-      \AxiomC{$\vdash\alpha_2^\textbf{N}: (x:\textbf{N})\rightarrow\textbf{N}$}
-      \RightLabel{\textbf{(Term-Weak)}}
-      \UnaryInfC{$y_k:\textbf{N}\vdash\alpha_2^\textbf{N}: (x:\textbf{N})\rightarrow\textbf{N}$}
-      \AxiomC{$\textbf{N}:*$}
-      \RightLabel{\textbf{(Proj)}}
-      \UnaryInfC{$y_k:\textbf{N}\vdash y_k:\textbf{N}$}
-      \RightLabel{\textbf{(Inst)}}
-      \BinaryInfC{$y_k:\textbf{N}\vdash \alpha_2^\textbf{N}@y_k:\textbf{N}$}
-      \RightLabel{\textbf{(Ind-E)}}
-      \TrinaryInfC{$\vdash \text{rec}((y_k).\alpha_1^\textbf{N}@\langle\rangle'
-                      ,(y_k).\alpha_2^\textbf{N} @ y_k):(y:\text{List }\textbf{1})\rightarrow\textbf{N}$}
-      \end{scprooftree}
-
-
-**** Rose Tree
-     Rose Tree A = $\nu(X:*;\epsilon_2;(\textbf{1},List X)$
-
-     #+begin_example
-     data RoseTree<A> : Set where
-        Leaf : Terminal -> RoseTree
-        Branch : List<RoseTree> -> RoseTree
-     leaf A = Leaf<A> @ ()
-     #+end_example
+** Substitution
 
 ** Typing rules
    We have to rewrite the typing rules of the paper, to get rules which are
@@ -1978,7 +1654,368 @@
 
    #+end_proof
 
+* Examples
+
+  In this section we reiterate the examples from the paper.  We use our
+  syntax, which is defined in [[Abstract Syntax]].
+
+** Terminal Object
+
+   The terminal object is a type which has exactly one value. In category
+   theory every object in the category has a unique morphism to it. We define
+   it as a coinductive type ~Terminal~ with one destructor ~Terminal~. It gets
+   a Terminal and returns a Terminal. To get a Terminal value we use
+   corecursion on the unit type, which is the first class terminal object.
+   #+begin_example
+   codata Terminal : Set where
+      Terminal : Terminal -> Terminal
+   terminal = corec Unit to Terminal where
+                 { Terminal x = x } @ ()
+
+   #+end_example
+
+** Initial Object
+
+   The initial object is a type which has no values. In category theory it is
+   the object which has a unique morphism to every other object in the
+   category. We define it inductively as ~Intial~ with one constructor
+   ~Initial~. This constructor want's one value of the same type. We can't
+   have a value of this type, because to get one we already need one. An
+   shorter way to define this type would be a inductive type with no
+   arguments. If we could get something of type ~Intial~, we could generate
+   with ~exfalsum~ a value of arbitrary type ~C~.
+   #+begin_example
+   data Initial : Set where
+      Initial : Intial -> Intial
+   exfalsum<C : Set> = rec Initial to C where
+                         Initial x = x
+   #+end_example
+
+** Natural Numbers
+
+   We use the classical peano numbers to define natural numbers.  Therefor we use
+   the inductive type ~Nat~ with the constructors ~Zero~ and ~Suc~. ~Zero~ is
+   just the number zero. Every constructor has to have a argument, which can
+   contain a recursive occurrence. Every Type ~A~ is isomorphic to the
+   function type ~Terminal -> A~. So we use ~Terminal~ for this occurrence.
+   ~Suc~ is the successor. So the meaning of ~Suc n~ is $n+1$
+   #+begin_example
+   data Nat : Set where
+      Zero : Terminal -> Nat
+      Suc : Nat -> Nat
+   zero = Zero @ ()
+   #+end_example
+
+** Binary Product
+
+   The product is defined as a coinductive type.  It has two destructors.
+   The first gives back the first element.  And the second the second.
+   The types A and B have to be concrete types.  We don't have type
+   polymorphism in our language.
+   #+begin_example
+   codata Product<A : Set, B : Set> : Set where
+      Fst : Product -> A
+      Snd : Product -> B
+   pair<A : Set, B : Set> (x:A, y:B) = corec Unit where
+                                         { Fst _ -> x
+                                         ; Snd _ -> y} @ ()
+   #+end_example
+   For different types we have to define different Products.  We will write
+   ProductNat for a product of two nats. ProductNatUnit is the prodcuct,
+   where the first element is a Nat and the second a Unit.
+
+*** Swap funtion
+    We use the swap function on a product of 2 numbers, to illustrate
+    how evaluation on a coinductive type works.  The swap function is
+    defined as follows.
+    #+begin_example
+    swap<A : Set, B : Set> =
+      corec Product<A,B> to Product<B,A> where
+             Fst x -> Snd x
+             Snd x -> Fst x
+    #+end_example
+    This is a well typed function as shown by the following proof
+    \begin{prooftree}
+    \AxiomC{$(A : *, B : *)\vdash$ Product<A,B> : $*$}
+    \AxiomC{(x:Nat) $\vdash$ Snd @ x : ProductNat \textcircled{a}}
+    \noLine
+    \UnaryInfC{(y : Nat) $\vdash$ Fst @ y : ProductNat \textcircled{b}}
+    \BinaryInfC{swap : (y : ProductNat) $\rat$ ProductNat}
+    \end{prooftree}
+    We show \textcircled{a} in the following proof.  \textcircled{b} works analog
+    \begin{prooftree}
+    \AxiomC{ProductNat : $*$}
+    \UnaryInfC{$\vdash$ Snd (y : Nat) $\rat$ ProductNat}
+    \AxiomC{Nat : $*$}
+    \BinaryInfC{(x : Nat) $\vdash$ Snd (y :Nat) $\rat$ ProductNat}
+    \AxiomC{Nat : $*$}
+    \UnaryInfC{(x : Nat) $\vdash$ x : Nat}
+    \BinaryInfC{(x : Nat) $\vdash$ Snd @ x : ProductNat}
+    \end{prooftree}
+
+** Binary Coproduct
+
+   The Binary Coproduct corresponds to the Eiher type in haskell.  It is defined
+   as an inductive type.  It is either ~A~ or ~B~.  We have one constructor ~Left~
+   for ~A~ and one constructor Right for ~B~
+   #+begin_example
+   data Coproduct<A,B> : Set where
+      Left : A -> Coproduct
+      Right : B -> Coproduct
+   #+end_example
+
+** Pi Type
+
+   The pi type is a generalization of the function type to dependent types.
+   The type of the codomain or result of a function can depend on the value
+   We define it as a coinductive type.  To destruct a function we just apply
+   it to a value.  So the Destructor is ~Apply~.  To construct a function we
+   use corecursion on on ~Unit~.  This is a lambda so we call it ~lambda~.
+
+   #+begin_example
+   codata Pi<A : Set,B : (x : A) -> Set> : Set where
+      Apply : (x : A) -> Pi x -> B
+   #+end_example
+
+*** identity function
+     The identity function is defined like this
+     #+begin_example
+     id<A : Set> = corec Unit to Pi<A,(v:A).A> where
+            { Apply v p = v } @ ()
+     #+end_example
+
+     Evaluation on one goes as follows
+
+    \begin{lstlisting}
+    apply = Apply<Nat,(v : Nat).Nat>
+    one = S @ (Z @ ())
+    apply @ id<Nat> @ one
+    = apply @ one @ ((corec Unit to Pi<Nat,(x:Nat).Nat> where
+                        Apply v p = v ) @ ())
+    $\succ \widehat{\text{Nat}} \left(\underbrace{
+       \begin{subarray}{c}
+         \text{corec Unit to Pi where} \\
+         \text{\{Apply' v \_ = v\} @ x}
+       \end{subarray}}_t\right)$[v/x][one,()]
+    = (rec Nat to Nat where
+         Zero x = Zero @ ($\widehat{()}$(t,x))
+         Succ x = Suc @ ($\widehat{Y}$(t,x)))@x[v/x][one,()]
+    = (rec Nat to Nat where
+         Zero x = Zero @ ($\widehat{()}$(t))
+         Succ x = Suc @ x)@x[v/x][one,()]
+    = (rec Nat to Nat where
+         Zero x = Zero @ ($\widehat{()}$())
+         Succ x = Suc @ x) @ x[v/x][one,()]
+    = (rec Nat to Nat where
+         Zero x = Zero @ x
+         Succ x = Suc @ x) @ x[v/x][one,()]
+    = (rec Nat to Nat where
+         Zero x = Zero @ x
+         Succ x = Suc @ x) @ v[one,()]
+    = (rec Nat to Nat where
+         Zero x = Zero @ x
+         Succ x = Suc @ x) @ one
+    = one
+    \end{lstlisting}
+** Sigma Type
+
+   The sigma type is a dependent pair of two types.  The second type can depend on
+   the value of the first type.  It corresponds to to exists in logic.  We define
+   it as an inductive type and call the constructor ~Exists~.
+   #+begin_example
+   data Sigma<A : Set,B : (x : A) -> Set> : Set where
+      Exists : (x:A) -> B x -> Sigma
+   #+end_example
+
+** Vectors
+
+   Vectors are a standard example for dependent type.  There are like lists, except
+   there type depends on there length. For example a vector ~[1;2]~ has type
+   ~Vector<Nat> 2~, because it length is 2. It has 2 constructors ~Nil~ and
+   ~Cons~ like lists. ~Nil~ gives back the empty vector. Because the length of
+   the empty vector is zero its return type is ~Vector 0~. The second
+   constructor ~Cons~ takes a natural number ~k~ and a pair. The pair consists
+   of ~A~ and a vector of length ~k~, a ~Vector k~. It returns a new vector.
+   Its head is the first argument of the pair and its tail the second. So the
+   results length is one more then the second argument of the pair. Therefore it
+   is ~Vector (Suc k)~
+
+   #+begin_example
+   data Vector<A : Set> : (n:Nat) -> Set where
+     Nil : Unit -> Vector zero
+     Cons : (k:Nat) -> Product<A,Vector @ k> -> Vector (Suc @ k)
+   nil<A : Set> = Nil<A : Set> @ ()
+   #+end_example
+
+*** Extend Function
+
+    We use a function, which extends a vector to the end of a
+    vector, to show how evaluation on a vector works.
+    This tail function returns the empty vector for the empty vector,
+    because every function has to be total in our language.  To keep
+    things simple we use Unit for $A$. We also simplify "Product Unit
+    (VectorUnit k)" to just "VectorUnit k"
+    #+begin_example
+    extend<A : Set>(x : A) = 
+      rec Vec<A> to ((x).Vec<A> @ (Suc x) where
+        Nil u = Cons<A> @ x @ nil<A>
+        Cons k v = Cons<A> @ (Suc @ k) @ v
+    #+end_example
+    The type checking of this function goes as follows
+    \begin{scprooftree}{0.8}
+    \AxiomC{$\vdash$ (x).(VecUnit @ (Suc @ x)) : (k: Nat)}
+    \noLine
+    \UnaryInfC{(\_ : Unit) $\vdash$ ConsUnit @ 0 @ (NilUnit' @ ()) : (x).(VecUnit @ (Suc @ x)) @ 0}
+    \noLine
+    \UnaryInfC{(k : Nat, v : (x).(Vec @ (Suc @ x)) @ k) $\vdash$ ConsUnit @ (Suc @ k) @ v : (x).(Vec @ (Suc @ x)) @ (Suc @ k)}
+    \UnaryInfC{$\vdash$ app : (k:Nat,y : (x).Vec (Suc x)) $\rat$ (x).(Vec @ (Suc x)) @ k}
+    \end{scprooftree}
+    As an example we evaluate a vector of length 1 with this function.  We choose length one
+    to see all rec cases.
+    \begin{align*}
+      &\text{extend}@ 1 @ (\text{ConsUnit} @ 0 @ (\text{NilUnit'} @ ()))\\
+      &= \text{extend}@(\text{Suc} @ k \bullet 0) @ (\text{ConsUnit} @ 0 @ (\text{NilUnit'} @ ()))\\
+      &\succ \text{ConsUnit} @ (\text{Suc} @ k) @ v \left[ \hat{X}(\text{extend} @ n @ x)/v \right][0,\text{NilUnit'} @ ()]\\
+      &= \text{ConsUnit} @ (\text{Suc} @ k) @ v \left[ \text{extend} @ n @ x/v \right][0, \text{NilUnit'} @ ()]\\
+      &= \text{ConsUnit} @ (\text{Suc} @ 0) @ (\text{extend} @ n @ x) [0,\text{NilUnit'} @ ()]\\
+      &= \text{ConsUnit} @ (\text{Suc} @ 0) @ (\text{extend} @ 0 @ (\text{NilUnit'} @ ()))\\
+      &= \text{ConsUnit} @ 1 @ (\text{extend} @ (0 \bullet 0) @ (\text{NilUnit'} @ ()))\\
+      &\succ \text{ConsUnit} @ 1 @ (\text{ConsUnit} @ 0 @ (\text{NilUnit'} @ ()))\left[ \hat{()}(\text{extend} @ k @ x) / \_  \right][()]\\
+      &= \text{ConsUnit} @ 1 @ (\text{ConsUnit} @ 0 @ (\text{NilUnit'} @ ()))[()]\\
+      &= \text{ConsUnit} @ 1 @ (\text{ConsUnit} @ 0 @ (\text{NilUnit'} @ ()))
+    \end{align*}
+
+*** replicate function
+    The following function gets a number $n$ and returns an vector of units
+    with length $n$
+    #+begin_example
+    length = rec VectorUnit to Nat where
+               NilUnit _ = zero
+               ConsUnit k _ = Succ @ k
+    replicate = lambda_Nat_VectorUnit n ((rec Nat to VectorUnit where
+                                            Zero _ = NilUnit @ ()
+                                            Suc   m = ConsUnit @ (length @ m) @ m) @ n)
+    #+end_example
+    The following shows the steps for evaluating /replicate/ on 1.  We omit
+    the steps for /length/ and the inner /rec/, because we want to see how
+    /corec/ evaluation works.  We will call the /rec/ part in the definition of
+    /replicate/ /rep/.
+
+    \begin{lstlisting}
+    apply (lambda n (rep @ n)) 1
+    = Apply @ 1 @ (lampda n (rep @ n))
+    = Apply @ 1 @ ((corec Pi to Unit where
+                     Apply n _ = rep @ n)@())
+    $\succ$ $\widehat{\text{VecUnit}}(\underbrace{\text{corec Pi to Unit where \{ Apply n \_ = rep @ n \} @ x}}_t)$[rep@n/x][1,()]
+    = (rec VecUnit to VecUnit where
+         VecNil x = VecNil @ $\widehat{()}$(t,x)
+         VecCons n x = VecCons @ n @ $\widehat{(y).Y}$(t,x))@n@x[rep@n/x][1,()]
+    = (rec VecUnit to VecUnit where
+         VecNil x = VecNil @ $\widehat{()}$(t,x)
+         VecCons n x = VecCons @ n @ $\widehat{Y}$(t,x))@n@x[rep@n/x][1,()]
+    = (rec VecUnit to VecUnit
+         VecNil x = VecNil@()
+         VecCons n x = VecCons'@n@x)@n@x[rep@n/x][1,()]
+    = (rec VecUnit to VecUnit
+         VecNil x = VecNil@x
+         VecCons n x = VecCons@n@y)@n@(rep@n)[1,()]
+    = (rec VecUnit to VecUnit
+         VecNil x = VecNil@x
+         VecCons n x = VecCons@n@x)@1@(rep@1)
+    = ConsUnit @ (NilUnit @ ())
+    \end{lstlisting}
+
+** Maybe
+
+** Extended Naturals
+
+   We will now define extended naturals.  There are needed for the definitions
+   of streams.  There are natural numbers with an additional value, infinty.  We
+   define it coinductively with the predecessor as it only destructor.  The predecessor
+   is either not defined (there is no predecessor of 0 in the natural numbers) or
+   another natural number.  So we use a coproduct of ~Unit~ (which should mean: "has no
+   predecessor") and another ~ExNat~.  We can define the successor as a corecursion.
+   The predecessor of the successor of ~x~ is just ~x~.  So the only case of corec returns
+   a ~Right x~ (remember Prec returns a coproduct not a number).
+   #+begin_example
+   codata ExNat : Set where
+      Prec : ExNat -> Maybe<ExNat>
+   succE = corec ExNat where
+             Prec x -> Just<ExNat> @ x
+   #+end_example
+
+** Streams
+
+   With extended naturals defined, we can now define partial streams.  This are streams
+   which depend on there definition depth.  Like non-dependent
+   streams they are coinductive and have 2 destructors for head and tail.
+   #+begin_example
+   codata PStr<A : Set>: (n: ExNat) -> Set where
+      hd : (k : ExNat) -> PStr<A> (succE k) -> A
+      tl : (k : ExNat) -> PStr<A> (succE k) -> PStr<A> @ k
+   #+end_example
+** List
+   List A describes a list of type elements with type A.  It is defined
+   as follows
+
+   \begin{equation*}
+   List A =  \mu(X:*;\epsilon_2;(\textbf{1},A\times X))
+   \end{equation*}
+   where $\Gamma_1=\emptyset$ and $\Gamma_2\vdash A:*$
+
+   In the implemented syntax is written like this
+   #+begin_example
+   data List<A : Set> : Set where
+      Nil : Terminal -> List
+      Cons : Product<A,List> -> List
+   nil<A : Set> = Nil<A> @ ()
+   #+end_example
+
+** Length function on lists of Units
+   \begin{align*}
+   \text{length} = \text{rec} &((y_k:\top).\alpha_1^\textbf{N}@\langle\rangle\\
+                &,(x:\top,y_k:\mu(X:*;\epsilon_2(\mathbf{1},X)))).\alpha_2^\textbf{N} @ y_k\\
+   \end{align*}
+*** Type checking
+
+    \begin{scprooftree}{0.6}
+    \AxiomC{$\vdash\textbf{N}:*$}
+    \AxiomC{$\vdash\alpha_1^\textbf{N}: (x:\textbf{1})\rightarrow\textbf{N}$}
+    \RightLabel{\textbf{(Term-Weak)}}
+    \UnaryInfC{$y_k:\textbf{1}\vdash\alpha_1^\textbf{N}: (x:\textbf{1})\rightarrow\textbf{N}$}
+    \AxiomC{$\vdash\langle\rangle':\textbf{1}$}
+    \RightLabel{\textbf{(Term-Weak)}}
+    \UnaryInfC{$y_k:\textbf{1}\vdash\langle\rangle':\textbf{1}$}
+    \RightLabel{\textbf{(Inst)}}
+    \BinaryInfC{$y_k:\textbf{1}\vdash \alpha_1^\textbf{N}@\langle\rangle':\textbf{N}$}
+    \AxiomC{$\vdash\alpha_2^\textbf{N}: (x:\textbf{N})\rightarrow\textbf{N}$}
+    \RightLabel{\textbf{(Term-Weak)}}
+    \UnaryInfC{$y_k:\textbf{N}\vdash\alpha_2^\textbf{N}: (x:\textbf{N})\rightarrow\textbf{N}$}
+    \AxiomC{$\textbf{N}:*$}
+    \RightLabel{\textbf{(Proj)}}
+    \UnaryInfC{$y_k:\textbf{N}\vdash y_k:\textbf{N}$}
+    \RightLabel{\textbf{(Inst)}}
+    \BinaryInfC{$y_k:\textbf{N}\vdash \alpha_2^\textbf{N}@y_k:\textbf{N}$}
+    \RightLabel{\textbf{(Ind-E)}}
+    \TrinaryInfC{$\vdash \text{rec}((y_k).\alpha_1^\textbf{N}@\langle\rangle'
+                    ,(y_k).\alpha_2^\textbf{N} @ y_k):(y:\text{List }\textbf{1})\rightarrow\textbf{N}$}
+    \end{scprooftree}
+
+
+** Rose Tree
+   Rose Tree A = $\nu(X:*;\epsilon_2;(\textbf{1},List X)$
+
+   #+begin_example
+   data RoseTree<A : Set> : Set where
+      Leaf : Terminal -> RoseTree
+      Branch : List<RoseTree> -> RoseTree
+   leaf<A : Set> = Leaf<A> @ ()
+   #+end_example
+
+
+\newpage   
 \printbibliography
+\newpage
 
 * Appendix
 ** Type action derivation
