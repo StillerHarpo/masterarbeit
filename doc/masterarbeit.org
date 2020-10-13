@@ -1,79 +1,15 @@
-#+LATEX_HEADER: \usepackage{listings}
-#+LATEX_HEADER: \usepackage{bussproofs}
-#+LATEX_HEADER: \usepackage{stmaryrd}
-#+LATEX_HEADER: \usepackage{xcolor}
-#+LATEX_HEADER: \usepackage{wasysym}
-#+LATEX_HEADER: \usepackage{amsthm}
-#+LATEX_HEADER: \usepackage{newfloat}
-#+LATEX_HEADER: \usepackage{minted}
-#+LATEX_HEADER: \usepackage{lscape}
-#+LATEX_HEADER: \usepackage[T1]{fontenc}
-#+latex_header: \usepackage[citestyle=authoryear-icomp,bibstyle=authoryear, hyperref=true,backref=true,maxcitenames=3,url=true,backend=biber,natbib=true] {biblatex}
-#+latex_header: \addbibresource{./references.bib}
-#+LATEX_HEADER: \lstset{
-#+LATEX_HEADER:  basicstyle=\ttfamily,
-#+LATEX_HEADER:   mathescape
-#+LATEX_HEADER: }
-#+LATEX_HEADER: \usepackage{graphicx}
-#+LATEX_HEADER: \usepackage{fontspec}
-#+LATEX_HEADER: \setmonofont{DejaVu Sans Mono}
-#+LATEX_HEADER: \newenvironment{scprooftree}[1]%
-#+LATEX_HEADER:  {\gdef\scalefactor{#1}\begin{center}\proofSkipAmount \leavevmode}%
-#+LATEX_HEADER:  {\scalebox{\scalefactor}{\DisplayProof}\proofSkipAmount \end{center} }
-#+LATEX_HEADER: \usepackage{esvect}
-#+LATEX_HEADER:\usepackage{geometry}
-#+LATEX_HEADER: \geometry{
-#+LATEX_HEADER: a4paper,
-#+LATEX_HEADER:   total={170mm,257mm},
-#+LATEX_HEADER:   left=20mm,
-#+LATEX_HEADER:   top=20mm,
-#+LATEX_HEADER: }
-#+LATEX_HEADER: \newcommand{\id}[1]{\text{id}_{#1}}
-#+LATEX_HEADER: \newcommand{\rec}{\text{rec}}
-#+LATEX_HEADER: \newcommand{\corec}{\text{corec}}
-#+LATEX_HEADER: \newcommand{\TyCtx}{\enskip\textbf{TyCtx}}
-#+LATEX_HEADER: \newcommand{\Ctx}{\enskip\textbf{Ctx}}
-#+LATEX_HEADER: \newcommand{\D}{\AxiomC{$\mathcal{D}$}\noLine}
-#+LATEX_HEADER: \newcommand{\Di}[1]{\AxiomC{$\mathcal{D}_{#1}$}\noLine}
-#+LATEX_HEADER: \newcommand{\topI}[1]{\RightLabel{\textbf{($\top$-I)}}\UnaryInfC{#1}}
-#+LATEX_HEADER: \newcommand{\TyVarI}[1]{\RightLabel{\textbf{TyVar-I}}\BinaryInfC{#1}}
-#+LATEX_HEADER: \newcommand{\TyVarWeak}[1]{\RightLabel{\textbf{(TyVar-Weak)}}\BinaryInfC{#1}}
-#+LATEX_HEADER: \newcommand{\TyWeak}[1]{\RightLabel{\textbf{(Ty-Weak)}}\BinaryInfC{#1}}
-#+LATEX_HEADER: \newcommand{\TyInst}[1]{\RightLabel{\textbf{(Ty-Inst)}}\BinaryInfC{#1}}
-#+LATEX_HEADER: \newcommand{\ParamAbstr}[1]{\RightLabel{\textbf{(Param-Abstr)}}\UnaryInfC{#1}}
-#+LATEX_HEADER: \newcommand{\FPTy}{\RightLabel{\textbf{(FP-Ty)}}}
-#+LATEX_HEADER: \newcommand{\Inst}[1]{\RightLabel{\textbf{(Inst)}}\BinaryInfC{#1}}
-#+LATEX_HEADER: \newcommand{\Conv}[1]{\RightLabel{\textbf{(Conv)}}\BinaryInfC{#1}}
-#+LATEX_HEADER: \newcommand{\Proj}[1]{\RightLabel{\textbf{(Proj)}}\UnaryInfC{#1}}
-#+LATEX_HEADER: \newcommand{\TermWeak}[1]{\RightLabel{\textbf{(Term-Weak)}}\BinaryInfC{#1}}
-#+LATEX_HEADER: \newcommand{\IndI}[1]{\RightLabel{\textbf{(Ind-I)}}\UnaryInfC{#1}}
-#+LATEX_HEADER: \newcommand{\CoindE}[1]{\RightLabel{\textbf{(Coind-E)}}\UnaryInfC{#1}}
-#+LATEX_HEADER: \newcommand{\IndE}{\RightLabel{\textbf{(Ind-E)}}}
-#+LATEX_HEADER: \newcommand{\CoindI}{\RightLabel{\textbf{(Coind-I)}}}
-#+LATEX_HEADER: \newcommand{\rat}{\rightarrowtriangle}
-#+LATEX_HEADER: \newenvironment{changemargin}[2]{%
-#+LATEX_HEADER: \begin{list}{}{%
-#+LATEX_HEADER: \setlength{\topsep}{0pt}%
-#+LATEX_HEADER: \setlength{\leftmargin}{#1}%
-#+LATEX_HEADER: \setlength{\rightmargin}{#2}%
-#+LATEX_HEADER: \setlength{\listparindent}{\parindent}%
-#+LATEX_HEADER: \setlength{\itemindent}{\parindent}%
-#+LATEX_HEADER: \setlength{\parsep}{\parskip}%
-#+LATEX_HEADER: }%
-#+LATEX_HEADER: \item[]}{\end{list}}
-#+LATEX_HEADER: \newtheorem{theorem}{Theorem}
-#+LATEX_HEADER: \newtheorem{definition}{Definition}
+#+LATEX_CLASS: scrbook
+#+LATEX_CLASS_OPTIONs: [a4paper,cleardoubleempty,BCOR1cm]
+#+LATEX_HEADER: \input{header}
+
 #+TITLE: Implementation of Type Theory based on dependent Inductive and Coinductive Types
 #+AUTHOR: Florian Engel
 
-#+begin_src elisp :exports none
-  (setq org-latex-listings 'minted)
-#+end_src
+#+OPTIONS: toc:nil
 
-#+RESULTS:
-: minted
+\input{teaser}
 
-#+begin_abstract
+\chapter*{Abstract}
   Dependent types are a useful tool to restrict possible type even further then
   types of strongly typed languages like Haskell. This gives us further type
   safety. With them we can also proof theorems. Coinductive types allow us to
@@ -87,7 +23,8 @@
   has both dependent inductive types and dependent coinductive types. In this
   type theory the dependent function space becomes definable. This leads to a
   more symmetrical approach of coinduction in dependently typed languages.
-#+end_abstract
+
+#+TOC: headlines 2
 
 * Introduction
   Through this work I will explain coinductive types at the examples of streams
@@ -2026,13 +1963,9 @@
    leaf<A : Set> = Leaf<A> @ ()
    #+end_example
 
+\appendix
 
-\newpage   
-\printbibliography
-\newpage
-
-* Appendix
-** Type action derivation
+* Type action derivation
 \begin{landscape}
 \begin{changemargin}{-1cm}{-1cm}
   \begin{prooftree}
@@ -2095,3 +2028,7 @@
 \end{scprooftree}
 \end{changemargin}
 \end{landscape}
+
+
+\bibliographystyle{alpha}
+\bibliography{references}

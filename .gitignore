@@ -1,8 +1,10 @@
 resources/
 **/dist-newstyle/
 **/_minted-masterarbeit/
-**/*.pdf
-**/*.tex
+README.pdf
+README.tex
+doc/masterarbeit.pdf
+doc/masterarbeit.tex
 **/*.local
 **/*.local~
 **/*.bbl
