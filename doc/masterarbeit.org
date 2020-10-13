@@ -887,16 +887,28 @@
     #+end_src
 
 ** Substitution
-   We use de-Bruijn indexes for bound variables to facilitate substitution.
-   With this method every bound variable is a number instead of a string.  The
-   number says where the variable is bound.  To find the binder of a variable we
-   go outwards from and count every bounder until we reach the number of the
-   variable.  For example $\lambda.\lambda.\lambda.1$ says that the variable is
-   bound by the second binder (we start counting at zero).  This would be the
-   same as $\lambda x.\lambda y. \lambda z.y$.  This means we never have to
-   generate fresh names.  We just shift the free variables in the term with
-   which we substitute by one, every time we encounter an binder.  This shifting
-   is done in the module ~ShiftFreeVars.hs~.
+   In the following we will write $t[s/x]$ for "substitute every free
+   occurrences of $x$ in $t$ by $s$". Substitution is done in the module
+   ~Subst.hs~. We use de-Bruijn indexes for bound variables to facilitate
+   substitution. With this method every bound variable is a number instead of a
+   string. The number says where the variable is bound. To find the binder of a
+   variable we go outwards from and count every bounder until we reach the
+   number of the variable. For example $\lambda.\lambda.\lambda.1$ says that the
+   variable is bound by the second binder (we start counting at zero). This
+   would be the same as $\lambda x.\lambda y. \lambda z.y$. This means we never
+   have to generate fresh names. We just shift the free variables in the term
+   with which we substitute by one, every time we encounter an binder. This
+   shifting is done in the module ~ShiftFreeVars.hs~. We also want to be able to
+   substitute multiple variables simultaneously. If we would just substitute one
+   term after another we could substitute into a previous term. For example the
+   substitution $x[y/x][z/y]$ would yield $z$ if we substitute sequential and
+   $y$ if we substitute simultaneously.  To make simultaneous substitution
+   possible every local variable has a boolean flag.  If this flag is set to
+   true substitution won't substitute for that variable.  So for simultaneous
+   substitution we just set this flag to true for all terms with witch we want
+   to substitute.  Then we substitute with them.  In the last step we just have
+   to set the flags to false in the result.  This setting(marking of the
+   variables) is done in the module ~Mark.hs~.
 
 ** Typing rules
    We have to rewrite the typing rules of the paper, to get rules which are
