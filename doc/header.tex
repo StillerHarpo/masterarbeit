@@ -92,6 +92,7 @@
 \newcommand{\rec}{\text{rec}}
 \newcommand{\corec}{\text{corec}}
 \newcommand{\TyCtx}{\enskip\textbf{TyCtx}}
+\newcommand{\ParCtx}{\enskip\textbf{ParCtx}}
 \newcommand{\Ctx}{\enskip\textbf{Ctx}}
 \newcommand{\D}{\AxiomC{$\mathcal{D}$}\noLine}
 \newcommand{\Di}[1]{\AxiomC{$\mathcal{D}_{#1}$}\noLine}
@@ -99,7 +100,9 @@
 \newcommand{\TyVarI}[1]{\RightLabel{\textbf{TyVar-I}}\BinaryInfC{#1}}
 \newcommand{\TyVarWeak}[1]{\RightLabel{\textbf{(TyVar-Weak)}}\BinaryInfC{#1}}
 \newcommand{\TyWeak}[1]{\RightLabel{\textbf{(Ty-Weak)}}\BinaryInfC{#1}}
-\newcommand{\TyInst}[1]{\RightLabel{\textbf{(Ty-Inst)}}\BinaryInfC{#1}}
+\newcommand{\TyInstLabel}{\RightLabel{\textbf{(Ty-Inst)}}}
+\newcommand{\TyInst}[1]{\TyInstLabel\BinaryInfC{#1}}
+\newcommand{\TyInstTrinary}[1]{\TyInstLabel\TrinaryInfC{#1}}
 \newcommand{\ParamAbstr}[1]{\RightLabel{\textbf{(Param-Abstr)}}\UnaryInfC{#1}}
 \newcommand{\FPTy}{\RightLabel{\textbf{(FP-Ty)}}}
 \newcommand{\Inst}[1]{\RightLabel{\textbf{(Inst)}}\BinaryInfC{#1}}
@@ -111,6 +114,7 @@
 \newcommand{\IndE}{\RightLabel{\textbf{(Ind-E)}}}
 \newcommand{\CoindI}{\RightLabel{\textbf{(Coind-I)}}}
 \newcommand{\rat}{\rightarrowtriangle}
+\newcommand{\graybox}[1]{\colorbox{gray}{#1}}
 
 \newenvironment{scprooftree}[1]%
  {\gdef\scalefactor{#1}\begin{center}\proofSkipAmount \leavevmode}%

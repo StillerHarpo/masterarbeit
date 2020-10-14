@@ -958,15 +958,32 @@
     \UnaryInfC{$\vdash\emptyset$ \Ctx}
     \DisplayProof
     \hskip 1.5em
-    \AxiomC{$\emptyset|\Gamma\vdash A:*$}
+    \AxiomC{$|\emptyset|\Gamma\vdash A:*$}
     \UnaryInfC{$\vdash\Gamma,x:A$ \Ctx}
     \DisplayProof
     \end{center}
+    In the rules for valid contexts we ensure that the types in the context can
+    not depend on *TyCtx*.  Note however that they can depend on *ParCtx*.  This
+    ensures that only strictly positive types are possible.
 
-    We use the notation $\Theta(X)\rightsquigarrow\Gamma\rat*$ for
-    looking up the type-variable $X$ in type-context $\Theta$ yields type
-    $\Gamma\rat*$. We add 2 rules for looking up something in a
-    type-context.  They are:
+    We also need new rules for checking if a parameter context is valid.
+    \begin{center}
+    \AxiomC{}
+    \UnaryInfC{$\vdash\emptyset$ \ParCtx}
+    \DisplayProof
+    \hskip 1.5em
+    \AxiomC{$\vdash\Phi$ \ParCtx}
+    \AxiomC{$\vdash\Gamma$ \Ctx}
+    \BinaryInfC{$\vdash\Phi,X:\Gamma\rat*$ \ParCtx}
+    \DisplayProof
+    \end{center}
+    This is structural the same rule as \TyCtx.  The difference is that \ParCtx
+    and \TyCtx are used differently in the other rules, as we have already seen
+    in the rule \Ctx.
+
+    We use the notation $\Theta(X)\rightsquigarrow\Gamma\rat*$ for looking up
+    the type-variable $X$ in type-context $\Theta$ yields type $\Gamma\rat*$. We
+    add 2 rules for looking up something in a type-context. They are:
     \begin{center}
       \AxiomC{$\vdash \Theta$ \TyCtx}
       \AxiomC{$\vdash \Gamma$ \Ctx}
@@ -979,6 +996,20 @@
       \DisplayProof
     \end{center}
     Here $Y$ and $X$ are different variables
+
+    The rules for looking up someting in a parameter context are principally the
+    same.
+    \begin{center}
+      \AxiomC{$\vdash \Phi$ \ParCtx}
+      \AxiomC{$\vdash \Gamma$ \Ctx}
+      \BinaryInfC{$\Phi,X:\Gamma\rat*(X)\rightsquigarrow\Gamma\rat*$}
+      \DisplayProof
+      \hskip 1.5em
+      \AxiomC{$\vdash \Gamma_1$ \Ctx}
+      \AxiomC{$\Phi(X) \rightsquigarrow\Gamma_2\rat*$}
+      \BinaryInfC{$\Phi,Y:\Gamma_1\rat*(X)\rightsquigarrow\Gamma_2\rat*$}
+      \DisplayProof
+    \end{center}
 
     Respectively the notation $\Gamma(x)\rightsquigarrow A$ means looking
     up the termvariable $x$ in term-context $\Gamma$ yields type $A$. The
@@ -1050,7 +1081,7 @@
      \begin{prooftree}
       \AxiomC{}
       \RightLabel{\textbf{(Unit-I)}}
-      \UnaryInfC{\colorbox{gray}{$\Theta|\Gamma$}$\vdash$Unit:$*$}
+      \UnaryInfC{\graybox{$\Phi|\Theta|\Gamma$}$\vdash$Unit:$*$}
     \end{prooftree}
     We change the syntax "$\top$" to "Unit" and add *Ctx* and *TyCtx*.
     We will do this for every rule which has empty contexts to subsume
@@ -1062,16 +1093,14 @@
      \begin{prooftree}
       \AxiomC{$\vdash \Theta$ \TyCtx}
       \AxiomC{$\vdash \Gamma$ \Ctx}
-      \RightLabel{\textbf{(TyVar-I)}}
-      \BinaryInfC{$\Theta,X:\Gamma\rat*|\emptyset\vdash X : \Gamma \rat *$}
+      \TyVarI{$\Theta,X:\Gamma\rat*|\emptyset\vdash X : \Gamma \rat *$}
     \end{prooftree}
     gets rewritten to
 
      \begin{prooftree}
-      \AxiomC{\colorbox{gray}{$\Theta(X)\rightsquigarrow\Gamma\rat*$}}
-      \AxiomC{\colorbox{gray}{$\vdash \Gamma_1$ \Ctx}}
-      \RightLabel{\textbf{(TyVar-I)}}
-      \BinaryInfC{$\Theta|$\colorbox{gray}{$\Gamma_1$}$\vdash X : \Gamma \rat *$}
+      \AxiomC{\graybox{$\Theta(X)\rightsquigarrow\Gamma\rat*$}}
+      \AxiomC{\graybox{$\vdash \Gamma_1$ \Ctx}}
+      \TyVarI{\graybox{$\Phi$}$|\Theta|$\graybox{$\Gamma_1$}$\vdash X : \Gamma \rat *$}
     \end{prooftree}
 
 *** Type instantiation
@@ -1079,69 +1108,67 @@
     \begin{prooftree}
       \AxiomC{$\Theta|\Gamma_1\vdash A:(x:B,\Gamma_2)\rat*$}
       \AxiomC{$\Gamma_1\vdash t:B$}
-      \BinaryInfC{$\Theta|\Gamma_1\vdash A@t:\Gamma_2[t/x]\rat*$}
+      \TyInst{$\Theta|\Gamma_1\vdash A@t:\Gamma_2[t/x]\rat*$}
     \end{prooftree}
     gets rewritten to
      \begin{prooftree}
-      \AxiomC{$\Theta|\Gamma_1\vdash A:(x:B,\Gamma_2)\rat*$}
-      \AxiomC{$\Gamma_1\vdash t:$\colorbox{gray}{$B'$}}
-      \AxiomC{\colorbox{gray}{$B\equiv_\beta B'$}}
-      \TrinaryInfC{$\Theta|\Gamma_1\vdash A@t:\Gamma_2[t/x]\rat*$}
+      \AxiomC{\graybox{$\Phi$}$|\Theta|\Gamma_1\vdash A:(x:B,\Gamma_2)\rat*$}
+      \AxiomC{\graybox{$\Phi|\Theta$}$|\Gamma_1\vdash t:$\graybox{$B'$}}
+      \AxiomC{\graybox{$B\equiv_\beta B'$}}
+      \TyInstTrinary{\graybox{$\Phi$}$|\Theta|\Gamma_1\vdash A@t:\Gamma_2[t/x]\rat*$}
     \end{prooftree}
-
 
 *** Parameter abstraction
     The rule
     \begin{center}
       \AxiomC{$\Theta|\Gamma_1,x:A\vdash B:\Gamma_2\rat*$}
-      \RightLabel{\textbf{(Param-Abstr)}}
-      \UnaryInfC{$\Theta|\Gamma_1\vdash(x).B:(x:A,\Gamma_2)\rat*$}
+      \ParamAbstr{$\Theta|\Gamma_1\vdash(x).B:(x:A,\Gamma_2)\rat*$}
       \DisplayProof
     \end{center}
     gets rewritten to
     \begin{center}
-      \AxiomC{$\Theta|\Gamma_1,x:A\vdash B:\Gamma_2\rat*$}
-      \RightLabel{\textbf{(Param-Abstr)}}
-      \UnaryInfC{$\Theta|\Gamma_1\vdash(x$\colorbox{gray}{$:A$}$).B:(x:A,\Gamma_2)\rat*$}
+      \AxiomC{\graybox{$\Phi$}|$\Theta|\Gamma_1,x:A\vdash B:\Gamma_2\rat*$}
+      \ParamAbstr{\graybox{$\Phi$}$|\Theta|\Gamma_1\vdash(x$\graybox{$:A$}$).B:(x:A,\Gamma_2)\rat*$}
       \DisplayProof
     \end{center}
 
-*** (co)data definition
-    The rule
+*** (co)inductive types
+    We have to separate the rule
     \begin{prooftree}
     \AxiomC{$\sigma_k:\Gamma_k\triangleright\Gamma$}
     \AxiomC{$\Theta,X:\Gamma\rat*|\Gamma_k\vdash A_k:*$}
-    \RightLabel{(\textbf{FP-Ty})}
+    \FPTy
     \BinaryInfC{$\Theta | \emptyset \vdash \rho(X : \Gamma \rat *;\vv{\sigma};\vv{A}):\Gamma\rat *$}
     \end{prooftree}
-    gets rewritten to
+    into multiple rules.  First we need rules to check the definitions of
+    (co)inductive types.  This are
     \begin{prooftree}
     \AxiomC{$\sigma_k:\Gamma_k\triangleright\Gamma$}
-    \AxiomC{$\Theta,X:\Gamma\rat*|\Gamma_k\vdash A_k:*$}
-    \RightLabel{(\textbf{FP-Ty})}
-    \BinaryInfC{$\Theta | $\colorbox{gray}{$\Gamma_1$} $\vdash$ data X $\Gamma$ -> Set where; $\vv{Constr_k : \Gamma_k\text{ -> }A_k\text{ -> }X \sigma_k}$}
+    \AxiomC{\graybox{$\Phi$}$|\Theta,X:\Gamma\rat*|\Gamma_k\vdash A_k:*$}
+    \AxiomC{\graybox{$\vdash \phi$ \ParCtx}}
+    \FPTy
+    \TrinaryInfC{$\vdash$ data X<$\Phi$> $\Gamma$ -> Set where; $\vv{Constr_k : \Gamma_k\text{ -> }A_k\text{ -> }X \sigma_k}$}
     \end{prooftree}
     and
     \begin{prooftree}
     \AxiomC{$\sigma_k:\Gamma_k\triangleright\Gamma$}
-    \AxiomC{$\Theta,X:\Gamma\rat*|\Gamma_k\vdash A_k:*$}
-    \RightLabel{(\textbf{FP-Ty})}
-    \BinaryInfC{$\Theta |$\colorbox{gray}{$\Gamma_1$} $ \vdash$ codata X $\Gamma$ -> Set where; $\vv{Destr_k : \Gamma_k \text{ -> } X \sigma_k \text{ -> } A_k}$}
+    \AxiomC{\graybox{$\Phi$}$|\Theta,X:\Gamma\rat*|\Gamma_k\vdash A_k:*$}
+    \AxiomC{\graybox{$\vdash \phi$ \ParCtx}}
+    \FPTy
+    \TrinaryInfC{$\vdash$ codata X<$\Phi$> : $\Gamma$ -> Set where; $\vv{Destr_k : \Gamma_k \text{ -> } X \sigma_k \text{ -> } A_k}$}
     \end{prooftree}
 
 *** Unit expression introduction
     The rule
     \begin{center}
       \AxiomC{}
-      \RightLabel{\textbf{(}$\top$\textbf{-I)}}
-      \UnaryInfC{$\lozenge:\top$}
+      \topI{$\vdash\lozenge:\top$}
       \DisplayProof
     \end{center}
     get rewritten to
     \begin{center}
       \AxiomC{}
-      \RightLabel{\textbf{(}$\top$\textbf{-I)}}
-      \UnaryInfC{():Unit}
+      \topI{\graybox{$\Phi|\Theta|\Gamma$}$\vdash$():Unit}
       \DisplayProof
     \end{center}
 
@@ -1156,11 +1183,11 @@
     \end{center}
     gets rewritten to
     \begin{center}
-      \AxiomC{$\Gamma_1\vdash t:(x:A,\Gamma_2)\rat B$}
-      \AxiomC{$\Gamma_1\vdash s:$\colorbox{gray}{$A'$}}
-      \AxiomC{\colorbox{gray}{$A\equiv_\beta A'$}}
+      \AxiomC{\graybox{$\Phi|\Theta$}$|\Gamma_1\vdash t:(x:A,\Gamma_2)\rat B$}
+      \AxiomC{\graybox{$\Phi|\Theta$}$|\Gamma_1\vdash s:$\graybox{$A'$}}
+      \AxiomC{\graybox{$A\equiv_\beta A'$}}
       \RightLabel{\textbf{(Inst)}}
-      \TrinaryInfC{$\Gamma_1\vdash t@s:\Gamma_2[s/x]\rat B[s/x]$}
+      \TrinaryInfC{\graybox{$\Phi|\Theta$}$|\Gamma_1\vdash t@s:\Gamma_2[s/x]\rat B[s/x]$}
       \DisplayProof
     \end{center}
 
@@ -1174,12 +1201,11 @@
     \end{center}
     gets rewritten to
     \begin{center}
-      \AxiomC{\colorbox{gray}{$\Gamma(x)\rightsquigarrow A$}}
+      \AxiomC{\graybox{$\Gamma(x)\rightsquigarrow A$}}
       \RightLabel{\textbf{(Proj)}}
-      \UnaryInfC{$\Sigma|\Theta|\Gamma\vdash x:A$}
+      \UnaryInfC{\graybox{$\Phi|\Theta$}$|\Theta|\Gamma\vdash x:A$}
       \DisplayProof
     \end{center}
-
 
 *** Constructor
     The rule
@@ -1192,12 +1218,11 @@
     \end{center}
     gets rewritten to
     \begin{center}
-      \AxiomC{\colorbox{gray}{$\Sigma$(Constr)$\rightsquigarrow(\Gamma_k,y:A_k[\mu/X])\rat\mu@\sigma_k$}}
+      \AxiomC{\graybox{$\Sigma$(Constr)$\rightsquigarrow(\Gamma_k,y:A_k[\mu/X])\rat\mu@\sigma_k$}}
       \RightLabel{\textbf{(Ind-I)}}
-      \UnaryInfC{\colorbox{gray}{$\Sigma|\Theta|\Gamma$}$\vdash$Constr$:(\Gamma_k,y:A_k[\mu/X])\rat\mu@\sigma_k$}
+      \UnaryInfC{\graybox{$\Sigma|\Theta|\Gamma$}$\vdash$Constr$:(\Gamma_k,y:A_k[\mu/X])\rat\mu@\sigma_k$}
       \DisplayProof
     \end{center}
-
 
 *** Destructor
     The rule
@@ -1211,14 +1236,13 @@
     \end{center}
     gets rewritten to
     \begin{center}
-      \AxiomC{\colorbox{gray}{$\Sigma$(Destr)$\rightsquigarrow(\Gamma_k,y:\nu@\sigma_k)\rightarrow
+      \AxiomC{\graybox{$\Sigma$(Destr)$\rightsquigarrow(\Gamma_k,y:\nu@\sigma_k)\rightarrow
         A_k[\nu/X]$}}
       \RightLabel{\textbf{(Ind-I)}}
-      \UnaryInfC{\colorbox{gray}{$\Sigma|\Theta|\Gamma$}$\vdash$Destr$:(\Gamma_k,y:\nu@\sigma_k)\rat
+      \UnaryInfC{\graybox{$\Sigma|\Theta|\Gamma$}$\vdash$Destr$:(\Gamma_k,y:\nu@\sigma_k)\rat
         A_k[\nu/X]$}
       \DisplayProof
     \end{center}
-
 
 *** Recursion
     \begin{center}
@@ -1233,15 +1257,14 @@
 
     \begin{prooftree}
       \AxiomC{$\vdash C:\Gamma\rat*$}
-      \AxiomC{\colorbox{gray}{$\vv{\vdash B_k\equiv_\beta(C@\sigma_k)}$}}
-      \AxiomC{\colorbox{gray}{$\vv{\Sigma \vdash\text{Constr}_k:(\Gamma_k,y:A_k[\mu/X])\rat\mu@\sigma_k}$}}
+      \AxiomC{\graybox{$\vv{\vdash B_k\equiv_\beta(C@\sigma_k)}$}}
+      \AxiomC{\graybox{$\vv{\Sigma \vdash\text{Constr}_k:(\Gamma_k,y:A_k[\mu/X])\rat\mu@\sigma_k}$}}
       \noLine
-      \UnaryInfC{$\vv{\Delta,\Gamma_k,y_k:A_k[C/X]\vdash g_k:\text{\colorbox{gray}{$B_k$}}}$}
+      \UnaryInfC{$\vv{\Delta,\Gamma_k,y_k:A_k[C/X]\vdash g_k:\text{\graybox{$B_k$}}}$}
       \RightLabel{\textbf{(Ind-E)}}
-      \TrinaryInfC{\colorbox{gray}{$\Sigma|\Theta|$}$\Delta\vdash$ rec \colorbox{gray}{$\mu$ to C};
+      \TrinaryInfC{\graybox{$\Sigma|\Theta|$}$\Delta\vdash$ rec \graybox{$\mu$ to C};
         $\vv{\text{Constr}_k\vv{x_k}\text{ } y_k = g_k}:(\Gamma,y:\mu@id_\Gamma)\rat C@id_\Gamma$}
      \end{prooftree}
-
 
 *** Corecursion
     \begin{center}
@@ -1256,13 +1279,13 @@
 
     \begin{prooftree}
       \AxiomC{$\vdash C:\Gamma\rat*$}
-      \AxiomC{\colorbox{gray}{$\vv{\vdash B_k\equiv_\beta A_k[C/X]}$}}
-      \AxiomC{\colorbox{gray}{$\vv{\Sigma \vdash\text{Destr}_k:(\Gamma_k,y:\nu@\sigma_k)\rat
+      \AxiomC{\graybox{$\vv{\vdash B_k\equiv_\beta A_k[C/X]}$}}
+      \AxiomC{\graybox{$\vv{\Sigma \vdash\text{Destr}_k:(\Gamma_k,y:\nu@\sigma_k)\rat
         A_k[\nu/X]}$}}
       \noLine
-      \UnaryInfC{$\vv{\Delta,\Gamma_k,y_k:(\Gamma_k,y:(C@\sigma_k))\vdash g_k:\text{\colorbox{gray}{$B_k$}}}$}
+      \UnaryInfC{$\vv{\Delta,\Gamma_k,y_k:(\Gamma_k,y:(C@\sigma_k))\vdash g_k:\text{\graybox{$B_k$}}}$}
       \RightLabel{\textbf{(Coind-I)}}
-      \TrinaryInfC{\colorbox{gray}{$\Sigma|\Theta|$}$\Delta\vdash$ rec \colorbox{gray}{C to $\nu$};
+      \TrinaryInfC{\graybox{$\Sigma|\Theta|$}$\Delta\vdash$ rec \graybox{C to $\nu$};
         $\vv{\text{Destr}_k\vv{x_k}\text{ } y_k = g_k}:(\Gamma,y:C@id_\Gamma)\rat \nu@id_\Gamma$}
      \end{prooftree}
 
