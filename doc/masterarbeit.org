@@ -1144,7 +1144,7 @@
     (co)inductive types.  This are
     \begin{prooftree}
     \AxiomC{$\sigma_k:\Gamma_k\triangleright\Gamma$}
-    \AxiomC{\graybox{$\Phi$}$|\Theta,X:\Gamma\rat*|\Gamma_k\vdash A_k:*$}
+    \AxiomC{\graybox{$\Phi$}$|X:\Gamma\rat*|\Gamma_k\vdash A_k:*$}
     \AxiomC{\graybox{$\vdash \phi$ \ParCtx}}
     \FPTy
     \TrinaryInfC{$\vdash$ data X<$\Phi$> $\Gamma$ -> Set where; $\vv{Constr_k : \Gamma_k\text{ -> }A_k\text{ -> }X \sigma_k}$}
@@ -1152,11 +1152,44 @@
     and
     \begin{prooftree}
     \AxiomC{$\sigma_k:\Gamma_k\triangleright\Gamma$}
-    \AxiomC{\graybox{$\Phi$}$|\Theta,X:\Gamma\rat*|\Gamma_k\vdash A_k:*$}
+    \AxiomC{\graybox{$\Phi$}$|X:\Gamma\rat*|\Gamma_k\vdash A_k:*$}
     \AxiomC{\graybox{$\vdash \phi$ \ParCtx}}
     \FPTy
     \TrinaryInfC{$\vdash$ codata X<$\Phi$> : $\Gamma$ -> Set where; $\vv{Destr_k : \Gamma_k \text{ -> } X \sigma_k \text{ -> } A_k}$}
     \end{prooftree}
+    Because we only allow top level definitions of (co)inductive types our rules
+    have empty contexts.  We first have to check if $\sigma_k$ is  a context
+    morphism from $\Gamma_k$ to $\Gamma$.  This basically means that the terms
+    in $\sigma_k$ are of the types in $\Gamma$, if we check them in $\Gamma_k$.
+    After that we have to check if the $\vv{A}$ (the arguments where we can have
+    a recursive occurrence) are of kind $*$.  Because this is a top level
+    definition the context $\phi$ is provided by the code.  So we have to check
+    if it is valid.  We will now have to rewrite the rules for context morphism.
+    Here we just add the parameter context to the rules of the paper.
+    \begin{center}
+    \AxiomC{}
+    \UnaryInfC{\graybox{$\Phi\vdash$}$() : \Gamma_1 \triangleright \emptyset$}
+    \DisplayProof
+    \hskip 1.5em
+    \AxiomC{\graybox{$\Phi\vdash$}$\sigma : \Gamma_1 \triangleright \Gamma_2$}
+    \AxiomC{\graybox{$\Phi|$}$\Gamma_1\vdash t : A[\sigma]$}
+    \BinaryInfC{\graybox{$\Phi\vdash$}$(\sigma,t):\Gamma_1\triangleright(\Gamma_2,x:A)$}
+    \DisplayProof
+    \end{center}
+    We also need a rule for the cases in which we are using this defined
+    variables.  This is.
+    \begin{prooftree}
+    \AxiomC{$\Phi|\Theta|\Gamma'\vdash A_i:\Gamma_i$}
+    \UnaryInfC{$\Phi|\Theta|\Gamma'\vdash X<\vv{A}> : \Gamma \rat *$}
+    \end{prooftree}
+    Here X is a data or codata definition.  The parser can decide if a variable
+    is a such an definition or a local definition.  Because we are type checking
+    on the abstract syntax tree we also know $\Gamma$ and the $\Gamma_i$.
+    $\Gamma$ is just the context from the definition and the $\Gamma_i$ are from
+    the parameter context.  Because we already typed checked this definition we
+    just have to check if types given for the parameters have the right type.
+    
+    
 
 *** Unit expression introduction
     The rule
