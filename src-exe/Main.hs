@@ -62,10 +62,13 @@ import           TypeChecker                                             ( check
                                                                          , checkProgramPTI
                                                                          , runPTI
                                                                          , runTI
+                                                                         , evalInTI
                                                                          , emptyCtx
                                                                          , defCtx
                                                                          , inferTerm
                                                                          , inferType)
+import           Eval                                                    ( evalType
+                                                                         , evalCtx)
 import           PrettyPrinter                                           ( prettyType
                                                                          , prettyKind)
 
@@ -82,7 +85,7 @@ cmdOpts = subparser $
 main :: IO ()
 main = execParser (info (cmdOpts <**> helper)
          ( fullDesc
-           <> progDesc "Interpreter for dependen inductive and" ))
+           <> progDesc "Interpreter for depended inductive and coinductive types" ))
        >>= \case
         (Run files) -> evalStateT (mapM_ evalProgram files) []
         (Repl files) -> repl files
@@ -114,7 +117,8 @@ getType input = do
         runTI (liftEither (parsePrettyError (evalStateT (parseExpr <* eof)
                                                         (defsToParserState stmts))
                                             "" (T.pack $ concat input))
-               >>= (errorNewLn . inferTerm)) $ (defCtx .~ stmts) emptyCtx
+               >>= inferTerm >>= (errorNewLn . evalInTI . evalType))
+               $ (defCtx .~ stmts) emptyCtx
   case resOrError of
     Left err -> liftIO $ putDoc err
     Right res -> liftIO (putDoc $ prettyType res <> "\n")
@@ -126,7 +130,8 @@ kind input = do
         runTI (liftEither (parsePrettyError (evalStateT (parseTypeExpr <* eof)
                                                         (defsToParserState stmts))
                                             "" (T.pack $ concat input))
-               >>= (errorNewLn . inferType)) $ (defCtx .~ stmts) emptyCtx
+               >>= inferType >>= (errorNewLn . evalInTI . evalCtx))
+               $ (defCtx .~ stmts) emptyCtx
   case resOrError of
     Left err -> liftIO . putDoc $ err
     Right res -> liftIO (putDoc $ prettyKind res <> "\n")
