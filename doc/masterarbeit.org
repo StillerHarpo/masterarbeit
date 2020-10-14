@@ -911,31 +911,36 @@
    variables) is done in the module ~Mark.hs~.
 
 ** Typing rules
-   We have to rewrite the typing rules of the paper, to get rules which are
-   syntax directed. Here are the rules which have to be rewritten.
+   A typing rule says that some expression or statement is of some type, given
+   some premises. If we can for every statement or expression form a tree of
+   such rules with no open premises, our program type checks. We have to rewrite
+   the typing rules of the paper, to get rules which are syntax directed. Syntax
+   directed means we can infer from the syntax alone what we have to check next
+   i. e. which rule with which premises we have to apply. Here are the rules
+   which have to be rewritten.
    + *(Ty-Inst)*
    + *(Param-Abstr)*
    This rules contain variables in the premises where their type isn't in the
    conclusion. So if we want to type-check something which is the conclusion of
    such a rule we have no way of knowing what this variables are.
 
-   We don't need the weaking rules because we can lookup a variable in a
-   context.
-
-   So the following rules get removed.
+   We don't need the weakening rules because we can lookup a variable in a
+   context. So the following rules get removed.
    + *(TyVar-Weak)*
    + *(Ty-Weak)*
    The order in *TyCtx* isn't relevant so we use a Map for it.  The order
    of *Ctx* is relevant because types of later variables can refer to
    former variables and application instantiate the first varibale in
-   *Ctx*
+   *Ctx*.  We add a new Ctx for data types.  We also need a context for the
+   parameters. *Ctx* can contain variables from this context, but not from
+   *TyCtx*.
 
-   We also rewrite the rules which are already syntax-directed to rules
-   which work on our syntax
+   We also rewrite the rules which are already syntax-directed to rules which
+   work on our syntax.   We will mark semantic differences in the rewritten rules
+   gray. We use variables $\Phi,\Phi',\Phi_1,\Phi_2,\dots$ for parameter contexts,
+   $\Theta,\Theta',\Theta_1,\Theta_2,\dots$ for type variable contexts and
+   $\Gamma,\Gamma',\Gamma_1,\Gamma_2,\dots$ for term variable contexts.
 
-   We add a new Ctx for data types
-
-   We will mark semantic differences in the rewritten rules gray.
 *** Context rules
     The rules for valid contexts are already syntax directed so we take
     just them
