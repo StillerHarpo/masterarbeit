@@ -167,7 +167,8 @@ inferTypeDuctiveWithPars pars od@OpenDuctive{..} =
   >> pure (substParsInCtx 0 pars gamma)
 
 checkTypeDuctive :: OpenDuctive -> TI ann ()
-checkTypeDuctive OpenDuctive{..} =
+checkTypeDuctive OpenDuctive{..} = do
+  checkParCtx parameterCtx
   local (over parCtx (parameterCtx++))
         (mapM_ checkStrDef strDefs)
     where
