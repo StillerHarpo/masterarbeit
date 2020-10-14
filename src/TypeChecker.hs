@@ -123,7 +123,7 @@ checkCtx ctx' = catchError (checkCtx' ctx')
       pure ()
     checkCtx' (typ:ctx') = do
       local (over ctx (++[typ])) (checkCtx' ctx')
-      checkType typ []
+      local (set tyCtx []) (checkType typ [])
 
 checkType :: TypeExpr -> Kind -> TI ann ()
 checkType e k = inferType e >>= (evalInTI . betaeqCtx k)
