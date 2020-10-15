@@ -691,7 +691,7 @@
 
   In section [[Abstract Syntax]] we will develop the abstract syntax of our language
   from the rare syntax in the paper.  Then we rewrite the typing rules in [[*Typing rules]]
-  At last we look at the implementation of the type action in [[*Type Actions]]
+  At last we look at the implementation of the reduction in [[*Evaluation]]
 ** Abstract Syntax
    In the following we will scratch out the abstract syntax. We will give every
    inductive and coinductive type a name. They will be defined via statements.
@@ -1375,8 +1375,23 @@
      A corecursion produces an coinductive type $\nu$.  We have to give it a
      type $C$ and list the destructors together with they should be destruct to.
      We get the syntax directed rule analog as in [[Recursion]].
-
-** Type Actions
+     
+** Evaluation 
+   
+   #+name: reduction-steps
+   \begin{figure}
+     \begin{align*}
+       ((x).A) @ t \longrightarrow_p A[t/x]\\
+       \rec \vv{(\Gamma_k,y_k).g_k}@(\sigma_k\bullet\tau)@(\alpha_k@\tau@u)\succ g_k\left[ \hat{A_k}(\rec\vv{(\Gamma_k,y_k).g_k}@\id{\Gamma}@x)/y_k \right][\tau,u]\\
+       \xi_k@\tau@(\corec \vv{(\Gamma_k,y_k).g_k}@(\sigma_k\bullet\tau)@u)\succ g_k \hat{A_k}(\corec\vv{(\Gamma_k,y_k).g_k}@\id{\Gamma}@x)[g_k/x] [\tau,u]
+     \end{align*}
+   \caption{Reduction steps}
+   \end{figure}
+ 
+   Their are 3 kinds of reduction steps in this system. There are given in
+   figure [[reduction-steps]] One is standard beta reduction on the type level. If
+   we apply a lambda to a term we substitute the term for the binding variable
+   in the body. This body is then the result of the reduction
    \begin{definition}
      Let $n \in \mathbb{N}$ and $1 \leq i \leq n$.
      Let:
