@@ -109,7 +109,9 @@
 \newcommand{\Conv}[1]{\RightLabel{\textbf{(Conv)}}\BinaryInfC{#1}}
 \newcommand{\Proj}[1]{\RightLabel{\textbf{(Proj)}}\UnaryInfC{#1}}
 \newcommand{\TermWeak}[1]{\RightLabel{\textbf{(Term-Weak)}}\BinaryInfC{#1}}
-\newcommand{\IndI}[1]{\RightLabel{\textbf{(Ind-I)}}\UnaryInfC{#1}}
+\newcommand{\IndILabel}{\RightLabel{\textbf{(Ind-I)}}}
+\newcommand{\IndI}[1]{\IndILabel\UnaryInfC{#1}}
+\newcommand{\IndIBinary}[1]{\IndILabel\BinaryInfC{#1}}
 \newcommand{\CoindE}[1]{\RightLabel{\textbf{(Coind-E)}}\UnaryInfC{#1}}
 \newcommand{\IndE}{\RightLabel{\textbf{(Ind-E)}}}
 \newcommand{\CoindI}{\RightLabel{\textbf{(Coind-I)}}}
