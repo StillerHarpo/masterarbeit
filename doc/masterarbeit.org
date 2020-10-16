@@ -697,10 +697,16 @@
   in section [[Typing rules]] and a detailed explanation of the reduction in [[Evaluation]].
 
 * Implementation
-  In this section we look at the implementation details
+  In this section we look at the implementation details.  We use the functional
+  programming language haskell.  Haskell is a pure language.  This means
+  functions which aren't in the IO monad have no side effect.  The only IO we
+  are doing is reading a file and as the last step printing it.  Because
+  everything between is pure, we can test it without bordering on side effects.
+  Another feature of haskell, which will be get useful in our implementation is
+  pattern matching.  We will see its usefulness in section [[Typing rules]].
 
   In section [[Abstract Syntax]] we will develop the abstract syntax of our language
-  from the rare syntax in the paper.  Then we rewrite the typing rules in [[*Typing rules]]
+  from the rare syntax in the paper.  Then we rewrite the typing rules in [[*Typing rules]].
   At last we look at the implementation of the reduction in [[*Evaluation]]
 ** Abstract Syntax
    In the following we will scratch out the abstract syntax. We will give every
@@ -950,6 +956,11 @@
    gray. We use variables $\Phi,\Phi',\Phi_1,\Phi_2,\dots$ for parameter contexts,
    $\Theta,\Theta',\Theta_1,\Theta_2,\dots$ for type variable contexts and
    $\Gamma,\Gamma',\Gamma_1,\Gamma_2,\dots$ for term variable contexts.
+
+   In the module ~TypeChecker~ we will implement the following rules.  It
+   defines a monad ~TI~ which can throw errors and has a reader on the contexts
+   in which we are type checking.  To add something to a context we use the
+   function ~local~.
 
 *** Context rules
     The rules for valid contexts are already syntax directed so we take
@@ -1227,7 +1238,7 @@
     We just check every variable for the kinds in $\Phi'$ one after the other.
     We also have to substitute the type into the context.  Because kinds in
     a parameter context can depend on variables previously defined in this context.
-    
+
 *** Unit expression introduction
     The rule
     \begin{center}
@@ -1347,7 +1358,7 @@
       \TrinaryInfC{\graybox{$\Phi|\Theta|$}$\Delta\vdash$ rec \graybox{$\mu<\vv{D}>$ to C};
         $\vv{\text{Constr}_k\vv{x_k}\text{ } y_k = g_k}:(\Gamma,y:\mu$\graybox{$[\vv{D}]$}$@id_\Gamma)\rat C@id_\Gamma$}
      \end{prooftree}
-     
+
      We are recursing over some previously inductive defined type $\mu$ to some
      type $C$.  This types must have the same context.  Recursing is done by
      listing each constructor with the result which the hole expression should
@@ -1381,27 +1392,44 @@
       \TrinaryInfC{\graybox{$\Phi|\Theta|$}$\Delta\vdash$ rec \graybox{C to $\nu<\vv{D}>$};
         $\vv{\text{Destr}_k\vv{x_k}\text{ } y_k = g_k}:(\Gamma,y:C@id_\Gamma)\rat \nu$\graybox{$[\vv{D}]$}$@id_\Gamma$}
      \end{prooftree}
-     
+
      A corecursion produces an coinductive type $\nu$.  We have to give it a
      type $C$ and list the destructors together with they should be destruct to.
      We get the syntax directed rule analog as in [[Recursion]].
-     
-** Evaluation 
-   
+
+** Evaluation
    #+name: reduction-steps
    \begin{figure}
      \begin{align*}
        ((x).A) @ t \longrightarrow_p A[t/x]\\
        \rec \vv{(\Gamma_k,y_k).g_k}@(\sigma_k\bullet\tau)@(\alpha_k@\tau@u)\succ g_k\left[ \hat{A_k}(\rec\vv{(\Gamma_k,y_k).g_k}@\id{\Gamma}@x)/y_k \right][\tau,u]\\
-       \xi_k@\tau@(\corec \vv{(\Gamma_k,y_k).g_k}@(\sigma_k\bullet\tau)@u)\succ g_k \hat{A_k}(\corec\vv{(\Gamma_k,y_k).g_k}@\id{\Gamma}@x)[g_k/x] [\tau,u]
+       \xi_k@\tau@(\corec \vv{(\Gamma_k,y_k).g_k}@(\sigma_k\bullet\tau)@u)\succ \hat{A_k}(\corec\vv{(\Gamma_k,y_k).g_k}@\id{\Gamma}@x)[g_k/x] [\tau,u]
      \end{align*}
    \caption{Reduction steps}
    \end{figure}
- 
    Their are 3 kinds of reduction steps in this system. There are given in
-   figure [[reduction-steps]] One is standard beta reduction on the type level. If
-   we apply a lambda to a term we substitute the term for the binding variable
-   in the body. This body is then the result of the reduction
+   figure [[reduction-steps]]. The implementation of this is in ~Eval.hs~. One is
+   standard beta reduction on the type level. If we apply a lambda to a term we
+   substitute the term for the binding variable in the body. This body is then
+   the result of the reduction. The other two are reductions on the term level,
+   for the (co)inductive types. Here $\sigma_k \bullet\tau$ is a context
+   morphism, where we first substitute with $\tau$ and then with $\sigma_k$. If
+   we apply a recursion to this context morphism and a constructor, which is
+   fully applied, we lookup the case for this constructor. In this case we
+   substitute $\tau$ for the variables from $\Gamma_k$ and $u$, where we apply
+   the recursion to all recursive occurrences, for $y_k$. So a recursion is
+   destructing an inductive type and all its recursive occurrences to another
+   type, while we use different cases for the different constructors of the
+   type. On the contrary corecurison is constructing a coinductive type. If we
+   apply a destructor on such a corecursion, we are taking the case of this
+   destructor. In this case we are applying the corecurison to all recursive
+   occurrences. $\tau$ and $u$ are substituted as in recursion. The type action
+   is responsible for the applying to the recursive occurrences. The variables
+   from $\id{\Gamma}$ get substituted by the type action.  The type action is
+   implemented in the module ~TypeAction.hs~.  Both the type action and the
+   evaluation are done in the ~Eval~ monad.  This monad has access to the
+   previously defined statements. We will now define the type action.
+
    \begin{definition}
      Let $n \in \mathbb{N}$ and $1 \leq i \leq n$.
      Let:
@@ -1411,10 +1439,6 @@
        \Gamma_i \vdash B_i : \ast \\
        \Gamma_i, x : A_i \vdash t_i : B_i
      \end{align*}
-     We will define the type action so that the following holds
-     \begin{equation*}
-       \Gamma',\Gamma,x:\hat{C}(\vv{A})\vdash\hat{C}(\vv{t}):\hat{C}(\vv{B})
-     \end{equation*}
      Then we define the type action on terms inductively over $C$
      \begin{align*}
        \begin{array}{ll}
@@ -1425,19 +1449,32 @@
          &\text{for }\Theta\mid\Gamma'\vdash C':(y,\Gamma)\rat*\\
          \widehat{(y).C'}(\vv{t})=\widehat{C'}(\vv{t}),
          &\text{for }\Theta\mid(\Gamma',y)\vdash C':\Gamma\rat*\\
-         \widehat{\mu(Y:\Gamma\rat*;\vv{\sigma};\vv{D}} =\text{rec}^{R_A}\vv{(\Delta_k,x).g_k}@\id{\Gamma}@x
+         \widehat{\mu(Y:\Gamma\rat*;\vv{\sigma};\vv{D})} =\text{rec}^{R_A}\vv{(\Delta_k,x).g_k}@\id{\Gamma}@x
          &\text{for } \Theta,Y:\Gamma\rat*\mid\Delta_k\vdash D_k:*\\
          \quad\text{with } g_k = \alpha_k^{R_B}@\id{\Delta_k}@\left(\widehat{D_k}(\vv{t},x)\right)\\
          \quad\text{and } R_A=\mu(Y:\Gamma\rat*;\vv{\sigma};\vv{D}[\vv{(\Gamma_i).A}/\vv{X}])\\
          \quad\text{and } R_B=\mu(Y:\Gamma\rat*;\vv{\sigma};\vv{D}[\vv{(\Gamma_i).B}/\vv{X}])\\
-         \widehat{\nu(Y:\Gamma\rat*;\vv{\sigma};\vv{D}} =\text{corec}^{R_B}\vv{(\Delta_k,x).g_k}@\id{\Gamma}@x
+         \widehat{\nu(Y:\Gamma\rat*;\vv{\sigma};\vv{D})} =\text{corec}^{R_B}\vv{(\Delta_k,x).g_k}@\id{\Gamma}@x
          &\text{for } \Theta,Y:\Gamma\rat*\mid\Delta_k\vdash D_k:*\\
          \quad\text{with } g_k = \widehat{D_k}(\vv{t},x)[(\xi_k^{R_A}@\id{\Delta_k}@x)/x]\\
          \quad\text{and } R_A=\mu(Y:\Gamma\rat*;\vv{\sigma};\vv{D}[\vv{(\Gamma_i).A}/\vv{X}])\\
          \quad\text{and } R_B=\mu(Y:\Gamma\rat*;\vv{\sigma};\vv{D}[\vv{(\Gamma_i).B}/\vv{X}])\\
        \end{array}
      \end{align*}
+     And the type action on types as follow
+     \begin{equation*}
+       \hat{C}(\vv{A})=C[\vv{(\Gamma_i).A}/\vv{X}]@\id{\Gamma}
+     \end{equation*}
    \end{definition}
+   The type action generates a term with a free variable $x$.  In the type of
+   this term we have changed all the free variables to the types of $\vv{t}$.
+   Therefore the following holds
+   \begin{prooftree}
+     \AxiomC{$X : \Gamma_1\rat*|\Gamma_2'\vdash C:\Gamma_2\rat*$}
+     \AxiomC{$\Gamma_1, x:A\vdash t:B$}
+     \BinaryInfC{$\Gamma_2',\Gamma_2,x:\hat{C}(\vv{A})\vdash\hat{C}(\vv{t}):\hat{C}(\vv{B})$}
+   \end{prooftree}
+
    #+NAME: abstrid
    #+begin_theorem
     $(\Gamma).A@\id{\Gamma}\leftrightarrow_T A$
