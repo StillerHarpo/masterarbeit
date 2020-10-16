@@ -42,10 +42,25 @@
   by pattern matching on the constructor. But it is hard to add a new
   constructor. We then have to add this constructor to every pattern matching
   on that type. For coinductive types its the other way around. For more on this
-  see cite:binder2019decomposition
-
-  In section [[Coinductive Types]] we will see how coinductive can be defined. hen,
-  in section [[*Implementation]] we will m
+  see cite:binder2019decomposition.  In the implemented syntax we can define
+  partial streams like the following
+  #+begin_example
+  codata PStr<A : Set> : (n : Conat) -> Set where
+    Hd : (k : Conat) -> PStr (succ @ k) -> A
+    Tl : (k : Conat) -> PStr (succ @ k) -> PStr @ k
+  #+end_example
+  And the Pi type
+  #+begin_example
+  codata Pi<A : Set, B : (x : A) -> Set> : Set where
+    Inst : (x : A) -> Pi -> B @ x
+  #+end_example
+  In chapter [[Coinductive Types]] we will see how coinductive can be defined. We
+  will see in chapter [[Coinductive Types in dependent languages]] how they are
+  defined in the dependently typed languages coq and agda.  In chapter
+  [[Type Theory based on dependent Inductive and Coinductive Types]] we see how they
+  are defined in cite:basold2016type.  We will then in chapter [[*Implementation]]
+  explain how this theory is implemented.  At last we look at the examples from
+  this paper in the implemented syntax.
 
 * Coinductive Types
   Inductive types are defined via their constructors.  Coinductive types on

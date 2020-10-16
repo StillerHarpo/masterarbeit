@@ -1,0 +1,13 @@
+codata Conat : Set where
+  Prev : Conat -> Maybe<Conat>
+
+zero = corec Unit to Conat where
+         { Prev u = Nothing<Unit> @ () } @ ()
+
+succ = corec Conat to Conat where
+         { Prev n = rec Maybe<Conat> to Maybe<Conat> where
+                           { Nothing u = Just<Conat> @ zero
+                           ; Just n = Just<Conat> @ n } @ (Prev @ n) }
+                                           
+one = succ @ zero
+two = succ @ one

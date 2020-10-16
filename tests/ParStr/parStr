@@ -1,0 +1,3 @@
+codata PStr<A : Set> : (n : Conat) -> Set where
+  Hd : (k : Conat) -> PStr (succ @ k) -> A
+  Tl : (k : Conat) -> PStr (succ @ k) -> PStr @ k
