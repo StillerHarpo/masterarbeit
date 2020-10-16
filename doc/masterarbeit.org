@@ -672,19 +672,30 @@
    Termination Checking with sized types: https://agda.readthedocs.io/en/latest/language/sized-types.html
 
 * Coinductive Types in other languages
-* Type Theory base of dependent Inductive and Coinductive Types
+* Type Theory based on dependent Inductive and Coinductive Types
   In the paper cite:basold2016type a type theory, where inductive types and
-  coinductive types can depend on values, is developed.  For example we can, in
-  contrast to the coinductive types of coq and agda, define streams which
-  depend on their defintion length.  The theory differentiates types from terms.
-  We don't have infinite universes, where a term in universe $n$ has a type
-  in universe $n+1$(This is how it is done in coq cite:sozeau2014universe  and
-  agda cite:agdadocuniverselevels).  Therefor types can only depend on values,
-  not on other types.  We only have funcitions on the type level.  We will see
-  that functions are definable on the term level.  We will give the rules for the
-  theory in section [[Typing rules]] along with the
-
-*** Type Action
+  coinductive types can depend on values, is developed. For example we can, in
+  contrast to the coinductive types of coq and agda, define streams which depend
+  on their definition length. The theory differentiates types from terms. We
+  don't have infinite universes, where a term in universe $n$ has a type in
+  universe $n+1$(This is how it is done in coq cite:sozeau2014universe and agda
+  cite:agdadocuniverselevels). Therefore types can only depend on values, not on
+  other types. We only have functions on the type level. This function abstract
+  over terms. For example $\lambda x.A$ is a type where all occurences of the
+  term variable $x$ in $A$ are bound . We will see that functions are definable
+  on the term level. We can apply types to terms. For example $A @ t$ means we
+  apply the term $A$ to $x$. Every type has a kind. A kind is either $*$ or
+  $\Gamma\rat*$. Here $\Gamma$ is a context, which states to what terms we can
+  apply the type. For example we can apply $A$ of kind $(x:B)\rat*$ only to a
+  term of type $B$. If we apply it to $t$ of type $B$, we get a type of kind
+  $*$. We write $\rat$ instead of $\rightarrow$ to indicate, that this are not
+  functions. We can also apply a term to annother term. For example $t@s$ means
+  we apply the term $t$ to the term $s$.  Terms also can depend on contexts.
+  For example if we have a term $t$ of type $(x:A)\rat B$ and apply it to a term
+  $s$ of type $A$ we get a term of type $B$.  We can also define our own types.
+  $\mu(X:\Gamma\rat*;\vv{\sigma}\vv{A})$ is an inductive type and
+  $\nu(X:\Gamma\rat*;\vv{\sigma}\vv{A})$ is an coinductive type. We will give the rules for the theory
+  in section [[Typing rules]] and a detailed explanation of the reduction in [[Evaluation]].
 
 * Implementation
   In this section we look at the implementation details
