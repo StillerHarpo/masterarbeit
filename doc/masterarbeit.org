@@ -671,7 +671,6 @@
 
    Termination Checking with sized types: https://agda.readthedocs.io/en/latest/language/sized-types.html
 
-* Coinductive Types in other languages
 * Type Theory based on dependent Inductive and Coinductive Types
   In the paper cite:basold2016type a type theory, where inductive types and
   coinductive types can depend on values, is developed. For example we can, in
