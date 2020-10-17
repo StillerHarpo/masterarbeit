@@ -707,9 +707,45 @@
   we apply the term $t$ to the term $s$.  Terms also can depend on contexts.
   For example if we have a term $t$ of type $(x:A)\rat B$ and apply it to a term
   $s$ of type $A$ we get a term of type $B$.  We can also define our own types.
-  $\mu(X:\Gamma\rat*;\vv{\sigma}\vv{A})$ is an inductive type and
-  $\nu(X:\Gamma\rat*;\vv{\sigma}\vv{A})$ is an coinductive type. We will give the rules for the theory
-  in section [[Typing rules]] and a detailed explanation of the reduction in [[Evaluation]].
+  $\mu(X:\Gamma\rat*;\vv{\sigma};\vv{A})$ is an inductive type and
+  $\nu(X:\Gamma\rat*;\vv{\sigma};\vv{A})$ is an coinductive type. $X$ is a
+  variable which stands for the recursive occurrence of the type.  The $\vv{A}$ can
+  contain this variable. There are also contexts $\vv{\Gamma}$, which are implicit
+  in the paper.  $\sigma_k$ and $A_k$ can contain variables from $\Gamma_k$.
+  $\sigma_k$ is a context morphism from $\Gamma_k$ to $\Gamma$.  A context
+  morphism is a sequence of terms, which depend on $\Gamma_k$ and instantiate
+  $\Gamma$. $\vv{\sigma}$, $\vv{A}$ and $\vv{\Gamma}$ are of same length.
+
+  In this theory we can define partial streams on some type $A$ like the following.
+  \begin{align*}
+  &\text{PStr }A := \nu(X:(n:\text{Conat})\rat*;(\text{succ} @ n, \text{succ} @ n);(A, X @ n))\\
+  &\text{with } \Gamma_1 = (n:\text{Conat}) \text{ and } \Gamma_n = (n:\text{Conat})
+  \end{align*}
+  Here ~succ~ is the successor on conats.  Conats are natural numbers with one
+  additional element, infinity.  See [[Extended Naturals]] for their definition.
+  Here the first destructor is the head.  It becomes a stream with lenght
+  $\text{succ} @ N$ and returns an $A$.  The second destructor is the tail.  It
+  becomes also an stream of length $\text{succ} @ N$.  It gives back an $X @ n$,
+  which is a stream of length $n$.  We can also define the Pi type from $A$ to $B$,
+  where $B$ can depend on $A$
+  \begin{align*}
+  &\Pi x:A.B := \nu(_:*;\epsilon_1;B)\\
+  &\text{with } \Gamma_1 = (x:A)
+  \end{align*}
+  By ~_~ we mean, we are ignoring this variable. $\epsilon_1$ is one empty
+  context morphism.  So the only destructor gives back an $B$ which can depend
+  on $x$ of type $A$.  It is the function application.
+
+  To construct a inductive types we use constructors (written
+  $\alpha_k^{\mu(X:\Gamma\rat*;\vv{\sigma};\vv{A})}$ in the paper, which is the k'st
+  constructor of the given type).  We can destruct it with recursion (written
+  rec $\vv{(\Gamma_k.y_k).g_k}$).  Coinductive type work the other way around.
+  We destruct them with destructors (written
+  $\xi_k^{\nu(X:\Gamma\rat*;\vv{\sigma};\vv{A})}$) and construct them with
+  corecursion (written corec $\vv{(\Gamma_k.y_k).g_k}$).
+
+  We will give the rules for the theory in section [[Typing rules]] and a detailed
+  explanation of the reduction in [[Evaluation]].
 
 * Implementation
   In this section we look at the implementation details.  We use the functional
