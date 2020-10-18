@@ -675,16 +675,55 @@
    The problem with this definition is that agda doesn't know that $x-y$ is
    smaller than $x+1$, which is clearly the case (x and y are positive).  This
    definition would work perfectly fine in a language without termination
-   checking (like haskell).
+   checking (like haskell).  Agda only checks an argument is structurally
+   decreasing.  Here it is neither the case for l~x~ nor for ~y~.
 
    To remedy this problem sized types where introduced first to mini-agda (a
-   language specifcilly develobed to expolore them) by abel.  Later they got
-   introduced to agda itself.
+   language specifically developed to explore them) by cite:abel2010miniagda.
+   Later they got introduced to agda itself. Sized types allow us to annote data
+   with their size. Functions can use this sizes to check termination and
+   productivity.
 
-   Sized types allow us to annote data with their size.  Functions can use this
-   sizes to check termination and productivity.
-
-   Termination Checking with sized types: https://agda.readthedocs.io/en/latest/language/sized-types.html
+   We can now define the natural numbers depending on a size argument.
+   #+begin_src agda
+   data ℕ (i : Size) : Set where
+     zero : ℕ i
+     suc : ∀{j : Size< i} → ℕ j → ℕ i
+   #+end_src
+   The natural number now depends on a size ~i~.  The constructor ~zero~ is of
+   arbitrary size ~i~.  ~suc~ gets an size ~j~ which is smaller than ~i~, a
+   natural number of size ~j~ and gives back a natural number of size ~i~.  This
+   means the size of the input is smaller than the size of the output.  For
+   inductive types, a size is upper bound on the number of constructors.  With
+   ~suc~ we add an constructor so the size has to increase  ~i~.  This means the
+   size of the input is smaller than the size of the output.  For inductive
+   types, a size is upper bound on the number of constructors.  With ~suc~ we
+   add an constructor so the size has to increase.  We can now define
+   subtraction on this sized nats.
+   #+begin_src agda
+   _-_ : {i : Size} → ℕ i → ℕ ∞ → ℕ i
+   zero    - _      = zero
+   n       - zero   = n
+   (suc n) - (suc m) = n - m
+   #+end_src
+   Through the sized annotations, we know now that the result isn't larger than
+   the first input.  $\infty$ means that the size isn't bound.  If the first
+   argument is zero the result is also zero, which has the same type.  If the
+   second argument is zero we return just the first.  In the last case both
+   arguments are non-zero.  We call subtraction recursively on the predecessors
+   of the inputs.  Here the size and both arguments are smaller.  So the
+   function terminates.  Tough the type is smaller then $i$, the result type
+   checks because sizes are upper bounds.  We can now define definition.
+   #+begin_src agda
+   _/_ : {i : Size} → ℕ i → ℕ ∞ → ℕ i
+   zero  / _ = zero
+   suc x / y = suc ( (x - y) / y)
+   #+end_src
+   From the definition of ~suc~ we now that the size of ~x~ is smaller than ~i~.
+   Because the result of ~-~ has the same size as it's first input (here ~x~),
+   we also now that ~(x - y)~ has the same size as ~x~. Therefor ~(x - y)~ is
+   smaller than ~suc x~ and the function is decreasing on the first argument.
+   Also, agda accepts this definition.
 
 * Type Theory based on dependent Inductive and Coinductive Types
   In the paper cite:basold2016type a type theory, where inductive types and
