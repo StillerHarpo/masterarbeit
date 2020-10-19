@@ -1479,7 +1479,7 @@
       \noLine
       \UnaryInfC{$\vv{\Delta,\Gamma_k$\graybox{$[\vv{D}]$}$,y_k:(C@\sigma_k$\graybox{$[\vv{D}]$}$)\vdash g_k:\text{\graybox{$B_k$}}}$}
       \RightLabel{\textbf{(Coind-I)}}
-      \TrinaryInfC{\graybox{$\Phi|\Theta|$}$\Delta\vdash$ rec \graybox{C to $\nu<\vv{D}>$};
+      \TrinaryInfC{\graybox{$\Phi|\Theta|$}$\Delta\vdash$ corec \graybox{C to $\nu<\vv{D}>$};
         $\vv{\text{Destr}_k\vv{x_k}\text{ } y_k = g_k}:(\Gamma,y:C@id_\Gamma)\rat \nu$\graybox{$[\vv{D}]$}$@id_\Gamma$}
      \end{prooftree}
 
@@ -2230,7 +2230,6 @@
     \TrinaryInfC{$\vdash \text{rec}((y_k).\alpha_1^\textbf{N}@\langle\rangle'
                     ,(y_k).\alpha_2^\textbf{N} @ y_k):(y:\text{List }\textbf{1})\rightarrow\textbf{N}$}
     \end{scprooftree}
-
 
 ** Rose Tree
    Rose Tree A = $\nu(X:*;\epsilon_2;(\textbf{1},List X)$
