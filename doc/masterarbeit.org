@@ -2242,8 +2242,20 @@
    leaf<A : Set> = Leaf<A> @ ()
    #+end_example
 
-\appendix
+* Conclusion
+  We have implemented a depend type theory with inductive and coinductive types.
+  In this theory, contrary to coq and agda, coinductive types can also depend on
+  values.  The downside is that we don't have universes.  This prevents type
+  polymorphism.  Further work needs do be done to solve this.
 
+  Another problem is, that each constructor or destructor has at least one
+  argument. The argument with the recursive occurrence. For example we have to
+  apply an unit to the constructors of a boolean types. We could allow recursive
+  occurrences in the contexts of the constructors and destructors. This makes it
+  possible to remove the argument the argument with the recursive occurrence. We
+  then have to be change the evaluation rules.
+
+\appendix
 * Type action derivation
 \begin{landscape}
 \begin{changemargin}{-1cm}{-1cm}
