@@ -2023,7 +2023,7 @@
 
      Evaluation on one goes as follows
 
-    \begin{lstlisting}
+    #+begin_example
     apply = Apply<Nat,(v : Nat).Nat>
     one = S @ (Z @ ())
     apply @ id<Nat> @ one
@@ -2053,7 +2053,7 @@
          Zero x = Zero @ x
          Succ x = Suc @ x) @ one
     = one
-    \end{lstlisting}
+    #+end_example
 ** Sigma Type
 
    The sigma type is a dependent pair of two types.  The second type can depend on
@@ -2138,7 +2138,7 @@
     /corec/ evaluation works.  We will call the /rec/ part in the definition of
     /replicate/ /rep/.
 
-    \begin{lstlisting}
+    #+begin_example
     apply (lambda n (rep @ n)) 1
     = Apply @ 1 @ (lampda n (rep @ n))
     = Apply @ 1 @ ((corec Pi to Unit where
@@ -2160,7 +2160,7 @@
          VecNil x = VecNil@x
          VecCons n x = VecCons@n@x)@1@(rep@1)
     = ConsUnit @ (NilUnit @ ())
-    \end{lstlisting}
+    #+end_example
 
 ** Maybe
 

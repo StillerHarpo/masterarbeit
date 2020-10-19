@@ -12,3 +12,11 @@
                   ("\\subsubsection{%s}" . "\\subsubsection*{%s}")
                   ("\\paragraph{%s}" . "\\paragraph*{%s}")
                   ("\\subparagraph{%s}" . "\\subparagraph*{%s}"))))
+
+(defun my-latex-filter-verbatim (text backend info)
+  "make verbatim enviroment to lstlisting"
+  (when (org-export-derived-backend-p backend 'latex)
+    (replace-regexp-in-string "{verbatim}" "{lstlisting}" text)))
+
+(add-to-list 'org-export-filter-example-block-functions
+             'my-latex-filter-verbatim)
