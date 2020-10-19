@@ -1419,7 +1419,7 @@
     \begin{center}
       \AxiomC{\graybox{$\Phi|\Theta|\Gamma\vdash \vv{B} : \Phi'$}}
       \RightLabel{\textbf{(Ind-I)}}
-      \UnaryInfC{\graybox{$\Sigma|\Theta|\Gamma$}$\vdash$Destr\graybox{$<\vv{B}>$}$:(\Gamma_k$\graybox{$[\vv{B}]$}$,y:\nu@\sigma_k)$\graybox{$[\vv{B}]$}$\rat
+      \UnaryInfC{\graybox{$\Phi|\Theta|\Gamma$}$\vdash$Destr\graybox{$<\vv{B}>$}$:(\Gamma_k$\graybox{$[\vv{B}]$}$,y:\nu@\sigma_k)$\graybox{$[\vv{B}]$}$\rat
         A_k[\nu/X]$\graybox{$[\vv{B}]$}$$}
       \DisplayProof
     \end{center}
@@ -1443,7 +1443,7 @@
       \UnaryInfC{\graybox{$\vv{\vdash B_k\equiv_\beta(C@\sigma_k[\vv{D}])}$}}
       \AxiomC{\graybox{$\Phi|\Theta|\Delta\vdash \vv{D}:\Phi'$}}
       \noLine
-      \UnaryInfC{$\vv{\Delta,\Gamma_k$\graybox{$[\vv{D}]$}$,y_k:A_k$\graybox{$[\vv{D}]$}$[C/X]\vdash g_k:\text{\graybox{$B_k$}}}$}
+      \UnaryInfC{$\vv{$\graybox{$\Phi||$}$\Delta,\Gamma_k$\graybox{$[\vv{D}]$}$,y_k:A_k$\graybox{$[\vv{D}]$}$[C/X]\vdash g_k:\text{\graybox{$B_k$}}}$}
       \RightLabel{\textbf{(Ind-E)}}
       \TrinaryInfC{\graybox{$\Phi|\Theta|$}$\Delta\vdash$ rec \graybox{$\mu<\vv{D}>$ to C};
         $\vv{\text{Constr}_k\vv{x_k}\text{ } y_k = g_k}:(\Gamma,y:\mu$\graybox{$[\vv{D}]$}$@id_\Gamma)\rat C@id_\Gamma$}
@@ -1477,7 +1477,7 @@
       \UnaryInfC{\graybox{$\vv{\vdash B_k\equiv_\beta A_k[\vv{D}][C/X]}$}}
       \AxiomC{\graybox{$\Phi|\Theta|\Delta\vdash \vv{D}:\Phi'$}}
       \noLine
-      \UnaryInfC{$\vv{\Delta,\Gamma_k$\graybox{$[\vv{D}]$}$,y_k:(C@\sigma_k$\graybox{$[\vv{D}]$}$)\vdash g_k:\text{\graybox{$B_k$}}}$}
+      \UnaryInfC{$\vv{$\graybox{$\Phi||$}$\Delta,\Gamma_k$\graybox{$[\vv{D}]$}$,y_k:(C@\sigma_k$\graybox{$[\vv{D}]$}$)\vdash g_k:\text{\graybox{$B_k$}}}$}
       \RightLabel{\textbf{(Coind-I)}}
       \TrinaryInfC{\graybox{$\Phi|\Theta|$}$\Delta\vdash$ corec \graybox{C to $\nu<\vv{D}>$};
         $\vv{\text{Destr}_k\vv{x_k}\text{ } y_k = g_k}:(\Gamma,y:C@id_\Gamma)\rat \nu$\graybox{$[\vv{D}]$}$@id_\Gamma$}
