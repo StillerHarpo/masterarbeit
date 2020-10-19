@@ -1886,8 +1886,9 @@
 
 * Examples
 
-  In this section we reiterate the examples from the paper.  We use our
-  syntax, which is defined in [[Abstract Syntax]].
+  In this section we reiterate the example types from the paper.  We use our
+  syntax, which is defined in [[Abstract Syntax]].  We will also show some functions
+  on this types.  On some of them we will show the reduction steps in detail.
 
 ** Terminal Object
 
