@@ -1942,7 +1942,8 @@
    The product is defined as a coinductive type.  It has two destructors.
    The first gives back the first element.  And the second the second.
    The types A and B have to be concrete types.  We don't have type
-   polymorphism in our language.
+   polymorphism in our language.  We also define a pair expression which
+   generates a pair over corecursion.
    #+begin_example
    codata Product<A : Set, B : Set> : Set where
       Fst : Product -> A
@@ -1951,14 +1952,19 @@
                                          { Fst _ -> x
                                          ; Snd _ -> y} @ ()
    #+end_example
-   For different types we have to define different Products.  We will write
-   ProductNat for a product of two nats. ProductNatUnit is the prodcuct,
-   where the first element is a Nat and the second a Unit.
+   For types with other contexts we have to define different Products.  For
+   example if ~B~ depends on ~Nat~, we define product like the following.
+   #+begin_example
+   codata Pair<A : Set, B : (n : Nat) -> Set> : (n : Nat) -> Set where
+     First : (n : Nat) -> Pair n -> A
+     Second : (n : Nat) -> Pair n -> B @ n
+   #+end_example
+   Here the product also depends on ~Nat~. If ~A~ or ~B~ depends on valuse the
+   product must also depend on this values. This is the product we need for the
+   definition of vectors
 
 *** Swap funtion
-    We use the swap function on a product of 2 numbers, to illustrate
-    how evaluation on a coinductive type works.  The swap function is
-    defined as follows.
+    On this type we can define the swap function.
     #+begin_example
     swap<A : Set, B : Set> =
       corec Product<A,B> to Product<B,A> where
@@ -1967,22 +1973,22 @@
     #+end_example
     This is a well typed function as shown by the following proof
     \begin{prooftree}
-    \AxiomC{$(A : *, B : *)\vdash$ Product<A,B> : $*$}
-    \AxiomC{(x:Nat) $\vdash$ Snd @ x : ProductNat \textcircled{a}}
+    \AxiomC{$(A : *, B : *)||\vdash$ Product<A,B> : $*$}
+    \AxiomC{$(A : *, B : *)||(x:A) \vdash$ Snd @ x : Product<A,B> \textcircled{a}}
     \noLine
-    \UnaryInfC{(y : Nat) $\vdash$ Fst @ y : ProductNat \textcircled{b}}
-    \BinaryInfC{swap : (y : ProductNat) $\rat$ ProductNat}
+    \UnaryInfC{$(A : *, B : *)||(y : B) \vdash$ Fst @ y : Product<A,B> \textcircled{b}}
+    \BinaryInfC{$(A : *, B : *)|| \vdash$ swap : (p : Product<A,B>) $\rat$ Product<B,A>}
     \end{prooftree}
     We show \textcircled{a} in the following proof.  \textcircled{b} works analog
     \begin{prooftree}
-    \AxiomC{ProductNat : $*$}
-    \UnaryInfC{$\vdash$ Snd (y : Nat) $\rat$ ProductNat}
-    \AxiomC{Nat : $*$}
-    \BinaryInfC{(x : Nat) $\vdash$ Snd (y :Nat) $\rat$ ProductNat}
-    \AxiomC{Nat : $*$}
-    \UnaryInfC{(x : Nat) $\vdash$ x : Nat}
-    \BinaryInfC{(x : Nat) $\vdash$ Snd @ x : ProductNat}
+    \AxiomC{$(A : *, B : *)||(x : A) \vdash$ Snd : $(x : A) \rat$ Product<A,B>}
+    \AxiomC{$(x : A )(x)\rightsquigarrow A$}
+    \UnaryInfC{$(x : A) \vdash x : A$}
+    \BinaryInfC{$(A : *, B : *)||(x : A) \vdash$ Snd @ x : Product<A,B>}
     \end{prooftree}
+    For brevity we omitted the beta equality premises and the checking for of
+    the parameters. The beta equality premises wouldn't be interesting because
+    they all already syntactically identical.
 
 ** Binary Coproduct
 
