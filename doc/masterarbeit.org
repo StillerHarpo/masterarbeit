@@ -840,18 +840,25 @@
 
     #+name: syntax-for-declarations
     \begin{figure}
-    \begin{lstlisting}
-    declaration =
-      data Name<$C_1 : \Gamma_1$ -> *,$\dots$ ,$ C_n : \Gamma_n$ -> *> : $(x_1 : B_1,\dots,x_n : B_n)$ -> Set where
-        $Constr_1$ : $(x_{1_1}:B_{1_1},\dots,x_{n_1}: B_{n_1})$ -> $A_1[Name/X]$ -> Name $\sigma_{1_1}\dots \sigma_{1_n}$
-               $\vdots$                $\vdots$             $\vdots$            $\vdots$
-        $Constr_m$ : $(x_{1_m}:B_{1_m},\dots,x_{n_m}: B_{n_m})$ -> $A_i[Name/X]$ -> Name $\sigma_{m_1}\dots \sigma_{m_n}$
-     | codata Name<$C_1 : \Gamma_1$ -> *,$\dots$ ,$ C_n : \Gamma_n$ -> *> : $(x_1 : B_1,\dots,x_n : B_n)$ -> Set where
-        $Destr_1$ : $(x_{1_1}:B_{i_1},\dots,x_{n_1}: B_{n_1})$ -> Name $\sigma_{1_1}\dots \sigma_{1_n}$ -> $A_1[Name/X]$
-               $\vdots$                $\vdots$             $\vdots$            $\vdots$
-        $Destr_m$ : $(x_{1_m}:B_{1_m},\dots,x_{n_m}: B_{n_m})$ -> Name $\sigma_{m_1}\dots \sigma_{m_n}$ -> $A_i[Name/X]$
-     | name<$C_1 : Gamma_1$ -> *,$\dots$ ,$ C_n : Gamma_n$ -> *> $(x_1:A_1,\dots,x_n:A_n)$ = expr
-    \end{lstlisting}
+     \begin{align*}
+       \begin{array}{llll}
+        N &= &[A-Z][a-zA-Z0-9]* &\text{Names for types,}\\
+             & &&          \text{constructors}\\
+             & &&          \text{and destructors}\\
+        n &= &[a-z][a-zA-Z0-9]* &\text{Names for expressions}\\
+        ExprVar &= &x,y,z,\dots &\text{Expression variables} \\
+        TypeVar &= &X,Y,Z,\dots &\text{Type expression} \\
+             & &&          \text{variables}\\
+        ParVar  &= &A,B,C,\dots &\text{Parameter variables} \\
+        ExprCtx &= &\text{(} (ExprVar \text{ : } TypeVar)* \text{)} &\text{Expression Context} \\
+        ParCtx &= &\text{<} (ParVar \text{ : } ExprCtx \rightarrow \text{ Set})* \text{>} &\text{Parameter Context} \\
+        Decl &= &\text{data } N\; ParCtx \text{ : } ExprCtx \rightarrow \text{ Set where} &\text{Declarations}\\
+                  &&\quad(N \text{ : }  ExprCtx \rightarrow\text{} TyExpr \rightarrow N\; expr*)* &\\
+             &| &\text{codata } N\; ParCtx \text{ : } ExprCtx \rightarrow\text{ Set where}& \\
+         &&\quad(N \text{ : }  ExprCtx \rightarrow\text{} N\; expr* \rightarrow\text{} TyExpr)*& \\
+        &| &n \; ParCtx \; ExprCtx \text{ = } expr & \\
+      \end{array}
+    \end{align*}
     \caption{Syntax for declarations}
     \end{figure}
 
