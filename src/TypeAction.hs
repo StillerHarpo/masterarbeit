@@ -20,11 +20,11 @@ import           PrettyPrinter             ()
 type Eval ann = ExceptT (Doc ann) (Reader EvalCtx)
 
 data EvalCtx = EvalCtx { numPars :: Int
-                       , stmtCtx :: [Statement]}
+                       , declCtx :: [Decl]}
 
 emptyEvalCtx :: EvalCtx
 emptyEvalCtx = EvalCtx { numPars = 0
-                       , stmtCtx = []}
+                       , declCtx = []}
 
 runEval :: Eval ann a -> EvalCtx -> Either (Doc ann) a
 runEval eval = runReader (runExceptT eval)
@@ -151,13 +151,13 @@ lookupDefExpr :: Text -- ^ name of expr var
               -> [TypeExpr] -- ^ type parameters to check
               -> [Expr] -- ^ expr parameters to check
               -> Eval ann Expr
-lookupDefExpr t tyPars exprPars = asks stmtCtx >>= lookupDefExpr'
+lookupDefExpr t tyPars exprPars = asks declCtx >>= lookupDefExpr'
   where
-    lookupDefExpr' :: [Statement] -> Eval ann Expr
+    lookupDefExpr' :: [Decl] -> Eval ann Expr
     lookupDefExpr' []         = throwError $ "Variable"
                                               <+> pretty t
                                               <+> "not defined"
-    lookupDefExpr' (ExprDef{..}:stmts)
+    lookupDefExpr' (ExprDef{..}:decls)
       | t == name             = do
          -- TODO should be unnecessary because it's already type checked
          assert (length tyPars == length tyParameterCtx)
@@ -174,21 +174,21 @@ lookupDefExpr t tyPars exprPars = asks stmtCtx >>= lookupDefExpr'
                  <+> pretty exprParameterCtx)
          pure $ substParsInExpr 0 (reverse tyPars)
               $ substExprs 0 (reverse exprPars) expr
-      | otherwise             = lookupDefExpr' stmts
-    lookupDefExpr' (_:stmts)  = lookupDefExpr' stmts
+      | otherwise             = lookupDefExpr' decls
+    lookupDefExpr' (_:decls)  = lookupDefExpr' decls
 
 lookupDefTypeExpr :: Text -- ^ name of type var
                   -> [TypeExpr] -- ^ parameters to check
                   -> Eval ann TypeExpr
-lookupDefTypeExpr t parametersTyExpr = asks stmtCtx >>= lookupDefTypeExpr'
+lookupDefTypeExpr t parametersTyExpr = asks declCtx >>= lookupDefTypeExpr'
   where
-    lookupDefTypeExpr' :: [Statement] -> Eval ann TypeExpr
+    lookupDefTypeExpr' :: [Decl] -> Eval ann TypeExpr
     lookupDefTypeExpr' []        = throwError $ "Variable" <+> pretty t
                                                  <+> "not defined"
-    lookupDefTypeExpr' (TypeDef openDuctive@OpenDuctive{..}:stmts)
+    lookupDefTypeExpr' (TypeDef openDuctive@OpenDuctive{..}:decls)
       | t == nameDuc             = pure Ductive{..}
-      | otherwise                = lookupDefTypeExpr' stmts
-    lookupDefTypeExpr' (_:stmts) = lookupDefTypeExpr' stmts
+      | otherwise                = lookupDefTypeExpr' decls
+    lookupDefTypeExpr' (_:decls) = lookupDefTypeExpr' decls
 
 assert :: MonadError e m => Bool -> e -> m ()
 assert True  _   = pure ()

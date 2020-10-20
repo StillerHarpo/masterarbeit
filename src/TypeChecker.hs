@@ -33,7 +33,7 @@ type TI ann = ExceptT (Doc ann) (Reader ContextTI)
 data ContextTI = ContextTI { _ctx    :: Ctx
                            , _tyCtx  :: TyCtx
                            , _parCtx :: TyCtx
-                           , _defCtx :: [Statement]
+                           , _defCtx :: [Decl]
                            }
 $(makeLenses ''ContextTI)
 
@@ -41,12 +41,12 @@ runTI :: TI ann a -> ContextTI -> Either (Doc ann) a
 runTI ti = runReader (runExceptT ti)
 
 -- | Program type inference monad
-type PTI ann = ExceptT (Doc ann) (State [Statement])
+type PTI ann = ExceptT (Doc ann) (State [Decl])
 
-runPTI :: PTI ann a -> [Statement] -> (Either (Doc ann) a, [Statement])
+runPTI :: PTI ann a -> [Decl] -> (Either (Doc ann) a, [Decl])
 runPTI pti = runState (runExceptT pti)
 
-evalPTI :: PTI ann a -> [Statement] -> Either (Doc ann) a
+evalPTI :: PTI ann a -> [Decl] -> Either (Doc ann) a
 evalPTI pti = evalState (runExceptT pti)
 
 emptyCtx :: ContextTI
@@ -55,12 +55,12 @@ emptyCtx = ContextTI { _ctx = []
                      , _parCtx = []
                      , _defCtx = []}
 
-checkProgram :: [Statement] -> Either (Doc ann) [TypedExpr]
+checkProgram :: [Decl] -> Either (Doc ann) [TypedExpr]
 checkProgram = flip evalPTI [] . checkProgramPTI
 
-checkProgramPTI :: [Statement] -> PTI ann [TypedExpr]
+checkProgramPTI :: [Decl] -> PTI ann [TypedExpr]
 checkProgramPTI []                       = pure []
-checkProgramPTI (ExprDef{..} : stmts)    = do
+checkProgramPTI (ExprDef{..} : decls)    = do
   tiInPTI $ checkParCtx tyParameterCtx
   tiInPTI $ local (set parCtx tyParameterCtx) $ checkCtx exprParameterCtx
   ty <- Just <$> tiInPTI (local (set parCtx tyParameterCtx
@@ -69,16 +69,16 @@ checkProgramPTI (ExprDef{..} : stmts)    = do
                                  >>= (evalInTI . evalType)))
   -- expr <- evalInPTI $ evalExpr expr
   modify (ExprDef{..} :)
-  checkProgramPTI stmts
-checkProgramPTI (TypeDef duc : stmts)    =
+  checkProgramPTI decls
+checkProgramPTI (TypeDef duc : decls)    =
   tiInPTI (checkTypeDuctive duc)
   >> modify (TypeDef duc :)
-  >> checkProgramPTI stmts
-checkProgramPTI (Expression expr : stmts) =
+  >> checkProgramPTI decls
+checkProgramPTI (Expression expr : decls) =
   (:) <$> (TypedExpr <$> evalInPTI (evalExpr expr)
                      <*> tiInPTI (inferTerm expr
                                   >>= (evalInTI . evalType)))
-      <*> checkProgramPTI stmts
+      <*> checkProgramPTI decls
 
 tiInPTI :: TI ann a -> PTI ann a
 tiInPTI ti = do
@@ -89,7 +89,7 @@ tiInPTI ti = do
 
 evalInTI :: Eval ann a -> TI ann a
 evalInTI eval = do
-  stmtCtx <- view defCtx
+  declCtx <- view defCtx
   numPars <- length <$> view parCtx
   case runEval eval EvalCtx {..} of
     Left err -> throwError err
@@ -316,10 +316,10 @@ lookupDefTypeTI :: Text -- ^ name of expr var
                 -> TI ann Type
 lookupDefTypeTI t tyPars exprPars = view defCtx >>= lookupDefTypeTI'
   where
-    lookupDefTypeTI' :: [Statement] -> TI ann Type
+    lookupDefTypeTI' :: [Decl] -> TI ann Type
     lookupDefTypeTI' []                  =
          throwError $ "Variable" <+> pretty t <+> "not defined"
-    lookupDefTypeTI' (ExprDef{..}:stmts)
+    lookupDefTypeTI' (ExprDef{..}:decls)
       | t == name                        =
           do catchError (tyExprsForParCtx tyPars tyParameterCtx)
                         (throwError . (<> "\n while looking up variable "
@@ -339,9 +339,9 @@ lookupDefTypeTI t tyPars exprPars = view defCtx >>= lookupDefTypeTI'
                   , substPars 0 (reverse tyPars)
                     $ substTypeExprs (length ctx') (reverse exprPars) res)
       | otherwise                        =
-          lookupDefTypeTI' stmts
-    lookupDefTypeTI' (_:stmts)           =
-          lookupDefTypeTI' stmts
+          lookupDefTypeTI' decls
+    lookupDefTypeTI' (_:decls)           =
+          lookupDefTypeTI' decls
 
 tyExprsForParCtx :: [TypeExpr] -> TyCtx -> TI ann ()
 tyExprsForParCtx [] [] = pure ()
@@ -376,10 +376,10 @@ lookupDefKindTI :: Text -- ^ name of type var
                 -> TI ann Kind
 lookupDefKindTI t pars = view defCtx >>= lookupDefKindTI'
   where
-    lookupDefKindTI' :: [Statement] -> TI ann Kind
+    lookupDefKindTI' :: [Decl] -> TI ann Kind
     lookupDefKindTI' []                  =
           throwError $ "Variable" <+> pretty t <+> "not defined"
-    lookupDefKindTI' (TypeDef OpenDuctive{..}:stmts)
+    lookupDefKindTI' (TypeDef OpenDuctive{..}:decls)
       | t == nameDuc                     =
           do catchError (checkParKinds pars parameterCtx)
                         (throwError . (<> "\n while looking up variable "
@@ -388,9 +388,9 @@ lookupDefKindTI t pars = view defCtx >>= lookupDefKindTI'
                                        <+> pretty pars))
              pure $ map (substPars 0 (reverse pars)) gamma
       | otherwise                        =
-          lookupDefKindTI' stmts
-    lookupDefKindTI' (_:stmts)           =
-          lookupDefKindTI' stmts
+          lookupDefKindTI' decls
+    lookupDefKindTI' (_:decls)           =
+          lookupDefKindTI' decls
 
 checkParKinds :: [TypeExpr] -> TyCtx -> TI ann ()
 checkParKinds []         []          =

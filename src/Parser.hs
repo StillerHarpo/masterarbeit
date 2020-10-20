@@ -72,18 +72,18 @@ type Parser = StateT ParserState (Parsec Void Text)
 instance (Monad m, IsString (m a)) => IsString (StateT s m a) where
   fromString = lift . fromString
 
-parseProgram :: Parsec Void Text [Statement]
-parseProgram = evalStateT (many parseStatement <* eof) emptyState
+parseProgram :: Parsec Void Text [Decl]
+parseProgram = evalStateT (many parseDecl <* eof) emptyState
 
-parseStatement :: Parser Statement
-parseStatement = nonIndented $ choice
+parseDecl :: Parser Decl
+parseDecl = nonIndented $ choice
   [ try parseData
   , try parseCodata
   , try parseDefinition
   , Expression <$> lineFold parseExpr
   ]
 
-parseDefinition :: Parser Statement
+parseDefinition :: Parser Decl
 parseDefinition = lineFold $ do
   name <- lexeme parseExprVarT
   tyCtxP <- lexeme parseParCtx
@@ -99,7 +99,7 @@ parseDefinition = lineFold $ do
           exprParameterCtx = map snd ctxP
       pure ExprDef{..}
 
-parseData :: Parser Statement
+parseData :: Parser Decl
 parseData = nonIndented $ parseBlock
   (symbol "data" *> parseDataHeader)
   (\(name, _, _) -> do
@@ -121,7 +121,7 @@ parseData = nonIndented $ parseBlock
      parameterNames .= []
      pure $ TypeDef OpenDuctive{..})
 
-parseCodata :: Parser Statement
+parseCodata :: Parser Decl
 parseCodata = nonIndented $ parseBlock
   (symbol "codata" *> parseDataHeader)
   (\(name, _, _) -> do

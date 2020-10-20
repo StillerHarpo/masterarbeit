@@ -802,9 +802,9 @@
   At last we look at the implementation of the reduction in [[*Evaluation]]
 ** Abstract Syntax
    In the following we will scratch out the abstract syntax. We will give every
-   inductive and coinductive type a name. They will be defined via statements.
+   inductive and coinductive type a name. They will be defined via declarations.
    We will also be able to bind expressions to names. This will be described in
-   section [[Statements]] . In section [[Expressions]] we will define the syntax of
+   section [[Declarations]] . In section [[Expressions]] we will define the syntax of
    expressions. This will mostly be in one to one correspondence with the syntax of
    the paper. Note however that we use the names of the constructors instead of anonymous
    constructors together with their type and number.  Also the order of the matches in
@@ -812,8 +812,8 @@
    Here we can't write anonymous inductive and coinductive types.  We have to refer to the
    previously defined types.  In the following section [[Examples]] we will see how the examples
    from the paper look in our syntax.
-*** Statements
-    The abstract syntax is given in figure [[syntax-for-statements]].
+*** Declarations
+    The abstract syntax is given in figure [[syntax-for-declarations]].
     In the syntax "/Name/" , "$Constr_1\dots Contr_m$" and
     "$Destr_1\dots Destr_m$" are arbitrary distinct names. With the
     keywords data and codata we define inductive and coinductive types
@@ -834,10 +834,10 @@
     We write the parameter context like in the case for data types behind the
     name. After that we can give a term context between round parenthesis.
 
-    #+name: syntax-for-statements
+    #+name: syntax-for-declarations
     \begin{figure}
     \begin{lstlisting}
-    statement =
+    declaration =
       data Name<$C_1 : \Gamma_1$ -> *,$\dots$ ,$ C_n : \Gamma_n$ -> *> : $(x_1 : B_1,\dots,x_n : B_n)$ -> Set where
         $Constr_1$ : $(x_{1_1}:B_{1_1},\dots,x_{n_1}: B_{n_1})$ -> $A_1[Name/X]$ -> Name $\sigma_{1_1}\dots \sigma_{1_n}$
                $\vdots$                $\vdots$             $\vdots$            $\vdots$
@@ -848,11 +848,11 @@
         $Destr_m$ : $(x_{1_m}:B_{1_m},\dots,x_{n_m}: B_{n_m})$ -> Name $\sigma_{m_1}\dots \sigma_{m_n}$ -> $A_i[Name/X]$
      | name<$C_1 : Gamma_1$ -> *,$\dots$ ,$ C_n : Gamma_n$ -> *> $(x_1:A_1,\dots,x_n:A_n)$ = expr
     \end{lstlisting}
-    \caption{Syntax for statements}
+    \caption{Syntax for declarations}
     \end{figure}
 
 
-    The statements in Figure [[syntax-for-statements]] correspond to $\rho(X:\Gamma\rat*;\vv\sigma;\vv{A}):\Gamma\rat*$ as follows.
+    The declarations in Figure [[syntax-for-declarations]] correspond to $\rho(X:\Gamma\rat*;\vv\sigma;\vv{A}):\Gamma\rat*$ as follows.
     + $x_1: B_1,\dots,x_n: B_n$ is $\Gamma$
     + /Name/ is X
     + $Constr_1,\dots, Contr_m$ stands for
@@ -866,8 +866,8 @@
       If we call a constructor we have to give this types, to relate the right type to it.
 
     To parse the abstract syntax we use megaparsec. The parser generates an
-    abstract syntax tree, which is given for statements in Listing
-    [[Abstract Syntax Tree for Statements]]. The field ~ty~ in ~ExprDef~ is used later in
+    abstract syntax tree, which is given for declarations in Listing
+    [[Abstract Syntax Tree for Declarations]]. The field ~ty~ in ~ExprDef~ is used later in
     type checking. The parser just fills them in with ~Nothing~. data and codata
     definitions are both saved in ~TypeDef~. The haskell type ~OpenDuctive~ contains all the
     information for inductive and coinductive types. It corresponds to $\mu$ and`
@@ -877,17 +877,17 @@
     same length.  We omit the implementation details for the parser, because we
     are manly focused on type checking.
 
-    #+caption: Abstract Syntax Tree for Statements
-    #+NAME: Abstract Syntax Tree for Statements
+    #+caption: Abstract Syntax Tree for Declarations
+    #+NAME: Abstract Syntax Tree for Declarations
     #+begin_src haskell
-      data Statement = ExprDef { name :: Text
-                               , tyParameterCtx :: TyCtx
-                               , exprParameterCtx :: Ctx
-                               , expr :: Expr
-                               , ty :: Maybe Type
-                               }
-                     | TypeDef OpenDuctive
-                     | Expression Expr
+      data Decl = ExprDef { name :: Text
+                          , tyParameterCtx :: TyCtx
+                          , exprParameterCtx :: Ctx
+                          , expr :: Expr
+                          , ty :: Maybe Type
+                          }
+                | TypeDef OpenDuctive
+                | Expression Expr
 
       data OpenDuctive = OpenDuctive { nameDuc :: Text
                                      , inOrCoin :: InOrCoin
@@ -1019,8 +1019,8 @@
    variables) is done in the module ~Mark.hs~.
 
 ** Typing rules
-   A typing rule says that some expression or statement is of some type, given
-   some premises. If we can for every statement or expression form a tree of
+   A typing rule says that some expression or declaration is of some type, given
+   some premises. If we can for every declaration or expression form a tree of
    such rules with no open premises, our program type checks. We have to rewrite
    the typing rules of the paper, to get rules which are syntax directed. Syntax
    directed means we can infer from the syntax alone what we have to check next
@@ -1520,7 +1520,7 @@
    from $\id{\Gamma}$ get substituted by the type action.  The type action is
    implemented in the module ~TypeAction.hs~.  Both the type action and the
    evaluation are done in the ~Eval~ monad.  This monad has access to the
-   previously defined statements. We will now define the type action.
+   previously defined declarations. We will now define the type action.
 
    \begin{definition}
      Let $n \in \mathbb{N}$ and $1 \leq i \leq n$.

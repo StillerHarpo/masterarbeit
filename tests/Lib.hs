@@ -28,15 +28,15 @@ import           Eval
 shouldParseWithDefs :: HasCallStack
                     => [Text] -- ^ definitions to parse
                     -> Text -- ^ expression to parse
-                    -> [Statement] -- ^ expected parsing result
+                    -> [Decl] -- ^ expected parsing result
                     -> Expectation
 shouldParseWithDefs defs input expOutput =
-  case parse (Strict.execStateT (many parseStatement <* eof) emptyState)
+  case parse (Strict.execStateT (many parseDecl <* eof) emptyState)
              "" (T.unlines defs) of
     Left err     ->
       error . show $ errorBundlePretty err
     Right pState ->
-      parse (Strict.evalStateT (many parseStatement <* eof) pState)
+      parse (Strict.evalStateT (many parseDecl <* eof) pState)
             "" input
       `shouldParse`
       expOutput
@@ -60,15 +60,15 @@ shouldEvalIn = shouldEvalIn' shouldBe
 
 shouldEvalInGlobCtx' :: (HasCallStack, Show a, Eq a)
                    => (Either String a -> Either String a -> m ())
-                   -> [Statement]
+                   -> [Decl]
                    -> Eval ann a
                    -> a
                    -> m ()
-shouldEvalInGlobCtx' comp stmtCtx' eval =
-  shouldEvalIn' comp eval (emptyEvalCtx {stmtCtx = stmtCtx'})
+shouldEvalInGlobCtx' comp declCtx' eval =
+  shouldEvalIn' comp eval (emptyEvalCtx {declCtx = declCtx'})
 
 shouldEvalInGlobCtx :: (HasCallStack, Show a, Eq a)
-                    => [Statement]
+                    => [Decl]
                     -> Eval ann a
                     -> a
                     -> Expectation
@@ -94,7 +94,7 @@ shouldCheckIn = shouldCheckIn' shouldBe
 
 shouldCheckInGlobCtx' :: (HasCallStack, Show a, Eq a)
                    => (Either String a -> Either String a -> m ())
-                   -> [Statement]
+                   -> [Decl]
                    -> TI ann a
                    -> a
                    -> m ()
@@ -102,7 +102,7 @@ shouldCheckInGlobCtx' comp defCtx' ti =
   shouldCheckIn' comp ti (set defCtx defCtx' emptyCtx)
 
 shouldCheckInGlobCtx :: (HasCallStack, Show a, Eq a)
-                   => [Statement]
+                   => [Decl]
                    -> TI ann a
                    -> a
                    -> Expectation
@@ -161,25 +161,25 @@ shouldCheckWithDefsP :: (HasCallStack, MonadTest m, MonadIO m)
                      -> m ()
 shouldCheckWithDefsP = shouldCheckWithDefs' (===)
 
-shouldCheckStmtWithDefs :: HasCallStack
+shouldCheckDeclWithDefs :: HasCallStack
                         => [Text] -- ^ definitions to parse
-                        -> Statement  -- ^ Statement to type check
+                        -> Decl  -- ^ Declaration to type check
                         -> Type -- ^ expected type
                         -> Expectation
-shouldCheckStmtWithDefs defs stmt expTy =
+shouldCheckDeclWithDefs defs decl expTy =
   case parse parseProgram "" (T.unlines defs) of
     Left err     ->
       error . show $ errorBundlePretty err
     Right defCtx' ->
       case runState (runExceptT $ checkProgramPTI
-                                $ defCtx' ++ [stmt]) [] of
+                                $ defCtx' ++ [decl]) [] of
         (Left err, _                      ) ->
           error $ show err
         (_       , ExprDef{ty = Just ty}:_) ->
           ty `shouldBe` expTy
-        (_       , stmt                 :_) ->
+        (_       , decl                 :_) ->
           error $ "First of statements is not a expression \nit ist"
-                  <> show stmt
+                  <> show decl
 
 shouldKindCheckWithDefs' :: (HasCallStack, MonadIO m)
                      => (Either String Kind -> Either String Kind -> m ())
@@ -241,7 +241,7 @@ shouldEvalSameWithDefs defs input1 input2 =
     Right defCtx' ->
       let typedDefCtx =
             execState (runExceptT $ checkProgramPTI defCtx') []
-          stateEval = EvalCtx { stmtCtx = typedDefCtx
+          stateEval = EvalCtx { declCtx = typedDefCtx
                               , numPars = 0}
           val1 = first show (runEval (evalExpr input1) stateEval)
           val2 = first show (runEval (evalExpr input2) stateEval)

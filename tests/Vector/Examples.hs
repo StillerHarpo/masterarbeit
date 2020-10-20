@@ -25,8 +25,8 @@ mkPairD = T.unlines
   , "     ; Second n p = p}) @ n @ y)"]
 mkPairDR = T.unlines [pairDR, mkPairD]
 
-mkPairStmt :: Statement
-mkPairStmt =
+mkPairDecl :: Decl
+mkPairDecl =
   ExprDef { name = "mkPair"
           , tyParameterCtx = [[],[GlobalTypeVar "Nat" []]]
           , exprParameterCtx = [ GlobalTypeVar "Nat" []
@@ -49,9 +49,9 @@ mkPairTests :: Spec
 mkPairTests = do
   it "parses mkPair" $
     shouldParseWithDefs [pairDR] mkPairD
-      [ mkPairStmt ]
+      [ mkPairDecl ]
   it "type checks mkPair" $
-    shouldCheckStmtWithDefs [pairDR] mkPairStmt
+    shouldCheckDeclWithDefs [pairDR] mkPairDecl
       ([], pairExpr (Parameter 1 False "A") (Parameter 0 False "B")
            :@ LocalExprVar 2 False "n")
 
@@ -59,8 +59,8 @@ nilD, nilDR :: Text
 nilD = "nil<A : Set> = Nil<A> @ ()"
 nilDR = T.unlines [vecDR, nilD]
 
-nilStmt :: Statement
-nilStmt =
+nilDecl :: Decl
+nilDecl =
   ExprDef { name = "nil"
           , tyParameterCtx = [[]]
           , exprParameterCtx = []
@@ -71,9 +71,9 @@ nilTests :: Spec
 nilTests = do
   it "parses nil" $
     shouldParseWithDefs [vecDR] nilD
-      [ nilStmt ]
+      [ nilDecl ]
   it "type checks nil" $
-    shouldCheckStmtWithDefs [vecDR] nilStmt
+    shouldCheckDeclWithDefs [vecDR] nilDecl
       ([], vecExprI (Parameter 0 False "A") :@ zeroExpr)
 
 consD, consDR :: Text
@@ -82,8 +82,8 @@ consD = T.unlines
   , "  Cons<A> @ n @ mkPair<A, Vec<A>>(n,x,xs)" ]
 consDR = T.unlines [mkPairDR, zeroD, vecD, consD]
 
-consStmt :: Statement
-consStmt =
+consDecl :: Decl
+consDecl =
   ExprDef { name = "cons"
           , tyParameterCtx = [[]]
           , exprParameterCtx = [ GlobalTypeVar "Nat" []
@@ -103,9 +103,9 @@ consTests :: Spec
 consTests = do
   it "parses cons" $
     shouldParseWithDefs [mkPairDR, zeroD, vecD] consD
-      [ consStmt ]
+      [ consDecl ]
   it "type checks cons" $
-    shouldCheckStmtWithDefs [mkPairDR, zeroD, vecD] consStmt
+    shouldCheckDeclWithDefs [mkPairDR, zeroD, vecD] consDecl
       ([], vecExprI (Parameter 0 False "A")
            :@ (sucExpr :@: LocalExprVar 2 False "n"))
 

@@ -53,7 +53,7 @@ import           Parser                                                  ( parse
                                                                          , defDuctives
                                                                          , constructorDefs
                                                                          , destructorDefs
-                                                                         , parseStatement
+                                                                         , parseDecl
                                                                          , emptyState
                                                                          , parseExpr
                                                                          , parseTypeExpr
@@ -90,19 +90,19 @@ main = execParser (info (cmdOpts <**> helper)
         (Run files) -> evalStateT (mapM_ evalProgram files) []
         (Repl files) -> repl files
 
-type Repl a = HaskelineT (StateT [Statement] IO) a
+type Repl a = HaskelineT (StateT [Decl] IO) a
 
 cmd :: String -> Repl ()
 cmd input = do
-  stmts <- get
-  let (resOrError, newStmts) =
-        runPTI (liftEither ((:[]) <$> parsePrettyError (evalStateT (parseStatement <* eof)
-                                                                   (defsToParserState stmts))
+  decls <- get
+  let (resOrError, newDecls) =
+        runPTI (liftEither ((:[]) <$> parsePrettyError (evalStateT (parseDecl <* eof)
+                                                                   (defsToParserState decls))
                                                         "" (T.pack input))
-                >>= (errorNewLn . checkProgramPTI)) stmts
+                >>= (errorNewLn . checkProgramPTI)) decls
   case resOrError of
     Left err -> liftIO $ putDoc err
-    Right res -> put (newStmts++stmts)
+    Right res -> put (newDecls++decls)
       >> case res of
            [TypedExpr expr _] -> liftIO (putDoc $ pretty expr <> "\n")
            _                  -> pure ()
@@ -112,26 +112,26 @@ clear = const (put [])
 
 getType :: [String] -> Repl ()
 getType input = do
-  stmts <- get
+  decls <- get
   let resOrError =
         runTI (liftEither (parsePrettyError (evalStateT (parseExpr <* eof)
-                                                        (defsToParserState stmts))
+                                                        (defsToParserState decls))
                                             "" (T.pack $ concat input))
                >>= inferTerm >>= (errorNewLn . evalInTI . evalType))
-               $ (defCtx .~ stmts) emptyCtx
+               $ (defCtx .~ decls) emptyCtx
   case resOrError of
     Left err -> liftIO $ putDoc err
     Right res -> liftIO (putDoc $ prettyType res <> "\n")
 
 kind :: [String] -> Repl ()
 kind input = do
-  stmts <- get
+  decls <- get
   let resOrError =
         runTI (liftEither (parsePrettyError (evalStateT (parseTypeExpr <* eof)
-                                                        (defsToParserState stmts))
+                                                        (defsToParserState decls))
                                             "" (T.pack $ concat input))
                >>= inferType >>= (errorNewLn . evalInTI . evalCtx))
-               $ (defCtx .~ stmts) emptyCtx
+               $ (defCtx .~ decls) emptyCtx
   case resOrError of
     Left err -> liftIO . putDoc $ err
     Right res -> liftIO (putDoc $ prettyKind res <> "\n")
@@ -141,27 +141,27 @@ parsePrettyError :: Parsec Void Text a -> String -> Text -> Either (Doc ann) a
 parsePrettyError parser file input = first (pretty . errorBundlePretty)
                                            (parse parser file input)
 
-defsToParserState :: [Statement] -> ParserState
+defsToParserState :: [Decl] -> ParserState
 defsToParserState []                                    =
   emptyState
-defsToParserState (ExprDef{..}               : stmts)   =
-  over exprDefs (Set.insert name) (defsToParserState stmts)
-defsToParserState (TypeDef od@ OpenDuctive{..} : stmts) =
+defsToParserState (ExprDef{..}               : decls)   =
+  over exprDefs (Set.insert name) (defsToParserState decls)
+defsToParserState (TypeDef od@ OpenDuctive{..} : decls) =
   let structors = Set.fromList $ map strName strDefs
   in (case inOrCoin of
        IsIn -> over constructorDefs (Set.union structors)
        IsCoin -> over destructorDefs (Set.union structors))
      (over typeExprDefs (Set.insert nameDuc)
-      $ over defDuctives (od:) (defsToParserState stmts))
-defsToParserState (_                          : stmts)  =
-  defsToParserState  stmts
+      $ over defDuctives (od:) (defsToParserState decls))
+defsToParserState (_                          : decls)  =
+  defsToParserState  decls
 
-getDefs :: [Statement] -> [Text]
+getDefs :: [Decl] -> [Text]
 getDefs []                                = []
-getDefs (ExprDef{..}             : stmts) = name : getDefs stmts
-getDefs (TypeDef OpenDuctive{..} : stmts) = map strName strDefs
-                                           ++ nameDuc : getDefs stmts
-getDefs (_                       : stmts) = getDefs stmts
+getDefs (ExprDef{..}             : decls) = name : getDefs decls
+getDefs (TypeDef OpenDuctive{..} : decls) = map strName strDefs
+                                           ++ nameDuc : getDefs decls
+getDefs (_                       : decls) = getDefs decls
 
 -- Prefix tab completeter
 defaultMatcher :: MonadIO m => [(String, CompletionFunc m)]
@@ -171,7 +171,7 @@ defaultMatcher = [
   ]
 
 -- Default tab completer
-byWord :: (Monad m, MonadState [Statement] m) => WordCompleter m
+byWord :: (Monad m, MonadState [Decl] m) => WordCompleter m
 byWord n = gets $ filter (isPrefixOf n)
               . map T.unpack
               . (++ ["rec", "corec", "data", "codata", "to", "where"])
@@ -181,19 +181,19 @@ byWord n = gets $ filter (isPrefixOf n)
 load :: [String] -> Repl ()
 load = mapM_ (dontCrash . lift . evalProgram)
 
-evalProgram :: String -> StateT [Statement] IO ()
+evalProgram :: String -> StateT [Decl] IO ()
 evalProgram file = do
   program <- liftIO $ readFile file
-  stmts <- get
-  let (resOrError, newStmts) =
+  decls <- get
+  let (resOrError, newDecls) =
         runPTI (liftEither
-                  (parsePrettyError (evalStateT (many parseStatement
+                  (parsePrettyError (evalStateT (many parseDecl
                                                  <* eof)
-                                                (defsToParserState stmts))
+                                                (defsToParserState decls))
                                      file program)
-                   >>= (errorNewLn . checkProgramPTI)) stmts
+                   >>= (errorNewLn . checkProgramPTI)) decls
   either (liftIO . putDoc)
-         (\res -> put (newStmts ++ stmts)
+         (\res -> put (newDecls ++ decls)
                   >> liftIO (putDoc $ vsep (map pretty res) <> if null res
                                                                then ""
                                                                else "\n"))

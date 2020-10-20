@@ -18,14 +18,14 @@ data TypedExpr = TypedExpr Expr Type
 -- (Con/De)structor-Context
 type StrCtx = [(Text,Type)]
 
-data Statement = ExprDef { name :: Text
-                         , tyParameterCtx :: TyCtx
-                         , exprParameterCtx :: Ctx
-                         , expr :: Expr
-                         , ty :: Maybe Type
-                         }
-               | TypeDef OpenDuctive
-               | Expression Expr
+data Decl = ExprDef { name :: Text
+                    , tyParameterCtx :: TyCtx
+                    , exprParameterCtx :: Ctx
+                    , expr :: Expr
+                    , ty :: Maybe Type
+                    }
+          | TypeDef OpenDuctive
+          | Expression Expr
   deriving (Eq,Show)
 
 data TypeExpr = UnitType -- verum type
