@@ -798,7 +798,7 @@
   pattern matching.  We will see its usefulness in section [[Typing rules]].
 
   In section [[Abstract Syntax]] we will develop the abstract syntax of our language
-  from the rare syntax in the paper.  Then we rewrite the typing rules in [[*Typing rules]].
+  from the raw syntax in the paper.  Then we rewrite the typing rules in [[*Typing rules]].
   At last we look at the implementation of the reduction in [[*Evaluation]]
 ** Abstract Syntax
    In the following we will scratch out the abstract syntax. We will give every
