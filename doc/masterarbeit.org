@@ -135,8 +135,8 @@
   We can define vectors in coq like follows.
   #+begin_src coq
   Inductive Vec (A : Set) : nat -> Set :=
-  | Nil : Vec A 0
-  | Cons : forall {k : nat}, A -> Vec A k -> Vec A (S k).
+    | Nil : Vec A 0
+    | Cons : forall {k : nat}, A -> Vec A k -> Vec A (S k).
   #+end_src
   A Vector has two constructors.  One for the empty vector called ~Nil~ and one to append a
   element at the front of a vector called ~Cons~.  The difference to list is the second argument
@@ -187,7 +187,7 @@
   match n with
   | O => m
   | S p => S (add p m)
-  end
+  end.
   #+end_src
   In the recursive call the first argument is structural decreasing. ~p~ is
   smaller than ~s p~. So coq accepts this definition.  The classical example
@@ -252,7 +252,7 @@
    ~repeat~ like the following.
 
    #+begin_src coq
-     CoFixpoint repeat (A:Set) (x:A) : Stream A := Cons A x (repeat x).
+     CoFixpoint repeat (A:Set) (x:A) : Stream A := Cons A x (repeat A x).
    #+end_src
 
    Then we can produce the constant zero stream with ~repeat nat 0~. If we used
@@ -268,10 +268,10 @@
    We define ~nth~ like the following.
 
    #+begin_src coq
-     Fixpoint nth (A:Set) (n:Nat) (s:Stream A) {struct n} : A :=
-       match l with
-         Cons _ a l' =>
-         match n with 0 => a | S p => nth A p l' end
+     Fixpoint nth (A:Set) (n:nat) (s:Stream A) {struct n} : A :=
+       match s with
+         Cons _ a s' =>
+         match n with 0 => a | S p => nth A p s' end
        end.
    #+end_src
 
@@ -389,7 +389,7 @@
 
     #+begin_src coq
       CoInductive Stream (A : Set) : Set :=
-        Seq { hd : A; tl : Stream A }
+        Seq { hd : A; tl : Stream A }.
     #+end_src
 
     Now we cant define ~repeat~ over the fields of ~Stream~
@@ -408,10 +408,10 @@
     ~tl~.  With them we can define nth again for the negative stream.
 
     #+begin_src coq
-      Fixpoint nth' (A : Set) (n : nat) (s : Stream' A) : list A :=
+      Fixpoint nth (A : Set) (n : nat) (s : Stream A) : list A :=
         match n with
         | 0 => nil
-        | S n' => s.(hd' A) :: nth' A n' s.(tl' A)
+        | S n' => s.(hd A) :: nth A n' s.(tl A)
         end.
     #+end_src
 
@@ -428,14 +428,14 @@
      we don't recurse or corecurse on it.
 
     #+begin_src coq
-      Definition In (y : U) : U := {| out := y |}
+      Definition In (y : U) : U := {| out := y |}.
     #+end_src
 
     We define it over the only field ~out~.  When we put a ~y~ in then we get
     the same ~y~ out.  We can also again define ~u~
 
     #+begin_src coq
-      CoFixpoint u : U := {| out := u |}
+      CoFixpoint u : U := {| out := u |}.
     #+end_src
 
     ~u~ With coinductive types it is know possible to define the pi type.
@@ -485,7 +485,9 @@
     We can also define a dependent function.  We define append2Units like
     follows
     #+begin_src coq
-    CoFixpoint append2Units : Pi nat (fun n => Pi (Vec unit n) (fun _ => Vec unit (S (S n)))) :=
+    CoFixpoint append2Units : Pi nat
+                                 (fun n => Pi (Vec unit n)
+                                           (fun _ => Vec unit (S (S n)))) :=
       {| Apply n := {| Apply v := Cons _ tt (Cons _ tt v) |} |}.
     #+end_src
     This just appends 2 units at a vector of length ~n~.
