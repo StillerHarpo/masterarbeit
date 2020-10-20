@@ -801,17 +801,21 @@
   from the raw syntax in the paper.  Then we rewrite the typing rules in [[*Typing rules]].
   At last we look at the implementation of the reduction in [[*Evaluation]]
 ** Abstract Syntax
-   In the following we will scratch out the abstract syntax. We will give every
-   inductive and coinductive type a name. They will be defined via declarations.
-   We will also be able to bind expressions to names. This will be described in
-   section [[Declarations]] . In section [[Expressions]] we will define the syntax of
-   expressions. This will mostly be in one to one correspondence with the syntax of
-   the paper. Note however that we use the names of the constructors instead of anonymous
-   constructors together with their type and number.  Also the order of the matches in
-   rec and corec is irrelevant.  We use the names of the Con/Destructors to identify them.
-   Here we can't write anonymous inductive and coinductive types.  We have to refer to the
-   previously defined types.  In the following section [[Examples]] we will see how the examples
-   from the paper look in our syntax.
+   In the following we will scratch out the abstract syntax. In contrast to
+   cite:basold2016type we can't write anonymous inductive and coinductive types.
+   We will give every inductive and coinductive type a name. They will be
+   defined via declarations. In this declarations we will give, their
+   constructors/destructors will also be given names. In cite:basold2016type
+   they are anonymous. We can then refer to the previously defined types. We
+   will described declarations in section [[Declarations]] . We will also be able to
+   bind expressions to names. In section [[Expressions]] we will define the syntax
+   of expressions. This will mostly be in one to one correspondence with the
+   syntax of cite:basold2016type. Note however that we use the names of the
+   constructors instead of anonymous constructors together with their type and
+   number. Also the order of the matches in rec and corec is irrelevant. We use
+   the names of the Con/Destructors to identify them. In the following section
+   [[Examples]] we will see how the examples from the paper look in our concrete
+   syntax.
 *** Declarations
     The abstract syntax is given in figure [[syntax-for-declarations]].
     In the syntax "/Name/" , "$Constr_1\dots Contr_m$" and
