@@ -817,78 +817,77 @@
    [[Examples]] we will see how the examples from the paper look in our concrete
    syntax.
 *** Declarations
-    The abstract syntax is given in figure [[syntax-for-declarations]].
-    In the syntax "/Name/" , "$Constr_1\dots Contr_m$" and
-    "$Destr_1\dots Destr_m$" are arbitrary distinct names. With the
+    The abstract syntax is given in figure [[syntax-for-declarations]]. With the
     keywords data and codata we define inductive and coinductive types
-    respectively. After that we will write the name. Behind that we can give a
+    respectively. After that we will write the name.  We can only use names
+    which aren't used already. Behind that we can give a
     parameter context. This is a type context. This types are not polymorphic.
-    They are merely macros to make the code more precise. If we want to use this
-    Type we have to fully instantiate this context. This types can occur
+    They are merely macros to make the code more readable and allow the
+    definition of nested types. If we want to use
+    this type we have to fully instantiate this context. This types can occur
     everywhere in the definition where a type is expected. A (co)inductive Type
     can have a context, which is written before an arrow. ~Set~ stands for type
     (or * in the paper). If a type don't has a context we omit the arrow. We
-    will also give names to every constructor and destructor. Constructors and
-    destructors also have contexts. Additionally they have one argument which
-    can has a recursive occurrence of the type we are defining. A constructor
-    gives back a value of the type, where its context is instantiated. This
-    instantiation corresponds to the sigmas in the paper. If we write a name
-    before a equal sign we can bind the following expression to the name. Every
-    such defined name can depend on a parameter context and an argument context.
-    We write the parameter context like in the case for data types behind the
-    name. After that we can give a term context between round parenthesis.
+    will also give names to every constructor and destructor. This names have to
+    be unique. Constructors and destructors also have contexts. Additionally
+    they have one argument which can has a recursive occurrence of the type we
+    are defining. A constructor gives back a value of the type, where its
+    context is instantiated. This instantiation corresponds to the sigmas in the
+    paper. If we write a name before a equal sign we can bind the following
+    expression to the name. Every such defined name can depend on a parameter
+    context and an argument context. We write the parameter context like in the
+    case for data types behind the name. After that we can give a term context
+    between round parenthesis.
 
     #+name: syntax-for-declarations
     \begin{figure}
      \begin{align*}
        \begin{array}{llll}
-        N &= &[A-Z][a-zA-Z0-9]* &\text{Names for types,}\\
+        N &:= &[A-Z][a-zA-Z0-9]* &\text{Names for types,}\\
              & &&          \text{constructors}\\
              & &&          \text{and destructors}\\
-        n &= &[a-z][a-zA-Z0-9]* &\text{Names for expressions}\\
-        ExprVar &= &x,y,z,\dots &\text{Expression variables} \\
-        TypeVar &= &X,Y,Z,\dots &\text{Type expression} \\
+        n &:= &[a-z][a-zA-Z0-9]* &\text{Names for expressions}\\
+        ExprVar &:= &x,y,z,\dots &\text{Expression variables} \\
+        TypeVar &:= &X,Y,Z,\dots &\text{Type expression} \\
              & &&          \text{variables}\\
-        ParVar  &= &A,B,C,\dots &\text{Parameter variables} \\
-        ExprCtx &= &\text{(} (ExprVar \text{ : } TypeVar)* \text{)} &\text{Expression Context} \\
-        ParCtx &= &\text{<} (ParVar \text{ : } ExprCtx \rightarrow \text{ Set})* \text{>} &\text{Parameter Context} \\
-        Decl &= &\text{data } N\; ParCtx \text{ : } ExprCtx \rightarrow \text{ Set where} &\text{Declarations}\\
-                  &&\quad(N \text{ : }  ExprCtx \rightarrow\text{} TyExpr \rightarrow N\; expr*)* &\\
+        ParVar  &:= &A,B,C,\dots &\text{Parameter variables} \\
+        ExprCtx &:= &\text{(} (ExprVar \text{ : } TypeVar)* \text{)} &\text{Expression Context} \\
+        ParCtx &:= &\text{<} (ParVar \text{ : } ExprCtx \rightarrow \text{ Set})* \text{>} &\text{Parameter Context} \\
+        Decl &:= &\text{data } N\; ParCtx \text{ : } ExprCtx \rightarrow \text{ Set where} &\text{Declarations}\\
+                  &&\quad(N \text{ : }  ExprCtx \rightarrow\text{} TypeExpr \rightarrow N\; Expr*)* &\\
              &| &\text{codata } N\; ParCtx \text{ : } ExprCtx \rightarrow\text{ Set where}& \\
-         &&\quad(N \text{ : }  ExprCtx \rightarrow\text{} N\; expr* \rightarrow\text{} TyExpr)*& \\
-        &| &n \; ParCtx \; ExprCtx \text{ = } expr & \\
+         &&\quad(N \text{ : }  ExprCtx \rightarrow\text{} N\; Expr* \rightarrow\text{} TypeExpr)*& \\
+        &| &n \; ParCtx \; ExprCtx \text{ = } Expr & \\
       \end{array}
     \end{align*}
     \caption{Syntax for declarations}
     \end{figure}
 
-
     The declarations in Figure [[syntax-for-declarations]] correspond to $\rho(X:\Gamma\rat*;\vv\sigma;\vv{A}):\Gamma\rat*$ as follows.
-    + $x_1: B_1,\dots,x_n: B_n$ is $\Gamma$
-    + /Name/ is X
-    + $Constr_1,\dots, Contr_m$ stands for
-      $\alpha_1^{\mu(X:\Gamma\rat *;\vv\sigma;\vv A)},\dots,\alpha_m^{\mu(X:\Gamma\rat *;\vv\sigma;\vv A)}$
-    + $Destr_1,\dots, Destr_m$ stands for
-      $\xi_1^{\mu(X:\Gamma\rat *;\vv\sigma;\vv A)},\dots,\xi_m^{\mu(X:\Gamma\rat *;\vv\sigma;\vv A)}$
-    + $Name_i$ is $A_i[\Gamma/X]$
-    + $(x_{1_1}:B_{1_1},\dots,x_{n_1}: B_{n_1}),\dots,(x_{1_m}:B_{1_m},\dots,x_{n_m}:B_{n_m})$
-      stands for $\Gamma_1,\dots,\Gamma_m$
-    + <$C_1 : Gamma_1$ -> *,$\dots$ ,$ C_n : Gamma_n$ -> *> are the parameter contexts.
-      If we call a constructor we have to give this types, to relate the right type to it.
+    + The first $N$ is X
+    + The other $N$ will be used later for
+      $\alpha_1^{\mu(X:\Gamma\rat *;\vv\sigma;\vv A)},\alpha_2^{\mu(X:\Gamma\rat *;\vv\sigma;\vv A)},\dots$
+      in the case of inductive types and
+      $\xi_1^{\mu(X:\Gamma\rat *;\vv\sigma;\vv A)},\xi_2^{\mu(X:\Gamma\rat *;\vv\sigma;\vv A)},\dots$
+      in the coinductive case
+    + The $TypExpr$ are the $\vv{A}$
+    + The $Expr*$ are the $\vv{\sigma}$
+    + The first $ExprCtx$ is $\Gamma$
+    + The other $ExprCtx$ stand for $\Gamma_1,\dots,\Gamma_m$
 
     To parse the abstract syntax we use megaparsec. The parser generates an
     abstract syntax tree, which is given for declarations in Listing
     [[Abstract Syntax Tree for Declarations]]. The field ~ty~ in ~ExprDef~ is used later in
     type checking. The parser just fills them in with ~Nothing~. data and codata
     definitions are both saved in ~TypeDef~. The haskell type ~OpenDuctive~ contains all the
-    information for inductive and coinductive types. It corresponds to $\mu$ and`
+    information for inductive and coinductive types. It corresponds to $\mu$ and
     $\nu$ in the paper. We use an ~OpenDuctive~ where the field ~inOrCoin~ is ~IsIn~
-    for $ \mu$ and an ~OpenDuctive~ where the field ~inOrCoin~ is ~IsCoin~ for
-    $\nu$.  The haskell type ~StrDef~ ensures that the sigmas as and gamma1s have the
+    for $\mu$ and an ~OpenDuctive~ where the field ~inOrCoin~ is ~IsCoin~ for
+    $\nu$.  The haskell type ~StrDef~ ensures that the sigmas, as and gamma1s have the
     same length.  We omit the implementation details for the parser, because we
     are manly focused on type checking.
 
-    #+caption: Abstract Syntax Tree for Declarations
+    #+caption: Implementation of the abstract syntax of Fig. [[syntax-for-declarations]]
     #+NAME: Abstract Syntax Tree for Declarations
     #+begin_src haskell
       data Decl = ExprDef { name :: Text
@@ -915,25 +914,57 @@
     #+end_src
 *** Expressions
     The abstract syntax for expression is given in figure [[syntax-for-expressions]].
-    We will separate expression in expressions for terms and in expressions for
-    types.  There are given as regular expressions in ~expr~ and ~typeExpr~ respectively.
+    We will separate expression in expressions for terms and expressions for
+    types.  There are given as regular expressions in ~Expr~ and ~TypeExpr~ respectively.
 
-    An ~expr~ is either the unit expression ~()~, an con/destructor, an
-    application ~@~, an ~rec~ or an ~corec~. All con/destructors have to be
-    instantiate with all variables in the parameter contexts of their types.
-    This is done by giving types of the expected kinds separated by ',' enclosed
-    in '<' and '>'. With the keyword ~rec~ we can destruct an inductive type.
-    We write ~Type to typeExrp~, where ~Type~ is an previously defined inductive
-    type after ~rec~ to facilitate type checking. It says we want to destruct a
-    inductive type to some other type . We have to list all the constructor
-    above one another. For each constructor we write an expression behind the
-    equal sign, which should be of type ~TypeExpr~ which we have given above. In
-    this expression we can use variables given in the match expression. The last
-    one is the recursive occurrence. With the keyword ~corec~ we can do the same
-    thing to construct a coinductive type. Here we have to swap the ~Type~ and
-    the ~TypeExpr~ and list the destructors. We can also apply a expression to
-    another with ~@~. The only primitive expression we have is the unit
-    expression ~()~.
+    #+name: syntax-for-expressions
+    \begin{figure}
+     \begin{align*}
+       \begin{array}{llll}
+         ParInst &:= &\text{<}TypeExpr(\text{,}TypeExpr)*\text{>} &\text{Instantiations for}\\
+                                                                &&&\text{paramter contexts}\\
+         ExprInst &:= &\text{(}Expr(\text{,}Expr)*\text{)} &\text{Instantiations for}\\
+                                                           &&&\text{expression contexts}\\
+         Expr &:= &\text{rec } N \; ParInst? \text{ to } TypeExpr \text{ where} &\text{expression}\\
+         &&\quad Match*&\\
+         &| &\text{corec } TypeExpr \text { to } N \; ParInst? \text{ where}&\\
+         &&\quad Match*&\\
+         &| &Expr\text{ @ }Expr &\\
+         &| &\text{()}&\\
+         &| &ExprVar&\\
+         &| &n\; ParInst\; ExprInst&\\
+         Match &:= &N\; ExprVar* = Expr &\text{match}\\
+         TypeExpr &:= &\text{(}ExprVar\text{ : }TypeExpr\text{).}TypeExpr &\text{Type expressions}\\
+         &| &TypeExpr\text{ @ }Expr&\\
+         &| &\text{Unit} &\\
+         &| &TypeVar&\\
+         &| &N\; ParInst? &\\
+      \end{array}
+    \end{align*}
+    \begin{lstlisting}
+    \end{lstlisting}
+    \caption{Syntax for expressions}
+    \end{figure}
+
+    An ~Expr~ is either an ~rec~, an ~corec~, an con/destructor, , an
+    application ~@~,the only primitive unit expression ~()~ or an variable.
+    With the keyword ~rec~ we can destruct an inductive type. We write ~N
+    ParInst? to TypeExrp~, where ~N~ is an previously defined inductive type and
+    ~ParInst?~ the instantiation of its parameter context, after ~rec~ to
+    facilitate type checking. It says we want to destruct an inductive type to
+    some other type . We have to list all the constructors above one another. For
+    each constructor we write an expression behind the equal sign, which should
+    be of type ~TypeExpr~ which we have given above. In this expression we can
+    use variables given in the match expression. The last one is the recursive
+    occurrence. With the keyword ~corec~ we can do the same thing to construct a
+    coinductive type. Here we have to swap the ~T~ and the ~TypeExpr~ and list
+    the destructors. All con/destructors have to be instantiate with all
+    variables in the parameter contexts of their types. This is done by giving
+    types of the expected kinds separated by ',' enclosed in '<' and '>'. The
+    variables are separated in local variables and global variables. Global
+    variables refer to previously defined expressions. We have to fully
+    instantiate they parameter contexts and their expression contexts.  We can
+    also apply a expression to another with ~@~.
 
     The ~typeExpr~ is either the unit type ~Unit~, a lambda abstraction on
     types, an application or a variable. In the lambda expression we have to
@@ -945,41 +976,18 @@
     [[abstract-syntax-tree-for-expressions]]. The variables for expressions are
     separated in ~LocalExprVar~ and ~GlobalExprVar~. ~LocalExprVar~ should refer
     to variables which are only locally defined i.e. in ~Rec~ and ~Corec~. We
-    use de-Brujin indexes for them.  This facilitates substitution which we will
-    describe in section [[Substitution]].  ~GlobalExprVar~ refers to variables from
+    use de-Brujin indexes for them. This facilitates substitution which we will
+    describe in section [[Substitution]]. ~GlobalExprVar~ refers to variables from
     definitions. Here we just use names. We do the same thing for ~LocalTypeVar~
     and ~GlobalTypeVar~. In the abstract syntax tree we use anonymous
-    constructors like in the paper.  We combine them to the haskell constructor
-    ~Iter~.  We now from the field ~ductive~ if it is a constructor or a destructor.
-    The types in field ~parameters~ are to fill in the parameter context of the
-    field ~ductive~
-    this type. Here we know that it has to be an inductive type, because we
-    don't have constructors for coinductive types. For Destructor, Rec and corec
-    we also know if it is coinductive or inductive. The field ~nameStr~ in
-    ~Constructor~ and ~Destructor~ are just for printing.
-
-    #+name: syntax-for-expressions
-    \begin{figure}
-    \begin{lstlisting}
-        expr :=
-          rec Name<$C_1,\dots,C_n$> to typeExpr where
-            match*
-        | corec typeExpr to Name<$C_1,\dots,C_n$> where
-            match*
-        | expr @ expr | ()
-
-        match := Name var* = expr
-
-        typeExpr := Unit
-                  | (var:typeExpr).typeExpr
-                  | typeExpr @ expr
-                  | Name
-    \end{lstlisting}
-    \caption{Syntax for expressions}
-    \end{figure}
+    constructors like in the paper. We combine them to the haskell constructor
+    ~Structor~. We know from the field ~ductive~ if it is a constructor or a
+    destructor. The types in field ~parameters~ are to fill in the parameter
+    context of the field ~ductive~. The field ~nameStr~ in ~Constructor~ and
+    ~Destructor~ are just for printing. We combine rec and corec to ~Iter~.
 
     #+name: abstract-syntax-tree-for-expressions
-    #+caption: Abstract Syntax Tree for Expressions
+    #+caption: Implementation of the abstract syntax of Fig. [[syntax-for-expressions]]
     #+begin_src haskell
       data TypeExpr = UnitType
                     | TypeExpr :@ Expr
