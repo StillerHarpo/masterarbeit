@@ -763,12 +763,12 @@
   &\text{with } \Gamma_1 = (n:\text{Conat}) \text{ and } \Gamma_n = (n:\text{Conat})
   \end{align*}
   Here ~succ~ is the successor on conats.  Conats are natural numbers with one
-  additional element, infinity.  See [[Extended Naturals]] for their definition.
-  Here the first destructor is the head.  It becomes a stream with lenght
-  $\text{succ} @ N$ and returns an $A$.  The second destructor is the tail.  It
-  becomes also an stream of length $\text{succ} @ N$.  It gives back an $X @ n$,
-  which is a stream of length $n$.  We can also define the Pi type from $A$ to $B$,
-  where $B$ can depend on $A$
+  additional element, infinity. See [[Natural Numbers and Extended Naturals]] for
+  their definition. Here the first destructor is the head. It becomes a stream
+  with lenght $\text{succ} @ N$ and returns an $A$. The second destructor is the
+  tail. It becomes also an stream of length $\text{succ} @ N$. It gives back an
+  $X @ n$, which is a stream of length $n$. We can also define the Pi type from
+  $A$ to $B$, where $B$ can depend on $A$
   \begin{align*}
   &\Pi x:A.B := \nu(_:*;\epsilon_1;B)\\
   &\text{with } \Gamma_1 = (x:A)
@@ -1911,7 +1911,7 @@
   syntax, which is defined in [[Abstract Syntax]].  We will also show some functions
   on this types.  On some of them we will show the reduction steps in detail.
 
-** Terminal Object
+** Terminal and Initial Object
 
    The terminal object is a type which has exactly one value. In category
    theory every object in the category has a unique morphism to it. We define
@@ -1925,8 +1925,6 @@
                  { Terminal x = x } @ ()
 
    #+end_example
-
-** Initial Object
 
    The initial object is a type which has no values. In category theory it is
    the object which has a unique morphism to every other object in the
@@ -1943,7 +1941,7 @@
                          Initial x = x
    #+end_example
 
-** Natural Numbers
+** Natural Numbers and Extended Naturals
 
    We use the classical peano numbers to define natural numbers.  Therefor we use
    the inductive type ~Nat~ with the constructors ~Zero~ and ~Suc~. ~Zero~ is
@@ -1958,7 +1956,27 @@
    zero = Zero @ ()
    #+end_example
 
-** Binary Product
+   We will now define extended naturals. There are also called conat. There are
+   natural numbers with an additional value, infinty. We define it coinductively
+   with the predecessor as it only destructor. The predecessor is either not
+   defined (there is no predecessor of 0 in the natural numbers) or another
+   natural number. We use the type ~Maybe~ to describe something which is either
+   present (the constructor ~Just~) or absent(the constructor ~Nothing~). We can
+   define the successor as a corecursion. The predecessor of the successor of
+   ~x~ is just ~x~. So the only case of corec returns a ~Right x~ (remember Prec
+   returns a coproduct not a number).
+   #+begin_example
+   data Maybe<A : Set> : Set where
+     Nothing : Unit -> Maybe
+     Just : A -> Maybe
+   codata Conat : Set where
+     Prec : Conat -> Maybe<Conat>
+   succ = corec Conat to Conat where
+            Prec x -> Just<Conat> @ x
+   #+end_example
+
+
+** Binary Product and Coproduct
 
    The product is defined as a coinductive type.  It has two destructors.
    The first gives back the first element.  And the second the second.
@@ -1984,18 +2002,17 @@
    product must also depend on this values. This is the product we need for the
    definition of vectors
 
-*** Swap funtion
-    On this type we can define the swap function.
-    #+begin_example
+   On ~Product~ we can define the swap function.
+   #+begin_example
     swap<A : Set, B : Set> =
       corec Product<A,B> to Product<B,A> where
              Fst x -> Snd x
              Snd x -> Fst x
     #+end_example
-    This is a well typed function as shown by the following proof
-    \begin{prooftree}
-    \AxiomC{$(A : *, B : *)||\vdash$ Product<A,B> : $*$}
-    \AxiomC{$(A : *, B : *)||(x:A) \vdash$ Snd @ x : Product<A,B> \textcircled{a}}
+   This is a well typed function as shown by the following proof
+   \begin{prooftree}
+   \AxiomC{$(A : *, B : *)||\vdash$ Product<A,B> : $*$}
+   \AxiomC{$(A : *, B : *)||(x:A) \vdash$ Snd @ x : Product<A,B> \textcircled{a}}
     \noLine
     \UnaryInfC{$(A : *, B : *)||(y : B) \vdash$ Fst @ y : Product<A,B> \textcircled{b}}
     \BinaryInfC{$(A : *, B : *)|| \vdash$ swap : (p : Product<A,B>) $\rat$ Product<B,A>}
@@ -2011,8 +2028,6 @@
     the parameters. The beta equality premises wouldn't be interesting because
     they all already syntactically identical.
 
-** Binary Coproduct
-
    The Binary Coproduct corresponds to the Eiher type in haskell.  It is defined
    as an inductive type.  It is either ~A~ or ~B~.  We have one constructor ~Left~
    for ~A~ and one constructor Right for ~B~
@@ -2022,7 +2037,15 @@
       Right : B -> Coproduct
    #+end_example
 
-** Pi Type
+** Sigma and Pi Type
+
+   The sigma type is a dependent pair of two types.  The second type can depend on
+   the value of the first type.  It corresponds to exists in logic.  We define
+   it as an inductive type and call the constructor ~Exists~.
+   #+begin_example
+   data Sigma<A : Set,B : (x : A) -> Set> : Set where
+      Exists : (x:A) -> B x -> Sigma
+   #+end_example
 
    The pi type is a generalization of the function type to dependent types.
    The type of the codomain or result of a function can depend on the value
@@ -2035,238 +2058,107 @@
       Apply : (x : A) -> Pi x -> B
    #+end_example
 
-*** identity function
-     The identity function is defined like this
-     #+begin_example
-     id<A : Set> = corec Unit to Pi<A,(v:A).A> where
-            { Apply v p = v } @ ()
-     #+end_example
-
-     Evaluation on one goes as follows
-
-    #+begin_example
-    apply = Apply<Nat,(v : Nat).Nat>
-    one = S @ (Z @ ())
-    apply @ id<Nat> @ one
-    = apply @ one @ ((corec Unit to Pi<Nat,(x:Nat).Nat> where
-                        Apply v p = v ) @ ())
-    $\succ \widehat{\text{Nat}} \left(\underbrace{
-       \begin{subarray}{c}
-         \text{corec Unit to Pi where} \\
-         \text{\{Apply' v \_ = v\} @ x}
-       \end{subarray}}_t\right)$[v/x][one,()]
-    = (rec Nat to Nat where
-         Zero x = Zero @ ($\widehat{()}$(t,x))
-         Succ x = Suc @ ($\widehat{Y}$(t,x)))@x[v/x][one,()]
-    = (rec Nat to Nat where
-         Zero x = Zero @ ($\widehat{()}$(t))
-         Succ x = Suc @ x)@x[v/x][one,()]
-    = (rec Nat to Nat where
-         Zero x = Zero @ ($\widehat{()}$())
-         Succ x = Suc @ x) @ x[v/x][one,()]
-    = (rec Nat to Nat where
-         Zero x = Zero @ x
-         Succ x = Suc @ x) @ x[v/x][one,()]
-    = (rec Nat to Nat where
-         Zero x = Zero @ x
-         Succ x = Suc @ x) @ v[one,()]
-    = (rec Nat to Nat where
-         Zero x = Zero @ x
-         Succ x = Suc @ x) @ one
-    = one
-    #+end_example
-** Sigma Type
-
-   The sigma type is a dependent pair of two types.  The second type can depend on
-   the value of the first type.  It corresponds to to exists in logic.  We define
-   it as an inductive type and call the constructor ~Exists~.
+   The identity function is defined like this
    #+begin_example
-   data Sigma<A : Set,B : (x : A) -> Set> : Set where
-      Exists : (x:A) -> B x -> Sigma
+   id<A : Set> = corec Unit to Pi<A,(v:A).A> where
+          { Apply v p = v } @ ()
    #+end_example
 
-** Vectors
+   Evaluation on one goes as follows
 
-   Vectors are a standard example for dependent type.  There are like lists, except
-   there type depends on there length. For example a vector ~[1;2]~ has type
-   ~Vector<Nat> 2~, because it length is 2. It has 2 constructors ~Nil~ and
+   #+begin_example
+   apply = Apply<Nat,(v : Nat).Nat>
+   one = S @ (Z @ ())
+   apply @ id<Nat> @ one
+   = apply @ one @ ((corec Unit to Pi<Nat,(x:Nat).Nat> where
+                       Apply v p = v ) @ ())
+   $\succ \widehat{\text{Nat}} \left(\underbrace{
+      \begin{subarray}{c}
+        \text{corec Unit to Pi where} \\
+        \text{\{Apply' v \_ = v\} @ x}
+      \end{subarray}}_t\right)$[v/x][one,()]
+   = (rec Nat to Nat where
+        Zero x = Zero @ ($\widehat{()}$(t,x))
+        Succ x = Suc @ ($\widehat{Y}$(t,x)))@x[v/x][one,()]
+   = (rec Nat to Nat where
+        Zero x = Zero @ ($\widehat{()}$(t))
+        Succ x = Suc @ x)@x[v/x][one,()]
+   = (rec Nat to Nat where
+        Zero x = Zero @ ($\widehat{()}$())
+        Succ x = Suc @ x) @ x[v/x][one,()]
+   = (rec Nat to Nat where
+        Zero x = Zero @ x
+        Succ x = Suc @ x) @ x[v/x][one,()]
+   = (rec Nat to Nat where
+        Zero x = Zero @ x
+        Succ x = Suc @ x) @ v[one,()]
+   = (rec Nat to Nat where
+        Zero x = Zero @ x
+        Succ x = Suc @ x) @ one
+   = one
+   #+end_example
+
+** Vectors and Streams
+
+   Vectors are a standard example for dependent types. There are like lists,
+   except there type depends on there length. For example a vector ~[1;2]~ has
+   type ~Vector<Nat> 2~, because it length is 2. It has 2 constructors ~Nil~ and
    ~Cons~ like lists. ~Nil~ gives back the empty vector. Because the length of
    the empty vector is zero its return type is ~Vector 0~. The second
-   constructor ~Cons~ takes a natural number ~k~ and a pair. The pair consists
-   of ~A~ and a vector of length ~k~, a ~Vector k~. It returns a new vector.
-   Its head is the first argument of the pair and its tail the second. So the
-   results length is one more then the second argument of the pair. Therefore it
-   is ~Vector (Suc k)~
+   constructor ~Cons~ takes a natural number ~k~ ,a value of type ~A~ and a
+   vector of length ~k~, a ~Vector k~. It returns a new vector. Its head is the
+   first argument of the pair and its tail the second. So the results length is
+   one more then the second argument of the pair. Therefore it is ~Vector (Suc
+   k)~. In cite:basold2016type the head and tail are encoded in a pair.
 
    #+begin_example
    data Vector<A : Set> : (n:Nat) -> Set where
      Nil : Unit -> Vector zero
-     Cons : (k:Nat) -> Product<A,Vector @ k> -> Vector (Suc @ k)
+     Cons : (k:Nat, v:A) -> Vector @ k -> Vector (Suc @ k)
    nil<A : Set> = Nil<A : Set> @ ()
    #+end_example
 
-*** Extend Function
-
-    We use a function, which extends a vector to the end of a
-    vector, to show how evaluation on a vector works.
-    This tail function returns the empty vector for the empty vector,
-    because every function has to be total in our language.  To keep
-    things simple we use Unit for $A$. We also simplify "Product Unit
-    (VectorUnit k)" to just "VectorUnit k"
-    #+begin_example
-    extend<A : Set>(x : A) =
-      rec Vec<A> to ((x).Vec<A> @ (Suc x) where
-        Nil u = Cons<A> @ x @ nil<A>
-        Cons k v = Cons<A> @ (Suc @ k) @ v
-    #+end_example
-    The type checking of this function goes as follows
-    \begin{scprooftree}{0.8}
-    \AxiomC{$\vdash$ (x).(VecUnit @ (Suc @ x)) : (k: Nat)}
-    \noLine
-    \UnaryInfC{(\_ : Unit) $\vdash$ ConsUnit @ 0 @ (NilUnit' @ ()) : (x).(VecUnit @ (Suc @ x)) @ 0}
-    \noLine
-    \UnaryInfC{(k : Nat, v : (x).(Vec @ (Suc @ x)) @ k) $\vdash$ ConsUnit @ (Suc @ k) @ v : (x).(Vec @ (Suc @ x)) @ (Suc @ k)}
-    \UnaryInfC{$\vdash$ app : (k:Nat,y : (x).Vec (Suc x)) $\rat$ (x).(Vec @ (Suc x)) @ k}
-    \end{scprooftree}
-    As an example we evaluate a vector of length 1 with this function.  We choose length one
-    to see all rec cases.
-    \begin{align*}
-      &\text{extend}@ 1 @ (\text{ConsUnit} @ 0 @ (\text{NilUnit'} @ ()))\\
-      &= \text{extend}@(\text{Suc} @ k \bullet 0) @ (\text{ConsUnit} @ 0 @ (\text{NilUnit'} @ ()))\\
-      &\succ \text{ConsUnit} @ (\text{Suc} @ k) @ v \left[ \hat{X}(\text{extend} @ n @ x)/v \right][0,\text{NilUnit'} @ ()]\\
-      &= \text{ConsUnit} @ (\text{Suc} @ k) @ v \left[ \text{extend} @ n @ x/v \right][0, \text{NilUnit'} @ ()]\\
-      &= \text{ConsUnit} @ (\text{Suc} @ 0) @ (\text{extend} @ n @ x) [0,\text{NilUnit'} @ ()]\\
-      &= \text{ConsUnit} @ (\text{Suc} @ 0) @ (\text{extend} @ 0 @ (\text{NilUnit'} @ ()))\\
-      &= \text{ConsUnit} @ 1 @ (\text{extend} @ (0 \bullet 0) @ (\text{NilUnit'} @ ()))\\
-      &\succ \text{ConsUnit} @ 1 @ (\text{ConsUnit} @ 0 @ (\text{NilUnit'} @ ()))\left[ \hat{()}(\text{extend} @ k @ x) / \_  \right][()]\\
-      &= \text{ConsUnit} @ 1 @ (\text{ConsUnit} @ 0 @ (\text{NilUnit'} @ ()))[()]\\
-      &= \text{ConsUnit} @ 1 @ (\text{ConsUnit} @ 0 @ (\text{NilUnit'} @ ()))
-    \end{align*}
-
-*** replicate function
-    The following function gets a number $n$ and returns an vector of units
-    with length $n$
-    #+begin_example
-    length = rec VectorUnit to Nat where
-               NilUnit _ = zero
-               ConsUnit k _ = Succ @ k
-    replicate = lambda_Nat_VectorUnit n ((rec Nat to VectorUnit where
-                                            Zero _ = NilUnit @ ()
-                                            Suc   m = ConsUnit @ (length @ m) @ m) @ n)
-    #+end_example
-    The following shows the steps for evaluating /replicate/ on 1.  We omit
-    the steps for /length/ and the inner /rec/, because we want to see how
-    /corec/ evaluation works.  We will call the /rec/ part in the definition of
-    /replicate/ /rep/.
-
-    #+begin_example
-    apply (lambda n (rep @ n)) 1
-    = Apply @ 1 @ (lampda n (rep @ n))
-    = Apply @ 1 @ ((corec Pi to Unit where
-                     Apply n _ = rep @ n)@())
-    $\succ$ $\widehat{\text{VecUnit}}(\underbrace{\text{corec Pi to Unit where \{ Apply n \_ = rep @ n \} @ x}}_t)$[rep@n/x][1,()]
-    = (rec VecUnit to VecUnit where
-         VecNil x = VecNil @ $\widehat{()}$(t,x)
-         VecCons n x = VecCons @ n @ $\widehat{(y).Y}$(t,x))@n@x[rep@n/x][1,()]
-    = (rec VecUnit to VecUnit where
-         VecNil x = VecNil @ $\widehat{()}$(t,x)
-         VecCons n x = VecCons @ n @ $\widehat{Y}$(t,x))@n@x[rep@n/x][1,()]
-    = (rec VecUnit to VecUnit
-         VecNil x = VecNil@()
-         VecCons n x = VecCons'@n@x)@n@x[rep@n/x][1,()]
-    = (rec VecUnit to VecUnit
-         VecNil x = VecNil@x
-         VecCons n x = VecCons@n@y)@n@(rep@n)[1,()]
-    = (rec VecUnit to VecUnit
-         VecNil x = VecNil@x
-         VecCons n x = VecCons@n@x)@1@(rep@1)
-    = ConsUnit @ (NilUnit @ ())
-    #+end_example
-
-** Maybe
-
-** Extended Naturals
-
-   We will now define extended naturals.  There are needed for the definitions
-   of streams.  There are natural numbers with an additional value, infinty.  We
-   define it coinductively with the predecessor as it only destructor.  The predecessor
-   is either not defined (there is no predecessor of 0 in the natural numbers) or
-   another natural number.  So we use a coproduct of ~Unit~ (which should mean: "has no
-   predecessor") and another ~ExNat~.  We can define the successor as a corecursion.
-   The predecessor of the successor of ~x~ is just ~x~.  So the only case of corec returns
-   a ~Right x~ (remember Prec returns a coproduct not a number).
+   The function ~extend~ takes an value ~x~ and extends it to a vector.
    #+begin_example
-   codata ExNat : Set where
-      Prec : ExNat -> Maybe<ExNat>
-   succE = corec ExNat where
-             Prec x -> Just<ExNat> @ x
+   extend<A : Set> =
+     rec Vec<A> to ((x).Vec<A> @ (Suc x) where
+       Nil u = Cons<A> @ x @ nil<A>
+       Cons k v = Cons<A> @ (Suc @ k) @ v
    #+end_example
+   The type checking of this function goes as follows
+   \begin{scprooftree}{0.8}
+   \AxiomC{(A : Set)||$\vdash$ (x).(Vec<A> @ (Suc @ x)) : (k: Nat) $\rat$ *}
+   \noLine
+   \UnaryInfC{(A: Set)||(u : A) $\vdash$ Cons<A> @ 0 @ (Nil<A> @ ()) : (x).(Vec<A> @ (Suc @ x)) @ 0}
+   \noLine
+   \UnaryInfC{(k : Nat, v : (x).(Vec @ (Suc @ x)) @ k) $\vdash$ Cons<A> @ (Suc @ k) @ v : (x).(Vec @ (Suc @ x)) @ (Suc @ k)}
+   \UnaryInfC{$\vdash$ extend<A> : (k:Nat,y : Vec<A> @ k) $\rat$ (x).(Vec<A> @ (Suc x)) @ k}
+   \end{scprooftree}
+   As an example we evaluate a vector of length 1 with this function.  We choose length one
+   to see all rec cases.
+   \begin{align*}
+     &\text{extend<Nat>} @ 1 @ (\text{Cons<Nat>} @ 0 @ 0 @ \text{nil<Nat>})\\
+     &= \text{extend<Nat>}@(\text{Suc} @ k \bullet 0) @ (\text{Cons<Nat>} @ 0 @ 0 @ \text{nil<Nat>})\\
+     &\succ \text{Cons<Nat>} @ (\text{Suc} @ k) @ v \left[ \widehat{X@k}(\text{extend<Nat>} @ n @ x)/v \right][0,\text{nil<Nat>}]\\
+     &= \text{Cons<Nat>} @ (\text{Suc} @ k) @ v \left[ \widehat{X}(\text{extend<Nat>} @ n @ x)[k/n]/v \right][0,\text{nil<Nat>}]\\
+     &= \text{Cons<Nat>} @ (\text{Suc} @ k) @ v \left[ \text{extend} @ n @ x[k/n]/v \right][0, \text{nil<Nat>}]\\
+     &= \text{Cons<Nat>} @ (\text{Suc} @ k) @ v \left[ \text{extend} @ k @ x/v \right][0, \text{nil<Nat>}]\\
+     &= \text{Cons<Nat>} @ (\text{Suc} @ k) @ (\text{extend} @ k @ x) [0,\text{nil<Nat>}]\\
+     &= \text{Cons<Nat>} @ (\text{Suc} @ 0) @ (\text{extend} @ 0 @ (\text{nil<Nat>}))\\
+     &= \text{Cons<Nat>} @ 1 @ (\text{extend} @ 0 @ (\text{Nil<Nat>} @ ()))\\
+     &\succ \text{Cons<Nat>} @ 1 @ (\text{Cons<Nat>} @ 0 @ (\text{Nil<Nat>} @ ()))\left[ \hat{()}(\text{extend} @ k @ x) / u  \right][()]\\
+     &= \text{Cons<Nat>} @ 1 @ (\text{Cons<Nat>} @ 0 @ (\text{Nil<Nat>} @ x))[()]\\
+     &= \text{Cons<Nat>} @ 1 @ (\text{Cons<Nat>} @ 0 @ (\text{Nil<Nat>} @ ()))
+   \end{align*}
+   here we write $1$ for ~Suc @ (Zero @ ())~ and $0$ for ~Zero @ ()~
 
-** Streams
-
-   With extended naturals defined, we can now define partial streams.  This are streams
+   With the help extended naturals , we can define partial streams.  This are streams
    which depend on there definition depth.  Like non-dependent
    streams they are coinductive and have 2 destructors for head and tail.
    #+begin_example
    codata PStr<A : Set>: (n: ExNat) -> Set where
       hd : (k : ExNat) -> PStr<A> (succE k) -> A
       tl : (k : ExNat) -> PStr<A> (succE k) -> PStr<A> @ k
-   #+end_example
-** List
-   List A describes a list of type elements with type A.  It is defined
-   as follows
-
-   \begin{equation*}
-   List A =  \mu(X:*;\epsilon_2;(\textbf{1},A\times X))
-   \end{equation*}
-   where $\Gamma_1=\emptyset$ and $\Gamma_2\vdash A:*$
-
-   In the implemented syntax is written like this
-   #+begin_example
-   data List<A : Set> : Set where
-      Nil : Terminal -> List
-      Cons : Product<A,List> -> List
-   nil<A : Set> = Nil<A> @ ()
-   #+end_example
-
-** Length function on lists of Units
-   \begin{align*}
-   \text{length} = \text{rec} &((y_k:\top).\alpha_1^\textbf{N}@\langle\rangle\\
-                &,(x:\top,y_k:\mu(X:*;\epsilon_2(\mathbf{1},X)))).\alpha_2^\textbf{N} @ y_k\\
-   \end{align*}
-*** Type checking
-
-    \begin{scprooftree}{0.6}
-    \AxiomC{$\vdash\textbf{N}:*$}
-    \AxiomC{$\vdash\alpha_1^\textbf{N}: (x:\textbf{1})\rightarrow\textbf{N}$}
-    \RightLabel{\textbf{(Term-Weak)}}
-    \UnaryInfC{$y_k:\textbf{1}\vdash\alpha_1^\textbf{N}: (x:\textbf{1})\rightarrow\textbf{N}$}
-    \AxiomC{$\vdash\langle\rangle':\textbf{1}$}
-    \RightLabel{\textbf{(Term-Weak)}}
-    \UnaryInfC{$y_k:\textbf{1}\vdash\langle\rangle':\textbf{1}$}
-    \RightLabel{\textbf{(Inst)}}
-    \BinaryInfC{$y_k:\textbf{1}\vdash \alpha_1^\textbf{N}@\langle\rangle':\textbf{N}$}
-    \AxiomC{$\vdash\alpha_2^\textbf{N}: (x:\textbf{N})\rightarrow\textbf{N}$}
-    \RightLabel{\textbf{(Term-Weak)}}
-    \UnaryInfC{$y_k:\textbf{N}\vdash\alpha_2^\textbf{N}: (x:\textbf{N})\rightarrow\textbf{N}$}
-    \AxiomC{$\textbf{N}:*$}
-    \RightLabel{\textbf{(Proj)}}
-    \UnaryInfC{$y_k:\textbf{N}\vdash y_k:\textbf{N}$}
-    \RightLabel{\textbf{(Inst)}}
-    \BinaryInfC{$y_k:\textbf{N}\vdash \alpha_2^\textbf{N}@y_k:\textbf{N}$}
-    \RightLabel{\textbf{(Ind-E)}}
-    \TrinaryInfC{$\vdash \text{rec}((y_k).\alpha_1^\textbf{N}@\langle\rangle'
-                    ,(y_k).\alpha_2^\textbf{N} @ y_k):(y:\text{List }\textbf{1})\rightarrow\textbf{N}$}
-    \end{scprooftree}
-
-** Rose Tree
-   Rose Tree A = $\nu(X:*;\epsilon_2;(\textbf{1},List X)$
-
-   #+begin_example
-   data RoseTree<A : Set> : Set where
-      Leaf : Terminal -> RoseTree
-      Branch : List<RoseTree> -> RoseTree
-   leaf<A : Set> = Leaf<A> @ ()
    #+end_example
 
 * Conclusion
