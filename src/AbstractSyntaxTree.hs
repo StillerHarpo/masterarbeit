@@ -106,7 +106,6 @@ instance Eq Expr where
 
 type Ctx = [TypeExpr]
 
--- | TyCtx contains only inductive coninductive types for now
 type TyCtx = [Ctx]
 
 data OverFuns = OverFuns { fTyExpr      :: TypeExpr    -> TypeExpr

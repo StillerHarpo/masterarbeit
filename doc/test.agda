@@ -1,11 +1,11 @@
 module test where
 
-open import Data.List
-open import Data.Maybe
 open import Relation.Binary.PropositionalEquality
 
 module NewCodata where
   open import Data.Nat
+  open import Data.List
+  open import Data.Maybe
   record Pair (A B : Set) : Set where
     field
       fst : A
@@ -156,9 +156,9 @@ module NonTerminating where
 module SizedTypes where
   open import Agda.Builtin.Size
 
-  data ℕ (i : Size) : Set where
-    zero : ℕ i
-    suc : ∀{j : Size< i} → ℕ j → ℕ i
+  data ℕ : Size → Set where
+    zero : {i : Size} → ℕ i
+    suc : {i : Size} → ℕ i → ℕ (↑ i)
 
   one : ℕ ∞
   one = suc zero
@@ -183,6 +183,11 @@ module SizedTypes where
   zero  / _ = zero
   suc x / y = suc ( (x - y) / y)
 
+  min : {i : Size} → ℕ i → ℕ i → ℕ i
+  min zero     _        = zero
+  min _        zero     = zero
+  min (suc  m) (suc  n) = suc (min  m n)
+
   test₁ : zero / zero ≡ zero
   test₁ = refl
   test₂ : zero / five ≡ zero
@@ -199,3 +204,34 @@ module SizedTypes where
   test₇ = refl
   test₈ : four / two ≡ two
   test₈ = refl
+
+  record Stream (i : Size) (A : Set) : Set where
+    coinductive
+    field
+      hd : A
+      tl : ∀ {j : Size< i} → Stream j A
+  open Stream
+
+  cons : {i : Size} {j : Size< i} {A : Set} → A -> Stream j A → Stream i A
+  hd (cons x _)  = x
+  tl (cons _ xs) = xs
+
+  repeat : {A : Set} → A → Stream ∞ A
+  hd (repeat x) = x
+  tl (repeat x) = repeat x
+
+  map : {A B : Set} {i : Size} → (A → B) → Stream i A → Stream i B
+  hd (map f xs) = f (hd xs)
+  tl (map f xs) = map f (tl xs)
+
+  leq : {C : Set} → ℕ ∞ → ℕ ∞ → C → C → C
+  leq zero    _       t _ = t
+  leq (suc x) zero    _ f = f
+  leq (suc x) (suc y) t f = leq x y t f
+
+
+  merge : {i : Size} → Stream i (ℕ ∞) → Stream i (ℕ ∞) → Stream i (ℕ ∞)
+  hd (merge xs ys) = min (hd xs) (hd ys)
+  tl (merge xs ys) = leq (hd xs) (hd ys)
+                         (cons (hd ys) (merge (tl xs) (tl ys)))
+                         (cons (hd xs) (merge (tl xs) (tl ys)))
