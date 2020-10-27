@@ -1084,18 +1084,14 @@
    such rules with no open premises, our program type checks. We have to rewrite
    the typing rules of the paper, to get rules which are syntax directed. Syntax
    directed means we can infer from the syntax alone what we have to check next
-   i. e. which rule with which premises we have to apply. Here are the rules
-   which have to be rewritten.
-   + *(Ty-Inst)*
-   + *(Param-Abstr)*
-   This rules contain variables in the premises where their type isn't in the
+   i. e. which rule with which premises we have to apply. In the paper their are
+   rules containing variables in the premises where their type isn't in the
    conclusion. So if we want to type-check something which is the conclusion of
    such a rule we have no way of knowing what this variables are.
 
    We don't need the weakening rules because we can lookup a variable in a
-   context. So the following rules get removed.
-   + *(TyVar-Weak)*
-   + *(Ty-Weak)*
+   context.  So we ignore them in our implementation.
+
    The order in *TyCtx* isn't relevant so we can use a map for it. In the code we
    use a list, because the names of the variables are the index of their type in
    the context. The order of *Ctx* is relevant because types of later variables
@@ -1109,6 +1105,28 @@
    gray. We use variables $\Phi,\Phi',\Phi_1,\Phi_2,\dots$ for parameter contexts,
    $\Theta,\Theta',\Theta_1,\Theta_2,\dots$ for type variable contexts and
    $\Gamma,\Gamma',\Gamma_1,\Gamma_2,\dots$ for term variable contexts.
+   The judgements in our rules are of one of the following form.
+   + $\Phi\mid\Theta\mid\Gamma\vdash\Theta'$ - The type variable context
+     $\Theta'$ is well formed in the combined context $\Phi\mid\Theta\mid\Gamma$
+   + $\Phi\mid\Theta\mid\Gamma\vdash\Gamma'$ - The term variable context
+     $\Gamma'$ is well formed in the combined context $\Phi\mid\Theta\mid\Gamma$
+   + $\Phi\mid\Theta\mid\Gamma\vdash\Phi'$ - The parameter variable context
+     $\Phi'$ is well formed in the combined context $\Phi\mid\Theta\mid\Gamma$
+   + $A\longrightarrow_T^* B$ - The type $A$ fully evaluates to type $B$
+   + $A \equiv B$ - The type $A$ is computational equivalent to type $B$
+   + $\Phi\mid\Theta\mid\Gamma\vdash A : \Gamma_2\rat*$ - The type
+     $A$ is well formed in the combined context $\Phi\mid\Theta\mid\Gamma$ and
+     can be instantiated with arguments according to context $\Gamma_2$
+   + $\Phi\mid\Theta\mid\Gamma\vdash t : \Gamma_2\rat A$ - The term $t$ is well
+     formed in the combined context $\Phi\mid\Theta\mid\Gamma$ and can be
+     instantiated with arguments according to context $\Gamma_2$.  After this
+     instantiation it is of type $A$, where the arguments are substituted in $A$.
+   + $\Phi \vdash \sigma : \Gamma_1 \triangleright \Gamma_2$ - The context
+     morphism $\sigma$ is a well-formed substitution for $\Gamma_2$ with terms
+     in context $\Gamma_1$ in parameter context $\Phi$
+   We will write $\vdash$ for $\Phi\mid\Theta\mid\Gamma\vdash$ where
+   $\Phi$,$\Theta$ and $\Gamma$ are arbitrary and aren't referred to by the
+   right hand side.
 
    In the module ~TypeChecker~ we will implement the following rules.  It
    defines a monad ~TI~ which can throw errors and has a reader on the contexts
@@ -1132,7 +1150,7 @@
     \UnaryInfC{$\vdash\emptyset$ \Ctx}
     \DisplayProof
     \hskip 1.5em
-    \AxiomC{$|\emptyset|\Gamma\vdash A:*$}
+    \AxiomC{$\mid\emptyset\Gamma\vdash A:*$}
     \UnaryInfC{$\vdash\Gamma,x:A$ \Ctx}
     \DisplayProof
     \end{center}
@@ -1200,9 +1218,13 @@
       \DisplayProof
     \end{center}
 
-*** Full evaluation
-    We write $A \longrightarrow_T^* B$ for evaluating $A$ as long as it
-    is possible yields $B$.
+*** Beta-equivalence
+    To type are beta equivalent if they evaluate to the same type. Because our
+    language is deterministic this just means if we fully evaluate both of them
+    they are alpha equivalent. Alpha equivalence means we can substitute some
+    variables in both of them and get the same type. So we first need to define
+    rules which say what full evaluation means. We write $A \longrightarrow_T^*
+    B$ for evaluating $A$ as long as it is possible yields $B$.
 
     The rules are
     \begin{center}
@@ -1216,8 +1238,8 @@
     \DisplayProof
     \end{center}
     $\longrightarrow_T$ is defined in section [[Evaluation]].
-*** Beta-equivalence
-    We introduce a new rule for beta-equivalence.
+
+    We can then introduce a new rule for beta-equivalence.
     \begin{center}
     \AxiomC{$A\longrightarrow_T^* A'$}
     \AxiomC{$B\longrightarrow_T^* B'$}
@@ -1225,8 +1247,9 @@
     \TrinaryInfC{$A\equiv_\beta B$}
     \DisplayProof
     \end{center}
-    In the implementation $\equiv_\alpha$ is trivial, because we use /de
-    Bruijn indices/.
+    This rule says if $A$ evaluates to $A'$, $B$ to $B'$ and $A'$ and $B'$ are
+    alpha equivalent, then $A$ and $B$ are beta equivalent In the implementation
+    $\equiv_\alpha$ is trivial, because we use /de Bruijn indices/.
 
     We also add some rules to check if two contexts are the same.
     \begin{center}
@@ -1245,57 +1268,94 @@
  %   \DisplayProof
     \end{center}
 
-*** Unit type introduction
-    The rule
-    \begin{prooftree}
+*** Unit type and expression introduction
+    The paper defines one rule for the unit type and one for the unit value.
+    This are.
+    \begin{center}
       \AxiomC{}
       \RightLabel{\textbf{($\top$-I)}}
       \UnaryInfC{$\vdash\top:*$}
-    \end{prooftree}
-    gets rewritten to
-     \begin{prooftree}
+      \DisplayProof
+      \hskip 1.5em
+      \AxiomC{}
+      \topI{$\vdash\lozenge:\top$}
+      \DisplayProof
+    \end{center}
+    The first rule says that the type $\top$ has always an empty context.  The
+    second rule says its value $\lozenge$ is always of type $\top$. This rules
+    get rewritten to.
+    \begin{center}
       \AxiomC{}
       \RightLabel{\textbf{(Unit-I)}}
-      \UnaryInfC{\graybox{$\Phi|\Theta|\Gamma$}$\vdash$Unit:$*$}
-    \end{prooftree}
-    We change the syntax "$\top$" to "Unit" and add *Ctx* and *TyCtx*.
-    We will do this for every rule which has empty contexts to subsume
-    the rules with *TyVar-Weak*, *Ty-Weak* and *Term-Weak*.
+      \UnaryInfC{\graybox{$\Phi\mid\Theta\mid\Gamma$}$\vdash$Unit:$*$}
+      \DisplayProof
+      \hskip 1.5em
+      \AxiomC{}
+      \topI{\graybox{$\Phi\mid\Theta\mid\Gamma$}$\vdash$():Unit}
+      \DisplayProof
+    \end{center}
+    We change the syntax "$\top$" to "Unit" and add *Ctx* and *TyCtx*. We will
+    do this for every rule which has empty contexts to subsume the weakening
+    rules of the paper. The unit term always has the unit type as its type.
 
-*** Type Variable introduction
+*** Variable lookup
+    We have three kinds of variables we can lookup. They are type variables,
+    term variables and parameters.  The paper already has rules for the type and
+    term variables.  We need to rewrite them.  We add a new rule for looking up
+    a parameter.
 
-     The rule
+    The rule
      \begin{prooftree}
       \AxiomC{$\vdash \Theta$ \TyCtx}
       \AxiomC{$\vdash \Gamma$ \Ctx}
-      \TyVarI{$\Theta,X:\Gamma\rat*|\emptyset\vdash X : \Gamma \rat *$}
+      \TyVarI{$\Theta,X:\Gamma\rat*\mid\emptyset\vdash X : \Gamma \rat *$}
     \end{prooftree}
     gets rewritten to
-
-     \begin{prooftree}
+    \begin{prooftree}
       \AxiomC{\graybox{$\Theta(X)\rightsquigarrow\Gamma\rat*$}}
       \AxiomC{\graybox{$\vdash \Gamma_1$ \Ctx}}
-      \TyVarI{\graybox{$\Phi$}$|\Theta|$\graybox{$\Gamma_1$}$\vdash X : \Gamma \rat *$}
+      \TyVarI{\graybox{$\Phi$}$\mid\Theta\mid$\graybox{$\Gamma_1$}$\vdash X : \Gamma \rat *$}
     \end{prooftree}
-    In the rule from the paper we can only type the last variable in the type
-    context.  In our rule we just look up the variable in the context.  This
+    The rule
+    \begin{center}
+      \AxiomC{$\Gamma\vdash A:*$}
+      \RightLabel{\textbf{(Proj)}}
+      \UnaryInfC{$\Gamma,x:A\vdash x:A$}
+      \DisplayProof
+    \end{center}
+    gets rewritten to
+    \begin{center}
+      \AxiomC{\graybox{$\Gamma(x)\rightsquigarrow A$}}
+      \RightLabel{\textbf{(Proj)}}
+      \UnaryInfC{\graybox{$\Phi\mid\Theta\mid$}$\Gamma\vdash x:A$}
+      \DisplayProof
+    \end{center}
+    The rule for looking something up in the parameter context is.
+    \begin{prooftree}
+      \AxiomC{$\Phi(X)\rightsquigarrow\Gamma\rat*$}
+      \AxiomC{$\vdash \Gamma_1$ \Ctx}
+      \TyVarI{$\Phi\mid\Theta\mid$$\Gamma_1$$\vdash X : \Gamma \rat *$}
+    \end{prooftree}
+
+    In the rule from the paper we can only infer the type or kind of the last variable in the
+    context.  In our rules we just look up the variable in the context.  This
     rules can check the same thing if we take the weakening rules into account.
     With them we can just weaken the context until we get to the desired
     variable.
 
-*** Type instantiation
-    The rule
+*** Type and expression instantiation
+    We can instantiate types and terms.  The rule
     \begin{prooftree}
-      \AxiomC{$\Theta|\Gamma_1\vdash A:(x:B,\Gamma_2)\rat*$}
+      \AxiomC{$\Theta\mid\Gamma_1\vdash A:(x:B,\Gamma_2)\rat*$}
       \AxiomC{$\Gamma_1\vdash t:B$}
-      \TyInst{$\Theta|\Gamma_1\vdash A@t:\Gamma_2[t/x]\rat*$}
+      \TyInst{$\Theta\mid\Gamma_1\vdash A@t:\Gamma_2[t/x]\rat*$}
     \end{prooftree}
-    gets rewritten to
+    for instantiating types gets rewritten to
      \begin{prooftree}
-      \AxiomC{\graybox{$\Phi$}$|\Theta|\Gamma_1\vdash A:(x:B,\Gamma_2)\rat*$}
-      \AxiomC{\graybox{$\Phi|\Theta$}$|\Gamma_1\vdash t:$\graybox{$B'$}}
+      \AxiomC{\graybox{$\Phi$}$\mid\Theta\mid\Gamma_1\vdash A:(x:B,\Gamma_2)\rat*$}
+      \AxiomC{\graybox{$\Phi\mid\Theta$}$\mid\Gamma_1\vdash t:$\graybox{$B'$}}
       \AxiomC{\graybox{$B\equiv_\beta B'$}}
-      \TyInstTrinary{\graybox{$\Phi$}$|\Theta|\Gamma_1\vdash A@t:\Gamma_2[t/x]\rat*$}
+      \TyInstTrinary{\graybox{$\Phi$}$\mid\Theta\mid\Gamma_1\vdash A@t:\Gamma_2[t/x]\rat*$}
     \end{prooftree}
     For this rule we have to check if $t$ has the expected type for the first
     variable in the context of $A$.  In our version we just infer the type for $A$ and $t$.
@@ -1303,17 +1363,39 @@
     of $t$.  If that isn't the case type checking fails.  Otherwise we just
     substitute in the remaining context.
 
-*** Parameter abstraction
-    The rule
+    We also have a rule to instantiate terms.  This rule
     \begin{center}
-      \AxiomC{$\Theta|\Gamma_1,x:A\vdash B:\Gamma_2\rat*$}
-      \ParamAbstr{$\Theta|\Gamma_1\vdash(x).B:(x:A,\Gamma_2)\rat*$}
+      \AxiomC{$\Gamma_1\vdash t:(x:A,\Gamma_2)\rat B$}
+      \AxiomC{$\Gamma_1\vdash s:A$}
+      \RightLabel{\textbf{(Inst)}}
+      \BinaryInfC{$\Gamma_1\vdash t@s:\Gamma_2[s/x]\rat B[s/x]$}
       \DisplayProof
     \end{center}
     gets rewritten to
     \begin{center}
-      \AxiomC{\graybox{$\Phi$}|$\Theta|\Gamma_1,x:A\vdash B:\Gamma_2\rat*$}
-      \ParamAbstr{\graybox{$\Phi$}$|\Theta|\Gamma_1\vdash(x$\graybox{$:A$}$).B:(x:A,\Gamma_2)\rat*$}
+      \AxiomC{\graybox{$\Phi\mid\Theta$}$\mid\Gamma_1\vdash t:(x:A,\Gamma_2)\rat B$}
+      \AxiomC{\graybox{$\Phi\mid\Theta$}$\mid\Gamma_1\vdash s:$\graybox{$A'$}}
+      \AxiomC{\graybox{$A\equiv_\beta A'$}}
+      \RightLabel{\textbf{(Inst)}}
+      \TrinaryInfC{\graybox{$\Phi\mid\Theta$}$\mid\Gamma_1\vdash t@s:\Gamma_2[s/x]\rat B[s/x]$}
+      \DisplayProof
+    \end{center}
+    This rules are similar to the rule for type instantiation.  Here we have to
+    check(or infer) a term instead of a type.  We also have to substitute $s$ in
+    the result type of $t$(in the case of types its always $*$, which obviously
+    has no free variables).
+
+*** Parameter abstraction
+    The rule
+    \begin{center}
+      \AxiomC{$\Theta\mid\Gamma_1,x:A\vdash B:\Gamma_2\rat*$}
+      \ParamAbstr{$\Theta\mid\Gamma_1\vdash(x).B:(x:A,\Gamma_2)\rat*$}
+      \DisplayProof
+    \end{center}
+    gets rewritten to
+    \begin{center}
+      \AxiomC{\graybox{$\Phi$}$\mid\Theta\mid\Gamma_1,x:A\vdash B:\Gamma_2\rat*$}
+      \ParamAbstr{\graybox{$\Phi$}$\mid\Theta\mid\Gamma_1\vdash(x$\graybox{$:A$}$).B:(x:A,\Gamma_2)\rat*$}
       \DisplayProof
     \end{center}
     Here we just add the argument of the lambda to the expression context.  Then
@@ -1325,26 +1407,26 @@
     We have to separate the rule
     \begin{prooftree}
     \AxiomC{$\sigma_k:\Gamma_k\triangleright\Gamma$}
-    \AxiomC{$\Theta,X:\Gamma\rat*|\Gamma_k\vdash A_k:*$}
+    \AxiomC{$\Theta,X:\Gamma\rat*\mid\Gamma_k\vdash A_k:*$}
     \FPTy
-    \BinaryInfC{$\Theta | \emptyset \vdash \rho(X : \Gamma \rat *;\vv{\sigma};\vv{A}):\Gamma\rat *$}
+    \BinaryInfC{$\Theta \mid \emptyset \vdash \rho(X : \Gamma \rat *;\vv{\sigma};\vv{A}):\Gamma\rat *$}
     \end{prooftree}
     into multiple rules.  First we need rules to check the definitions of
     (co)inductive types.  This are
     \begin{prooftree}
     \AxiomC{$\sigma_k:\Gamma_k\triangleright\Gamma$}
-    \AxiomC{\graybox{$\Phi$}$|X:\Gamma\rat*|\Gamma_k\vdash A_k:*$}
+    \AxiomC{\graybox{$\Phi$}$\mid X:\Gamma\rat*\mid\Gamma_k\vdash A_k:*$}
     \AxiomC{\graybox{$\vdash \phi$ \ParCtx}}
     \FPTy
-    \TrinaryInfC{$\vdash$ data X<$\Phi$> $\Gamma$ -> Set where; $\vv{Constr_k : \Gamma_k\text{ -> }A_k\text{ -> }X \sigma_k}$}
+    \TrinaryInfC{$\vdash$ data X$\langle\Phi\rangle$ $\Gamma \rat $ Set where; $\vv{Constr_k : \Gamma_k\rat A_k\rat X \sigma_k}$}
     \end{prooftree}
     and
     \begin{prooftree}
     \AxiomC{$\sigma_k:\Gamma_k\triangleright\Gamma$}
-    \AxiomC{\graybox{$\Phi$}$|X:\Gamma\rat*|\Gamma_k\vdash A_k:*$}
+    \AxiomC{\graybox{$\Phi$}$\mid X:\Gamma\rat*\mid\Gamma_k\vdash A_k:*$}
     \AxiomC{\graybox{$\vdash \phi$ \ParCtx}}
     \FPTy
-    \TrinaryInfC{$\vdash$ codata X<$\Phi$> : $\Gamma$ -> Set where; $\vv{Destr_k : \Gamma_k \text{ -> } X \sigma_k \text{ -> } A_k}$}
+    \TrinaryInfC{$\vdash$ codata X$\langle\Phi\rangle$ : $\Gamma \rat$ Set where; $\vv{Destr_k : \Gamma_k \rat  X \sigma_k \rat  A_k}$}
     \end{prooftree}
     Because we only allow top level definitions of (co)inductive types our rules
     have empty contexts.  We first have to check if $\sigma_k$ is  a context
@@ -1361,15 +1443,15 @@
     \DisplayProof
     \hskip 1.5em
     \AxiomC{\graybox{$\Phi\vdash$}$\sigma : \Gamma_1 \triangleright \Gamma_2$}
-    \AxiomC{\graybox{$\Phi|$}$\Gamma_1\vdash t : A[\sigma]$}
+    \AxiomC{\graybox{$\Phi\mid$}$\Gamma_1\vdash t : A[\sigma]$}
     \BinaryInfC{\graybox{$\Phi\vdash$}$(\sigma,t):\Gamma_1\triangleright(\Gamma_2,x:A)$}
     \DisplayProof
     \end{center}
     We also need a rule for the cases in which we are using this defined
     variables.  This is.
     \begin{prooftree}
-    \AxiomC{$\Phi|\Theta|\Gamma'\vdash \vv{A}:\Gamma_i \rat *$}
-    \UnaryInfC{$\Phi|\Theta|\Gamma'\vdash X<\vv{A}> : \Gamma[\vv{A}]\rat *$}
+    \AxiomC{$\Phi\mid\Theta\mid\Gamma'\vdash \vv{A}:\Gamma_i \rat *$}
+    \UnaryInfC{$\Phi\mid\Theta\mid\Gamma'\vdash X\langle\vv{A}\rangle : \Gamma[\vv{A}]\rat *$}
     \end{prooftree}
     Here X is a data or codata definition.  The parser can decide if a variable
     is a such an definition or a local definition. Because we are type checking
@@ -1381,99 +1463,36 @@
     list of parameters matches a parameter context.
     \begin{center}
     \AxiomC{}
-    \UnaryInfC{$\Phi|\Theta|\Gamma\vdash () : ()$}
+    \UnaryInfC{$\Phi\mid\Theta\mid\Gamma\vdash () : ()$}
     \DisplayProof
     \hskip 1.5em
-    \AxiomC{$\Phi|\Theta|\Gamma\vdash A : \Gamma'\rat*$}
-    \AxiomC{$\Phi|\Theta|\Gamma\vdash \vv{A} : \Phi'[A/X]$}
-    \BinaryInfC{$\Phi|\Theta|\Gamma\vdash A,\vv{A} : (X:\Gamma'\rat*,\Phi'$)}
+    \AxiomC{$\Phi\mid\Theta\mid\Gamma\vdash A : \Gamma'\rat*$}
+    \AxiomC{$\Phi\mid\Theta\mid\Gamma\vdash \vv{A} : \Phi'[A/X]$}
+    \BinaryInfC{$\Phi\mid\Theta\mid\Gamma\vdash A,\vv{A} : (X:\Gamma'\rat*,\Phi'$)}
     \DisplayProof
     \end{center}
     We just check every variable for the kinds in $\Phi'$ one after the other.
     We also have to substitute the type into the context.  Because kinds in
     a parameter context can depend on variables previously defined in this context.
 
-*** Unit expression introduction
-    The rule
-    \begin{center}
-      \AxiomC{}
-      \topI{$\vdash\lozenge:\top$}
-      \DisplayProof
-    \end{center}
-    get rewritten to
-    \begin{center}
-      \AxiomC{}
-      \topI{\graybox{$\Phi|\Theta|\Gamma$}$\vdash$():Unit}
-      \DisplayProof
-    \end{center}
-    The unit term always has the unit type as its type.
-
-*** Expression Instantiation
-    The rule
-    \begin{center}
-      \AxiomC{$\Gamma_1\vdash t:(x:A,\Gamma_2)\rat B$}
-      \AxiomC{$\Gamma_1\vdash s:A$}
-      \RightLabel{\textbf{(Inst)}}
-      \BinaryInfC{$\Gamma_1\vdash t@s:\Gamma_2[s/x]\rat B[s/x]$}
-      \DisplayProof
-    \end{center}
-    gets rewritten to
-    \begin{center}
-      \AxiomC{\graybox{$\Phi|\Theta$}$|\Gamma_1\vdash t:(x:A,\Gamma_2)\rat B$}
-      \AxiomC{\graybox{$\Phi|\Theta$}$|\Gamma_1\vdash s:$\graybox{$A'$}}
-      \AxiomC{\graybox{$A\equiv_\beta A'$}}
-      \RightLabel{\textbf{(Inst)}}
-      \TrinaryInfC{\graybox{$\Phi|\Theta$}$|\Gamma_1\vdash t@s:\Gamma_2[s/x]\rat B[s/x]$}
-      \DisplayProof
-    \end{center}
-    This rules are similar to the rules in [[Type instantiation]].  Here we have to
-    check(or infer) a term instead of a type.  We also have to substitute $s$ in
-    the result type of $t$(in the case of types its always $*$, which obviously
-    has no free variables).
-
-*** Expression variable introduction
-    The rule
-    \begin{center}
-      \AxiomC{$\Gamma\vdash A:*$}
-      \RightLabel{\textbf{(Proj)}}
-      \UnaryInfC{$\Gamma,x:A\vdash x:A$}
-      \DisplayProof
-    \end{center}
-    gets rewritten to
-    \begin{center}
-      \AxiomC{\graybox{$\Gamma(x)\rightsquigarrow A$}}
-      \RightLabel{\textbf{(Proj)}}
-      \UnaryInfC{\graybox{$\Phi|\Theta|$}$\Gamma\vdash x:A$}
-      \DisplayProof
-    \end{center}
-    This works analog to [[Type Variable introduction]].  Here we just look up a
-    expression variable in the expression variable context.
-
-*** Constructor
-    The rule
+*** Constructor and Destructor
+    The rule for constructors
     \begin{center}
       \AxiomC{$\mu(X:\Gamma\rat*;\vv{\sigma};\vv{A}):\Gamma\rat*$}
-      \AxiomC{$1\leq k\leq|\vv{A}|$}
+      \AxiomC{$1\leq k\leq\mid\vv{A}\mid$}
       \IndIBinary{$\vdash\alpha_k^{\mu(X:\Gamma\rat*;\vv{\sigma};\vv{A})}:(\Gamma_k,y:A_k[\mu/X])\rat\mu@\sigma_k$}
       \DisplayProof
     \end{center}
     gets rewritten to
     \begin{center}
-      \AxiomC{\graybox{$\Phi|\Theta|\Gamma\vdash \vv{B} : \Phi'$}}
-      \IndI{\graybox{$\Phi|\Theta|\Gamma$}$\vdash$Constr\graybox{$<\vv{B}>$}$:(\Gamma_k\graybox{$\graybox{$[\vv{B}]$}$},y:A_k[\mu/X]\graybox{$\graybox{$[\vv{B}]$}$})\rat\mu@\sigma_k\graybox{$\graybox{$[\vv{B}]$}$}$}
+      \AxiomC{\graybox{$\Phi\mid\Theta\mid\Gamma\vdash \vv{B} : \Phi'$}}
+      \IndI{\graybox{$\Phi\mid\Theta\mid\Gamma$}$\vdash$Constr\graybox{$\langle\vv{B}\rangle$}$:(\Gamma_k\graybox{$\graybox{$[\vv{B}]$}$},y:A_k[\mu/X]\graybox{$\graybox{$[\vv{B}]$}$})\rat\mu@\sigma_k\graybox{$\graybox{$[\vv{B}]$}$}$}
       \DisplayProof
     \end{center}
-    We just have to check the parameters.  Every term we need is in the Haskell
-    representation of the constructor.  The constructor has the type which we
-    have defined in the data definition.  We just substitute the type itself for
-    the free variable.  At last we need to substitute the parameters for the
-    respective variables.
-
-*** Destructor
-    The rule
+    The rule for destructors
     \begin{center}
       \AxiomC{$\nu(X:\Gamma\rat*;\vv{\sigma};\vv{A}):\Gamma\rat*$}
-      \AxiomC{$1\leq k\leq|\vv{A}|$}
+      \AxiomC{$1\leq k\leq\mid\vv{A}\mid$}
       \RightLabel{\textbf{(Coind-E)}}
       \BinaryInfC{$\vdash\xi_k^{\nu(X;\Gamma\rat*;\vv{\sigma};\vv{A})}:(\Gamma_k,y:\nu@\sigma_k)\rat
         A_k[\nu/X]$}
@@ -1481,15 +1500,30 @@
     \end{center}
     gets rewritten to
     \begin{center}
-      \AxiomC{\graybox{$\Phi|\Theta|\Gamma\vdash \vv{B} : \Phi'$}}
+      \AxiomC{\graybox{$\Phi\mid\Theta\mid\Gamma\vdash \vv{B} : \Phi'$}}
       \RightLabel{\textbf{(Ind-I)}}
-      \UnaryInfC{\graybox{$\Phi|\Theta|\Gamma$}$\vdash$Destr\graybox{$<\vv{B}>$}$:(\Gamma_k$\graybox{$[\vv{B}]$}$,y:\nu@\sigma_k)$\graybox{$[\vv{B}]$}$\rat
+      \UnaryInfC{\graybox{$\Phi\mid\Theta\mid\Gamma$}$\vdash$Destr\graybox{$\langle\vv{B}\rangle$}$:(\Gamma_k$\graybox{$[\vv{B}]$}$,y:\nu@\sigma_k)$\graybox{$[\vv{B}]$}$\rat
         A_k[\nu/X]$\graybox{$[\vv{B}]$}$$}
       \DisplayProof
     \end{center}
-    This works analog to [[Constructor]].
+    In the paper de/constructors are anonymous.  They come together with their
+    type. Therefor we have to check if this type is valid. Constructors
+    construct their type. So their output value is their type $\mu$ applied to
+    the context morphism $\sigma_k$, where $k$ is the number of the constructor.
+    They become as input the context $\Gamma_k$, which is implicit in the paper,
+    and an value of type $A_k[\mu/X]$, which is the type, which can contain the
+    recursive occurrence. Destructors are destructing their type so we get their
+    type $\nu$ applied to $\sigma_k$ as input and $A_k[\nu/X]$ as output.
 
-*** Recursion
+    In our rules, in contrast to the paper, the de/constructors refer to some
+    type which we have already type checked. We just have to check the
+    parameters. Every term we need is in the Haskell representation of the
+    de/constructor. The de/constructor has the type which we have defined in the
+    data definition. We just substitute the type itself for the free variable.
+    At last we need to substitute the parameters for the respective variables.
+
+*** Recursion and Corecursion
+    The rule
     \begin{center}
       \AxiomC{$\vdash C:\Gamma\rat*$}
       \AxiomC{$\Delta,\Gamma_k,y_k:A_k[C/X]\vdash g_k:(C@\sigma_k)$}
@@ -1499,17 +1533,17 @@
         $\vv{(\Gamma_k,y_k).g_k}:(\Gamma,y:\mu@id_\Gamma)\rat C@id_\Gamma$}
       \DisplayProof
     \end{center}
-
+    gets rewritten to
     \begin{prooftree}
       \AxiomC{$\vdash C:\Gamma\rat*$}
       \AxiomC{\graybox{$\vdash\Gamma\equiv_\beta \Gamma'[\vv{D}]$}}
       \noLine
       \UnaryInfC{\graybox{$\vv{\vdash B_k\equiv_\beta(C@\sigma_k[\vv{D}])}$}}
-      \AxiomC{\graybox{$\Phi|\Theta|\Delta\vdash \vv{D}:\Phi'$}}
+      \AxiomC{\graybox{$\Phi\mid\Theta\mid\Delta\vdash \vv{D}:\Phi'$}}
       \noLine
-      \UnaryInfC{$\vv{$\graybox{$\Phi||$}$\Delta,\Gamma_k$\graybox{$[\vv{D}]$}$,y_k:A_k$\graybox{$[\vv{D}]$}$[C/X]\vdash g_k:\text{\graybox{$B_k$}}}$}
+      \UnaryInfC{$\vv{$\graybox{$\Phi\mid\mid$}$\Delta,\Gamma_k$\graybox{$[\vv{D}]$}$,y_k:A_k$\graybox{$[\vv{D}]$}$[C/X]\vdash g_k:\text{\graybox{$B_k$}}}$}
       \RightLabel{\textbf{(Ind-E)}}
-      \TrinaryInfC{\graybox{$\Phi|\Theta|$}$\Delta\vdash$ rec \graybox{$\mu<\vv{D}>$ to C};
+      \TrinaryInfC{\graybox{$\Phi\mid\Theta\mid$}$\Delta\vdash$ rec \graybox{$\mu\langle\vv{D}\rangle$ to C};
         $\vv{\text{Constr}_k\vv{x_k}\text{ } y_k = g_k}:(\Gamma,y:\mu$\graybox{$[\vv{D}]$}$@id_\Gamma)\rat C@id_\Gamma$}
      \end{prooftree}
 
@@ -1523,7 +1557,7 @@
      check if the types match by inferring them and compare them on beta
      equality.
 
-*** Corecursion
+    We have a similar rule for corecursion.  It
     \begin{center}
       \AxiomC{$\vdash C:\Gamma\rat*$}
       \AxiomC{$\Delta,\Gamma_k,y_k:(C@\sigma_k)\vdash g_k:A_k[C/X]$}
@@ -1533,23 +1567,24 @@
         $\vv{(\Gamma_k,y_k).g_k}:(\Gamma,y:C@id_\Gamma)\rat \nu@id_\Gamma$}
       \DisplayProof
     \end{center}
-
+    gets rewritten to
     \begin{prooftree}
       \AxiomC{$\vdash C:\Gamma\rat*$}
       \AxiomC{\graybox{$\vdash\Gamma\equiv_\beta \Gamma'[\vv{D}]$}}
       \noLine
       \UnaryInfC{\graybox{$\vv{\vdash B_k\equiv_\beta A_k[\vv{D}][C/X]}$}}
-      \AxiomC{\graybox{$\Phi|\Theta|\Delta\vdash \vv{D}:\Phi'$}}
+      \AxiomC{\graybox{$\Phi\mid\Theta\mid\Delta\vdash \vv{D}:\Phi'$}}
       \noLine
-      \UnaryInfC{$\vv{$\graybox{$\Phi||$}$\Delta,\Gamma_k$\graybox{$[\vv{D}]$}$,y_k:(C@\sigma_k$\graybox{$[\vv{D}]$}$)\vdash g_k:\text{\graybox{$B_k$}}}$}
+      \UnaryInfC{$\vv{$\graybox{$\Phi\mid\mid$}$\Delta,\Gamma_k$\graybox{$[\vv{D}]$}$,y_k:(C@\sigma_k$\graybox{$[\vv{D}]$}$)\vdash g_k:\text{\graybox{$B_k$}}}$}
       \RightLabel{\textbf{(Coind-I)}}
-      \TrinaryInfC{\graybox{$\Phi|\Theta|$}$\Delta\vdash$ corec \graybox{C to $\nu<\vv{D}>$};
+      \TrinaryInfC{\graybox{$\Phi\mid\Theta\mid$}$\Delta\vdash$ corec \graybox{C to $\nu\langle\vv{D}\rangle$};
         $\vv{\text{Destr}_k\vv{x_k}\text{ } y_k = g_k}:(\Gamma,y:C@id_\Gamma)\rat \nu$\graybox{$[\vv{D}]$}$@id_\Gamma$}
      \end{prooftree}
 
      A corecursion produces an coinductive type $\nu$.  We have to give it a
      type $C$ and list the destructors together with the expression they should
-     be destructed to. We get the syntax directed rule analog as in [[Recursion]].
+     be destructed to. We get the syntax directed rule analog as in case of Recursion.
+
 
 ** Evaluation
    #+name: reduction-steps
