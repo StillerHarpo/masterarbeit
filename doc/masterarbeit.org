@@ -27,6 +27,46 @@
 #+TOC: headlines 2
 
 * Introduction
+  In functional programming we have functions which get an input and produce an
+  output. This functions don't depend on multiple value i.e. if they is no IO
+  involved they produce for the same input always the same output. For example
+  if we call a function or on true and false we always get true. This makes the
+  code more predictable.
+
+  The or function should only be working on numbers. To call it on strings
+  "fu" and "bar", wouldn't make sense i.e. there is no defined output for this
+  inputs. To prevent calls like this some functional programming languages
+  introduced types.  Types contain only certain values.  For example the type
+  bool contains only the values for true and false.  In Haskell we can define it
+  like the following.
+  #+begin_src haskell
+  data Bool = True | False
+  #+end_src
+  This says we can construct values of type ~Bool~ with the constructors ~True~
+  and ~False~. This which have constructors are called inductive types. We can
+  then define or like this
+  #+begin_src haskell
+  or :: Bool -> Bool -> Bool
+  or True _    = True
+  or _    True = True
+  or _    _    = False
+  #+end_src
+  Here we just list equations which say what the output for an given input is.
+  For example in the first equation, we say if the first value is constructed
+  with the constructor ~True~ we give back ~True~.  We don't care about the
+  second value, therefor we write ~_~.  We are matching on the construction of
+  the input values.  Therefor we call this method pattern matching.
+  If we call this function somewhere in the code on values which aren't of type
+  ~Bool~.  Haskell won't compile our code.  Instead it gives back an type error.
+
+  If we now want to change ~Bool~ to a three-valued logic, we have to add an third
+  constructor to ~Bool~.  After that we to change every function which pattern
+  matches on ~Bool~.  If we have many that would be a lot of repetitive work.
+  If haskell would have coinductive type this could be a lot less work.
+  Coinductive types are types which are, in contrary to inductive types defined
+  over their destruction.  Se we could define ~Bool~ over its destructors.  This
+  would be or,and, etc.
+
   Through this work we will explain coinductive types at the examples of streams
   and functions. They will be generalized to partial streams and the Pi type in
   dependently typed languages. Streams are lists which are infinitely long. They
