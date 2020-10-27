@@ -3,7 +3,6 @@ resources/
 **/_minted-masterarbeit/
 README.pdf
 README.tex
-doc/masterarbeit.pdf
 doc/masterarbeit.tex
 **/*.local
 **/*.local~
