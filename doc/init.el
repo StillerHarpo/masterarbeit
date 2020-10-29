@@ -18,5 +18,16 @@
   (when (org-export-derived-backend-p backend 'latex)
     (replace-regexp-in-string "{verbatim}" "{lstlisting}" text)))
 
+(defun my-latex-filter-code (text backend info)
+  "make code enviroment to mathttt"
+  (when (org-export-derived-backend-p backend 'latex)
+    (replace-regexp-in-string
+     "\\\\textbackslash{}" "\\\\"
+     (replace-regexp-in-string
+      " " "\\\\;"
+      (replace-regexp-in-string "\\\\texttt{\\(.*\\)}" "$\\\\mathtt{\\1}$" text)))))
+
 (add-to-list 'org-export-filter-example-block-functions
              'my-latex-filter-verbatim)
+
+(add-to-list 'org-export-filter-code-functions 'my-latex-filter-code)

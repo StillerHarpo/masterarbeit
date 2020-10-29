@@ -85,14 +85,14 @@
   see cite:binder2019decomposition.  In the implemented syntax we can define
   partial streams like the following
   #+begin_example
-  codata PStr<A : Set> : (n : Conat) -> Set where
-    Hd : (k : Conat) -> PStr (succ @ k) -> A
-    Tl : (k : Conat) -> PStr (succ @ k) -> PStr @ k
+  codata PStr$\langle$A : Set$\rangle$ : (n : Conat) $\rat$ Set where
+    Hd : (k : Conat) $\rat$ PStr (succ @ k) $\rat$ A
+    Tl : (k : Conat) $\rat$ PStr (succ @ k) $\rat$ PStr @ k
   #+end_example
   And the Pi type
   #+begin_example
-  codata Pi<A : Set, B : (x : A) -> Set> : Set where
-    Inst : (x : A) -> Pi -> B @ x
+  codata Pi$\langle$A : Set, B : (x : A) $\rat$ Set$\rangle$ : Set where
+    Inst : (x : A) $\rat$ Pi $\rat$ B @ x
   #+end_example
   In chapter [[Coinductive Types]] we will see how coinductive types can be defined. We
   will see in chapter [[Coinductive Types in dependent languages]] how they are
@@ -125,7 +125,7 @@
   stream which just infinitely repeats it.
 
   #+begin_example
-  repeat : Nat -> Stream Nat
+  repeat : Nat $\rat$ Stream Nat
   head (repeat x) = x
   tail (repeat x) = repeat x
   #+end_example
@@ -141,29 +141,29 @@
   implement a function which looks at the nth. value. Here it is.
 
   #+begin_example
-  nth : Nat -> Stream A -> A
+  nth : Nat $\rat$ Stream A $\rat$ A
   nth 0     x = head x
   nth (S n) x = nth n (tail x)
   #+end_example
 
   As you can see we use ordinary pattern matching on the left hand side and
-  observers on the right hand side. `nth 3 (repeat 2)` will output 2 as expected.
+  observers on the right hand side. ~nth 3 (repeat 2)~ will output ~2~ as expected.
   Functions can also be defined via a recursive record.  It is defined like the
   following.
 
   #+begin_example
-  record A -> B = { apply : A ~> B }
+  record A $\rat$ B = { apply : A $\leadsto$ B }
   #+end_example
 
-  Here we differentiate between our defined function ~A -> B~ and ~~>~ in the
+  Here we differentiate between our defined function ~A \rat B~ and ~\leadsto~ in the
   destructor. Constructor application or, as is the case here, destructor
   application is not the same as function application, like in Haskell. In the
   paper ~f x~ means ~apply f x~. We will also use this convention in the
   following. In fact we already used in the definitions of the functions
   ~repeat~ and ~nth~. ~nth 0 x~ is just a nested copattern. We can also write it
   with `apply` like so: ~apply (apply nth 0) x = head x~. Here we use currying.
-  So the first apply is the sole observer of type ~Stream A -> A~ and the second
-  of type ~Nat -> (Stream A -> A)~.
+  So the first apply is the sole observer of type ~Stream A \rat A~ and the second
+  of type ~Nat \rat (Stream A \rat A)~.
 
 * Coinductive Types in dependent languages
   In this section we will look how coinductive types are implemented in
@@ -210,7 +210,7 @@
   #+end_src
   That terms can occur in types makes it necessary to ensure that function
   terminate. Otherwise type checking wouldn't be decidable. If we have a
-  function ~f : Nat -> Nat~ and we want to check a value ~a~ against a type ~Vec
+  function ~f : Nat \rat Nat~ and we want to check a value ~a~ against a type ~Vec
   (f 1)~ we have to know what ~f 1~ evaluates to. So ~f~ has to terminate.  We check
   termination in coq via a structural decreasing argument.  A argument is structural decreasing, if
   it is structural smaller in a recursive call.  Structural smaller means it is a recursive occurrence
@@ -890,14 +890,14 @@
         TV &:= &X,Y,Z,\dots &\text{Type expression} \\
              & &&          \text{variables}\\
         PV  &:= &A,B,C,\dots &\text{Parameter variables} \\
-        EC &:= &\text{()} &\text{Expression Context} \\
+        EC &:= &\lozenge &\text{Expression Context} \\
                &| &\text{(} EV \text { : } TV (,EV \text{ : } TV)*\text{)}& \\
-        PC &:= &\text{<>} &\text{Parameter Context} \\
-           &| &\text{<} (PV \text{ : } EC \rightarrow \text{ Set})* \text{>} & \\
+        PC &:= &\langle\rangle &\text{Parameter Context} \\
+           &| &\langle(PV \text{ : } EC \rightarrow \text{ Set})*\rangle & \\
         Decl &:= &\text{data } N\; PC \text{ : } (EC \rightarrow)? \text{ Set where} &\text{Declarations}\\
                   &&\quad(N \text{ : }  (EC \rightarrow)? TypeExpr \rightarrow N\; Expr*)* &\\
              &| &\text{codata } N\; PC \text{ : } (EC \rightarrow)? \text{ Set where}& \\
-         &&\quad(N \text{ : }  (EC \rightarrow)? N\; Expr* \rightarrow\text{} TypeExpr)*& \\
+         &&\quad(N \text{ : }  (EC \rightarrow)? N\; Expr* \rightarrow TypeExpr)*& \\
         &| &n \; PC \; EC \text{ = } Expr & \\
       \end{array}
     \end{align*}
@@ -962,7 +962,7 @@
     \begin{figure}
      \begin{align*}
        \begin{array}{llll}
-         ParInst &:= &\text{<}TypeExpr(\text{,}TypeExpr)*\text{>} &\text{Instantiations for}\\
+         ParInst &:= &\langle TypeExpr(\text{,}TypeExpr)*\rangle &\text{Instantiations for}\\
                                                                 &&&\text{paramter contexts}\\
          ExprInst &:= &\text{(}Expr(\text{,}Expr)*\text{)} &\text{Instantiations for}\\
                                                            &&&\text{expression contexts}\\
@@ -971,7 +971,7 @@
          &| &\text{corec } TypeExpr \text { to } N \; ParInst? \text{ where}&\\
          &&\quad Match*&\\
          &| &Expr\text{ @ }Expr &\\
-         &| &\text{()}&\\
+         &| &\lozenge&\\
          &| &EV&\\
          &| &n\; ParInst\; ExprInst&\\
          Match &:= &N\; EV* = Expr &\text{match}\\
@@ -988,7 +988,7 @@
     \end{figure}
 
     An ~Expr~ is either an ~rec~, an ~corec~, an con/destructor, , an
-    application ~@~,the only primitive unit expression ~()~ or an variable. With
+    application ~@~,the only primitive unit expression ~\lozenge~ or an variable. With
     the keyword ~rec~ we can destruct an inductive type. We write ~N ParInst? to
     TypeExrp~, where ~N~ is an previously defined inductive type and ~ParInst?~
     the instantiation of its parameter context, after ~rec~ to facilitate type
@@ -1001,7 +1001,7 @@
     coinductive type. Here we have to swap the ~N ParInst?~ and the ~TypeExpr~
     and list the destructors. All con/destructors have to be instantiate with
     all variables in the parameter contexts of their types. This is done by
-    giving types of the expected kinds separated by ',' enclosed in '<' and '>'.
+    giving types of the expected kinds separated by ',' enclosed in ~\langle~ and ~\rangle~.
     The variables are separated in local variables and global variables. Global
     variables refer to previously defined expressions. We have to fully
     instantiate they parameter contexts and their expression contexts. We can
@@ -1291,7 +1291,7 @@
       \DisplayProof
       \hskip 1.5em
       \AxiomC{}
-      \topI{\graybox{$\Phi\mid\Theta\mid\Gamma$}$\vdash$():Unit}
+      \topI{\graybox{$\Phi\mid\Theta\mid\Gamma$}$\vdash\lozenge$:Unit}
       \DisplayProof
     \end{center}
     We change the syntax "$\top$" to "Unit" and add *Ctx* and *TyCtx*. We will
@@ -1681,7 +1681,7 @@
    corecursion on the unit type, which is the first class terminal object.
    #+begin_example
    codata Terminal : Set where
-   terminal = corec Unit to Terminal where @ ()
+   terminal = corec Unit to Terminal where @ $\lozenge$
    #+end_example
    Contrary to the definition in the paper there is no destructor ~Terminal~.
    In the paper definitions of coinductive or inductive types need at least one
@@ -1698,7 +1698,7 @@
    ~C~.
    #+begin_example
    data Initial : Set where
-   exfalsum<C : Set> = rec Initial to C where
+   exfalsum$\langle$C : Set$\rangle$ = rec Initial to C where
    #+end_example
 
 
@@ -1709,13 +1709,13 @@
    the inductive type ~Nat~ with the constructors ~Zero~ and ~Suc~. ~Zero~ is
    just the number zero. Every constructor has to have a argument, which can
    contain a recursive occurrence. Every Type ~A~ is isomorphic to the
-   function type ~Terminal -> A~. So we use ~Terminal~ for this occurrence.
+   function type ~Terminal \rat A~. So we use ~Terminal~ for this occurrence.
    ~Suc~ is the successor. So the meaning of ~Suc n~ is $n+1$.
    #+begin_example
    data Nat : Set where
-      Zero : Terminal -> Nat
-      Suc : Nat -> Nat
-   zero = Zero @ ()
+      Zero : Terminal $\rat$ Nat
+      Suc : Nat $\rat$ Nat
+   zero = Zero @ $\lozenge$
    #+end_example
 
    We will now define extended naturals. There are also called conat. There are
@@ -1725,28 +1725,28 @@
    describe something which is either present (the constructor ~Just~) or
    absent(the constructor ~Nothing~). We can define the successor as a
    corecursion. The predecessor of the successor of ~x~ is just ~x~. So the only
-   case of corec returns a ~Just x~ (remember Prec returns a ~Maybe<Conat>~ not
-   a ~Contat~).
+   case of corec returns a ~Just x~ (remember Prec returns a ~Maybe\langle Conat\rangle~ not
+   a ~Conat~).
    #+begin_example
-   data Maybe<A : Set> : Set where
-     Nothing : Unit -> Maybe
-     Just : A -> Maybe
-   nothing<A> = Nothing<A> @ ()
+   data Maybe$\langle$A : Set$\rangle$ : Set where
+     Nothing : Unit $\rat$ Maybe
+     Just : A $\rat$ Maybe
+   nothing$\langle$A$\rangle$ = Nothing$\rangle$A$\rangle$ @ $\lozenge$
    codata Conat : Set where
-     Prec : Conat -> Maybe<Conat>
+     Prec : Conat $\rat$ Maybe$\langle$Conat$\rangle$
    succ = corec Conat to Conat where
-            Prec x -> Just<Conat> @ x
+            Prec x $\rat$ Just$\langle$Conat$\rangle$ @ x
    #+end_example
    We now define the values zero and infinity
    #+begin_example
    zero = (corec Unit to Conat where
-             {Prev x = nothing$\langle$Unit$\rangle$}) @ ()
+             {Prev x = nothing$\langle$Unit$\rangle$}) @ $\lozenge$
    infinity = (corec Unit to Conat where
-                 {Prev x = Just$\langle$Conat$\rangle$ @ ()}) @ ()
+                 {Prev x = Just$\langle$Conat$\rangle$ @ }) @ $\lozenge$
    #+end_example
    For ~zero~ the predecessor is absent, there is no predecessor of 0 in the
    natural numbers , so we give pack ~Nothing~.  We then have to apply the
-   ~corec~ to ~()~ to get the value.  The predecessor of ~infinity~ should also
+   ~corec~ to ~\lozenge~ to get the value.  The predecessor of ~infinity~ should also
    be ~infinity~.  We apply the ~corec~ to another ~Conat~, so the ~x~ is also a
    ~Conat~.  We will no see that the predecessor on this values give back the
    right value.
@@ -1755,37 +1755,37 @@
         \begin{subarray}{l}
           \text{(corec Unit to Conat where}\\
           \quad\text{\{ Prec x = nothing}\langle\Unit\rangle \text{\}} @ x)
-        \end{subarray}}_{t_1}\right) @ x)$[nothing$\langle$Unit$\rangle$/x][()]
+        \end{subarray}}_{t_1}\right) @ x)$[nothing$\langle$Unit$\rangle$/x][$\lozenge$]
                  = rec Maybe$\langle$Unit$\rangle$ to Maybe$\langle$Conat$\rangle$ where
                      { Nothing u = Nothing$\langle$Conat$\rangle$ @ $\widehat{\text{Unit}}(t_1,x)$
-                       Just c = Just$\langle$Conat$\rangle$ @ $\widehat{X}(t_1,x)$} @ x [nothing$\langle$Unit$\rangle$/x][()]
+                       Just c = Just$\langle$Conat$\rangle$ @ $\widehat{X}(t_1,x)$} @ x [nothing$\langle$Unit$\rangle$/x][$\lozenge$]
                  = $\underbrace{\begin{subarray}{l}
                    \recT{\Maybe\langle\Unit\rangle}{\Maybe\langle\Conat\rangle} \\
                    \quad\text{\{} \Nothing\; u = \Nothing\langle\Conat\rangle @ u \\
                    \quad\;\Just\; c = \Just\langle\Conat\rangle @ t_1 \text{\}}
                   \end{subarray}}_{t_2}$ @ nothing$\langle$Unit$\rangle$
-                 $\succ$ Nothing$\langle$Conat$\rangle$ @ u[$\widehat{\text{Unit}}$(t_2 @ x)/u][()]
-                 = Nothing$\langle$Conat$\rangle$ @ u[x/u][()]
-                 = Nothing$\langle$Conat$\rangle$ @ ()
+                 $\succ$ Nothing$\langle$Conat$\rangle$ @ u[$\widehat{\text{Unit}}$(t_2 @ x)/u][$\lozenge$]
+                 = Nothing$\langle$Conat$\rangle$ @ u[x/u][$\lozenge$]
+                 = Nothing$\langle$Conat$\rangle$ @ $\lozenge$
      Prev @ infinity $\succ \widehat{\text{Maybe}\langle X\rangle} \left(\underbrace{
         \begin{subarray}{l}
           \text{(corec Unit to Conat where}\\
-          \quad\text{\{ Prec x = Just}\langle\Unit\rangle @ () \text{\}} @ x)
-        \end{subarray}}_{t_1}\right) @ x)$[Just$\langle$Unit$\rangle$@()/x][()]
+          \quad\text{\{ Prec x = Just}\langle\Unit\rangle @  \text{\}} @ x)
+        \end{subarray}}_{t_1}\right) @ x)$[Just$\langle$Unit$\rangle$@/x][$\lozenge$]
                      = rec Maybe$\langle$Unit$\rangle$ to Maybe$\langle$Conat$\rangle$ where
                          { Nothing u = Nothing$\langle$Conat$\rangle$ @ $\widehat{\text{Unit}}(t_1,x)$
-                           Just x = Just$\langle$Conat$\rangle$ @ $\widehat{X}(t_1,x)$} @ x [Just$\langle$Unit$\rangle$@()/x][()]
+                           Just x = Just$\langle$Conat$\rangle$ @ $\widehat{X}(t_1,x)$} @ x [Just$\langle$Unit$\rangle$@/x][$\lozenge$]
                      = $\underbrace{\begin{subarray}{l}
                        \recT{\Maybe\langle\Unit\rangle}{\Maybe\langle\Conat\rangle} \\
                        \quad\text{\{} \Nothing\; u = \Nothing\langle\Conat\rangle @ u \\
                        \quad\;\Just\; x = \Just\langle\Conat\rangle @ t_1 \text{\}}
-                      \end{subarray}}_{t_2}$ @ Just$\langle$Unit$\rangle$@()
-                     $\succ$ Just$\langle$Conat$\rangle$ @ $t_1$[$\widehat{\text{Unit}}(t_2 @ x)$/x][()]
-                     = Just$\langle$Conat$\rangle$ @ $t_1$[x/x][()]
+                      \end{subarray}}_{t_2}$ @ Just$\langle$Unit$\rangle$@
+                     $\succ$ Just$\langle$Conat$\rangle$ @ $t_1$[$\widehat{\text{Unit}}(t_2 @ x)$/x][$\lozenge$]
+                     = Just$\langle$Conat$\rangle$ @ $t_1$[x/x][$\lozenge$]
                      = Just$\langle$Conat$\rangle$ @ infinity
 
    #+end_example
-   
+
 ** Binary Product and Coproduct
 
    The product is defined as a coinductive type.  It has two destructors. The
@@ -1794,19 +1794,19 @@
    have type polymorphism in our language. We also define a pair expression
    which generates a pair over corecursion.
    #+begin_example
-   codata Product<A : Set, B : Set> : Set where
-      Fst : Product -> A
-      Snd : Product -> B
-   pair<A : Set, B : Set> (x:A, y:B) = corec Unit where
-                                         { Fst u -> x
-                                         ; Snd u -> y} @ ()
+   codata Product$\langle$A : Set, B : Set$\rangle$ : Set where
+      Fst : Product $\rat$ A
+      Snd : Product $\rat$ B
+   pair$\langle$A : Set, B : Set$\rangle$ (x:A, y:B) = corec Unit where
+                                         { Fst u $\rat$ x
+                                         ; Snd u $\rat$ y} @ $\lozenge$
    #+end_example
    For types with other contexts we have to define different Products.  For
    example if ~B~ depends on ~Nat~, we define product like the following.
    #+begin_example
-   codata Pair<A : Set, B : (n : Nat) -> Set> : (n : Nat) -> Set where
-     First : (n : Nat) -> Pair n -> A
-     Second : (n : Nat) -> Pair n -> B @ n
+   codata Pair$\langle$A : Set, B : (n : Nat) $\rat$ Set$\rangle$ : (n : Nat) $\rat$ Set where
+     First : (n : Nat) $\rat$ Pair n $\rat$ A
+     Second : (n : Nat) $\rat$ Pair n $\rat$ B @ n
    #+end_example
    Here the product also depends on ~Nat~. If ~A~ or ~B~ depends on values the
    product must also depend on this values. This is the product, which used is
@@ -1814,25 +1814,25 @@
 
    On ~Product~ we can define the swap function.
    #+begin_example
-    swap<A : Set, B : Set> =
-      corec Product<A,B> to Product<B,A> where
-             Fst x -> Snd x
-             Snd x -> Fst x
+    swap$\langle$A : Set, B : Set$\rangle$ =
+      corec Product$\langle$A,B$\rangle$ to Product$\langle$B,A$\rangle$ where
+             Fst x $\rat$ Snd x
+             Snd x $\rat$ Fst x
     #+end_example
    This is a well typed function as shown by the following proof
    \begin{prooftree}
-   \AxiomC{$(A : *, B : *)||\vdash$ Product<A,B> : $*$}
-   \AxiomC{$(A : *, B : *)||(x:A) \vdash$ Snd @ x : Product<A,B> \textcircled{a}}
+   \AxiomC{$(A : *, B : *)||\vdash$ Product$\langle$A,B$\rangle$ : $*$}
+   \AxiomC{$(A : *, B : *)||(x:A) \vdash$ Snd @ x : Product$\langle$A,B$\rangle$ \textcircled{a}}
     \noLine
-    \UnaryInfC{$(A : *, B : *)||(y : B) \vdash$ Fst @ y : Product<A,B> \textcircled{b}}
-    \BinaryInfC{$(A : *, B : *)|| \vdash$ swap : (p : Product<A,B>) $\rat$ Product<B,A>}
+    \UnaryInfC{$(A : *, B : *)||(y : B) \vdash$ Fst @ y : Product$\langle$A,B$\rangle$ \textcircled{b}}
+    \BinaryInfC{$(A : *, B : *)|| \vdash$ swap : (p : Product$\langle$A,B$\rangle$) $\rat$ Product$\langle$B,A$\rangle$}
     \end{prooftree}
     We show \textcircled{a} in the following proof.  \textcircled{b} works analog
     \begin{prooftree}
-    \AxiomC{$(A : *, B : *)||(x : A) \vdash$ Snd : $(x : A) \rat$ Product<A,B>}
+    \AxiomC{$(A : *, B : *)||(x : A) \vdash$ Snd : $(x : A) \rat$ Product$\langle$A,B$\rangle$}
     \AxiomC{$(x : A )(x)\rightsquigarrow A$}
     \UnaryInfC{$(x : A) \vdash x : A$}
-    \BinaryInfC{$(A : *, B : *)||(x : A) \vdash$ Snd @ x : Product<A,B>}
+    \BinaryInfC{$(A : *, B : *)||(x : A) \vdash$ Snd @ x : Product$\langle$A,B$\rangle$}
     \end{prooftree}
     For brevity we omitted the beta equality premises and the checking for of
     the parameters. The beta equality premises wouldn't be interesting because
@@ -1842,9 +1842,9 @@
    as an inductive type.  It is either ~A~ or ~B~.  We have one constructor ~Left~
    for ~A~ and one constructor Right for ~B~
    #+begin_example
-   data Coproduct<A,B> : Set where
-      Left : A -> Coproduct
-      Right : B -> Coproduct
+   data Coproduct$\langle$A,B$\rangle$ : Set where
+      Left : A $\rat$ Coproduct
+      Right : B $\rat$ Coproduct
    #+end_example
 
 ** Sigma and Pi Type
@@ -1853,8 +1853,8 @@
    the value of the first type.  It corresponds to exists in logic.  We define
    it as an inductive type and call the constructor ~Exists~.
    #+begin_example
-   data Sigma<A : Set,B : (x : A) -> Set> : Set where
-      Exists : (x:A) -> B x -> Sigma
+   data Sigma$\langle$A : Set,B : (x : A) $\rat$ Set$\rangle$ : Set where
+      Exists : (x:A) $\rat$ B x $\rat$ Sigma
    #+end_example
 
    The pi type is a generalization of the function type to dependent types.
@@ -1864,44 +1864,44 @@
    use corecursion on ~Unit~.  This is a lambda so we call it ~lambda~.
 
    #+begin_example
-   codata Pi<A : Set,B : (x : A) -> Set> : Set where
-      Apply : (x : A) -> Pi x -> B
+   codata Pi$\langle$A : Set,B : (x : A) $\rat$ Set$\rangle$ : Set where
+      Apply : (x : A) $\rat$ Pi x $\rat$ B
    #+end_example
 
    The identity function is defined like this
    #+begin_example
-   id<A : Set> = corec Unit to Pi<A,(v:A).A> where
-          { Apply v p = v } @ ()
+   id$\langle$A : Set$\rangle$ = corec Unit to Pi$\langle$A,(v:A).A$\rangle$ where
+          { Apply v p = v } @ $\lozenge$
    #+end_example
 
    Evaluation on one goes as follows
 
    #+begin_example
-   apply = Apply<Nat,(v : Nat).Nat>
-   one = S @ (Z @ ())
-   apply @ id<Nat> @ one
-   = apply @ one @ ((corec Unit to Pi<Nat,(x:Nat).Nat> where
-                       Apply v p = v ) @ ())
+   apply = Apply$\langle$Nat,(v : Nat).Nat$\rangle$
+   one = S @ (Z @ )
+   apply @ id$\langle$Nat$\rangle$ @ one
+   = apply @ one @ ((corec Unit to Pi$\langle$Nat,(x:Nat).Nat$\rangle$ where
+                       Apply v p = v ) @ $\lozenge$)
    $\succ \widehat{\text{Nat}} \left(\underbrace{
       \begin{subarray}{c}
         \text{corec Unit to Pi where} \\
         \text{  \{Apply' v \_ = v\} @ x}
-      \end{subarray}}_t\right)$[v/x][one,()]
+      \end{subarray}}_t\right)$[v/x][one,$\lozenge$]
    = (rec Nat to Nat where
-        Zero x = Zero @ ($\widehat{()}$(t,x))
-        Succ x = Suc @ ($\widehat{Y}$(t,x)))@x[v/x][one,()]
+        Zero x = Zero @ ($\widehat{\text{Unit}}$(t,x))
+        Succ x = Suc @ ($\widehat{Y}$(t,x)))@x[v/x][one,$\lozenge$]
    = (rec Nat to Nat where
-        Zero x = Zero @ ($\widehat{()}$(t))
-        Succ x = Suc @ x)@x[v/x][one,()]
+        Zero x = Zero @ ($\widehat{\text{Unit}}$(t))
+        Succ x = Suc @ x)@x[v/x][one,]
    = (rec Nat to Nat where
-        Zero x = Zero @ ($\widehat{()}$())
-        Succ x = Suc @ x) @ x[v/x][one,()]
-   = (rec Nat to Nat where
-        Zero x = Zero @ x
-        Succ x = Suc @ x) @ x[v/x][one,()]
+        Zero x = Zero @ ($\widehat{\text{Unit}}$())
+        Succ x = Suc @ x) @ x[v/x][one,$\lozenge$]
    = (rec Nat to Nat where
         Zero x = Zero @ x
-        Succ x = Suc @ x) @ v[one,()]
+        Succ x = Suc @ x) @ x[v/x][one,$\lozenge$]
+   = (rec Nat to Nat where
+        Zero x = Zero @ x
+        Succ x = Suc @ x) @ v[one,$\lozenge$]
    = (rec Nat to Nat where
         Zero x = Zero @ x
         Succ x = Suc @ x) @ one
@@ -1912,7 +1912,7 @@
 
    Vectors are a standard example for dependent types. They are like lists,
    except their type depends on their length. For example a vector ~[1;2]~ has
-   type ~Vector<Nat> 2~, because its length is 2. It has 2 constructors ~Nil~ and
+   type ~Vector\langle Nat\rangle  2~, because its length is 2. It has 2 constructors ~Nil~ and
    ~Cons~ like lists. ~Nil~ gives back the empty vector. Because the length of
    the empty vector is zero its return type is ~Vector 0~. The second
    constructor ~Cons~ takes a natural number ~k~ ,a value of type ~A~ and a
@@ -1922,53 +1922,53 @@
    k)~. In cite:basold2016type the head and tail are encoded in a pair.
 
    #+begin_example
-   data Vector<A : Set> : (n:Nat) -> Set where
-     Nil : Unit -> Vector zero
-     Cons : (k:Nat, v:A) -> Vector @ k -> Vector (Suc @ k)
-   nil<A : Set> = Nil<A : Set> @ ()
+   data Vector$\langle$A : Set$\rangle$ : (n:Nat) $\rat$ Set where
+     Nil : Unit $\rat$ Vector zero
+     Cons : (k:Nat, v:A) $\rat$ Vector @ k $\rat$ Vector (Suc @ k)
+   nil$\langle$A : Set$\rangle$ = Nil$\langle$A : Set$\rangle$ @ $\lozenge$
    #+end_example
 
    The function ~extend~ takes an value ~x~ and extends it to a vector.
    #+begin_example
-   extend<A : Set> =
-     rec Vec<A> to ((x).Vec<A> @ (Suc x) where
-       Nil u = Cons<A> @ x @ nil<A>
-       Cons k v = Cons<A> @ (Suc @ k) @ v
+   extend$\langle$A : Set$\rangle$ =
+     rec Vec$\langle$A$\rangle$ to ((x).Vec$\langle$ A$\rangle$ @ (Suc x) where
+       Nil u = Cons$\langle$A$\rangle$ @ x @ nil$\langle$A$\rangle$
+       Cons k v = Cons$\langle$A$\rangle$ @ (Suc @ k) @ v
    #+end_example
    The type checking of this function goes as follows
    \begin{scprooftree}{0.8}
-   \AxiomC{(A : Set)||$\vdash$ (x).(Vec<A> @ (Suc @ x)) : (k: Nat) $\rat$ *}
+   \AxiomC{(A : Set)||$\vdash$ (x).(Vec$\langle$A$\rangle$ @ (Suc @ x)) : (k: Nat) $\rat$ *}
    \noLine
-   \UnaryInfC{(A: Set)||(u : A) $\vdash$ Cons<A> @ 0 @ (Nil<A> @ ()) : (x).(Vec<A> @ (Suc @ x)) @ 0}
+   \UnaryInfC{(A: Set)||(u : A) $\vdash$ Cons$\langle$A$\rangle$ @ 0 @ (Nil$\langle$A$\langle$ @ ) : (x).(Vec$\langle$A$\rangle$ @ (Suc @ x)) @ 0}
    \noLine
-   \UnaryInfC{(k : Nat, v : (x).(Vec @ (Suc @ x)) @ k) $\vdash$ Cons<A> @ (Suc @ k) @ v : (x).(Vec @ (Suc @ x)) @ (Suc @ k)}
-   \UnaryInfC{$\vdash$ extend<A> : (k:Nat,y : Vec<A> @ k) $\rat$ (x).(Vec<A> @ (Suc x)) @ k}
+   \UnaryInfC{(k : Nat, v : (x).(Vec @ (Suc @ x)) @ k) $\vdash$ Cons$\rangle$A$\langle$ @ (Suc @ k) @ v : (x).(Vec @ (Suc @ x)) @ (Suc @ k)}
+   \UnaryInfC{$\vdash$ extend$\langle$A$\rangle$ : (k:Nat,y : Vec$\langle$A$\rangle$ @ k) $\rat$ (x).(Vec$\langle$A$\rangle$ @ (Suc x)) @ k}
    \end{scprooftree}
    As an example we evaluate a vector of length 1 with this function.  We choose length one
    to see all rec cases.
    \begin{align*}
-     &\text{extend<Nat>} @ 1 @ (\text{Cons<Nat>} @ 0 @ 0 @ \text{nil<Nat>})\\
-     &= \text{extend<Nat>}@(\text{Suc} @ k \bullet 0) @ (\text{Cons<Nat>} @ 0 @ 0 @ \text{nil<Nat>})\\
-     &\succ \text{Cons<Nat>} @ (\text{Suc} @ k) @ v \left[ \widehat{X@k}(\text{extend<Nat>} @ n @ x)/v \right][0,\text{nil<Nat>}]\\
-     &= \text{Cons<Nat>} @ (\text{Suc} @ k) @ v \left[ \widehat{X}(\text{extend<Nat>} @ n @ x)[k/n]/v \right][0,\text{nil<Nat>}]\\
-     &= \text{Cons<Nat>} @ (\text{Suc} @ k) @ v \left[ \text{extend} @ n @ x[k/n]/v \right][0, \text{nil<Nat>}]\\
-     &= \text{Cons<Nat>} @ (\text{Suc} @ k) @ v \left[ \text{extend} @ k @ x/v \right][0, \text{nil<Nat>}]\\
-     &= \text{Cons<Nat>} @ (\text{Suc} @ k) @ (\text{extend} @ k @ x) [0,\text{nil<Nat>}]\\
-     &= \text{Cons<Nat>} @ (\text{Suc} @ 0) @ (\text{extend} @ 0 @ (\text{nil<Nat>}))\\
-     &= \text{Cons<Nat>} @ 1 @ (\text{extend} @ 0 @ (\text{Nil<Nat>} @ ()))\\
-     &\succ \text{Cons<Nat>} @ 1 @ (\text{Cons<Nat>} @ 0 @ (\text{Nil<Nat>} @ ()))\left[ \hat{()}(\text{extend} @ k @ x) / u  \right][()]\\
-     &= \text{Cons<Nat>} @ 1 @ (\text{Cons<Nat>} @ 0 @ (\text{Nil<Nat>} @ x))[()]\\
-     &= \text{Cons<Nat>} @ 1 @ (\text{Cons<Nat>} @ 0 @ (\text{Nil<Nat>} @ ()))
+     &\text{extend$\langle$Nat$\rangle$} @ 1 @ (\text{Cons$\langle$Nat$\rangle$} @ 0 @ 0 @ \text{nil$\langle$Nat$\rangle$})\\
+     &= \text{extend$\langle$Nat$\rangle$}@(\text{Suc} @ k \bullet 0) @ (\text{Cons$\langle$Nat$\rangle$} @ 0 @ 0 @ \text{nil$\langle$Nat$\rangle$})\\
+     &\succ \text{Cons$\langle$Nat$\rangle$} @ (\text{Suc} @ k) @ v \left[ \widehat{X@k}(\text{extend$\langle$Nat$\rangle$} @ n @ x)/v \right][0,\text{nil$\langle$Nat$\rangle$}]\\
+     &= \text{Cons$\langle$Nat$\rangle$} @ (\text{Suc} @ k) @ v \left[ \widehat{X}(\text{extend$\langle$Nat$\rangle$} @ n @ x)[k/n]/v \right][0,\text{nil$\langle$Nat$\rangle$}]\\
+     &= \text{Cons$\langle$Nat$\rangle$} @ (\text{Suc} @ k) @ v \left[ \text{extend} @ n @ x[k/n]/v \right][0, \text{nil$\langle$Nat$\rangle$}]\\
+     &= \text{Cons$\langle$Nat$\rangle$} @ (\text{Suc} @ k) @ v \left[ \text{extend} @ k @ x/v \right][0, \text{nil$\langle$Nat$\rangle$}]\\
+     &= \text{Cons$\langle$Nat$\rangle$} @ (\text{Suc} @ k) @ (\text{extend} @ k @ x) [0,\text{nil$\langle$Nat$\rangle$}]\\
+     &= \text{Cons$\langle$Nat$\rangle$} @ (\text{Suc} @ 0) @ (\text{extend} @ 0 @ (\text{nil$\langle$Nat$\rangle$}))\\
+     &= \text{Cons$\langle$Nat$\rangle$} @ 1 @ (\text{extend} @ 0 @ (\text{Nil$\langle$Nat$\rangle$} @ ))\\
+     &\succ \text{Cons$\langle$Nat$\rangle$} @ 1 @ (\text{Cons$\langle$Nat$\rangle$} @ 0 @ (\text{Nil$\langle$Nat$\rangle$} @ ))\left[ \widehat{\text{Unit}}(\text{extend} @ k @ x) / u  \right][\lozenge]\\
+     &= \text{Cons$\langle$Nat$\rangle$} @ 1 @ (\text{Cons$\langle$Nat$\rangle$} @ 0 @ (\text{Nil$\langle$Nat$\rangle$} @ x))[\lozenge]\\
+     &= \text{Cons$\langle$Nat$\rangle$} @ 1 @ (\text{Cons$\langle$Nat$\rangle$} @ 0 @ (\text{Nil$\langle$Nat$\rangle$} @ ))
    \end{align*}
-   here we write $1$ for ~Suc @ (Zero @ ())~ and $0$ for ~Zero @ ()~
+   here we write $1$ for ~Suc @ (Zero @ )~ and $0$ for ~Zero @ \lozenge~
 
    With the help of extended naturals, we can define partial streams. This are
    streams which depend on there definition depth. Like non-dependent streams
    they are coinductive and have 2 destructors for head and tail.
    #+begin_example
-   codata PStr<A : Set>: (n: ExNat) -> Set where
-      hd : (k : ExNat) -> PStr<A> (succE k) -> A
-      tl : (k : ExNat) -> PStr<A> (succE k) -> PStr<A> @ k
+   codata PStr$\langle$A : Set$\rangle$: (n: ExNat) $\rat$ Set where
+      hd : (k : ExNat) $\rat$ PStr$\langle$A$\rangle$ (succE k) $\rat$ A
+      tl : (k : ExNat) $\rat$ PStr$\langle$A$\rangle$ (succE k) $\rat$ PStr$\langle$A$\rangle$ @ k
    #+end_example
    This streams are like vectors except they also can be infinite long. This is
    in contrary to non dependent streams.  A non dependent stream could not be of
