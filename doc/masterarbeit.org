@@ -1676,31 +1676,32 @@
 
    The terminal object is a type which has exactly one value. In category
    theory every object in the category has a unique morphism to it. We define
-   it as a coinductive type ~Terminal~ with one destructor ~Terminal~. It gets
+   it as a coinductive type ~Terminal~ with no destructors . It gets
    a terminal and returns a terminal. To get a terminal value we use
    corecursion on the unit type, which is the first class terminal object.
    #+begin_example
    codata Terminal : Set where
-      Terminal : Terminal -> Terminal
-   terminal = corec Unit to Terminal where
-                 { Terminal x = x } @ ()
-
+   terminal = corec Unit to Terminal where @ ()
    #+end_example
+   Contrary to the definition in the paper there is no destructor ~Terminal~.
+   In the paper definitions of coinductive or inductive types need at least one
+   de/constructor.  Therefore our definition wouldn't work
 
    The initial object is a type which has no values. In category theory it is
-   the object which has a unique morphism to every other object in the
-   category. We define it inductively as ~Intial~ with one constructor
-   ~Initial~. This constructor want's one value of the same type. We can't
-   have a value of this type, because to get one we already need one. An
-   shorter way to define this type would be a inductive type with no
-   constructors. If we could get something of type ~Intial~, we could generate
-   with ~exfalsum~ a value of arbitrary type ~C~.
+   the object which has a unique morphism to every other object in the category.
+   We define it inductively as ~Intial~ with no constructor. In the paper it is
+   defined with one constructor. This constructor want's one value of the same
+   type. We can't have a value of this type, because to get one we already need
+   one. Our way of defining it is shorter and more clear. We can't construct an
+   value of this type because we have no constructors. If we could get something
+   of type ~Intial~, we could generate with ~exfalsum~ a value of arbitrary type
+   ~C~.
    #+begin_example
    data Initial : Set where
-      Initial : Intial -> Intial
    exfalsum<C : Set> = rec Initial to C where
-                         Initial x = x
    #+end_example
+
+
 
 ** Natural Numbers and Extended Naturals
 
@@ -1718,24 +1719,73 @@
    #+end_example
 
    We will now define extended naturals. There are also called conat. There are
-   natural numbers with an additional value, infinity. We define it coinductively
-   with the predecessor as its only destructor. The predecessor is either not
-   defined (there is no predecessor of 0 in the natural numbers) or another
-   natural number. We use the type ~Maybe~ to describe something which is either
-   present (the constructor ~Just~) or absent(the constructor ~Nothing~). We can
-   define the successor as a corecursion. The predecessor of the successor of
-   ~x~ is just ~x~. So the only case of corec returns a ~Just x~ (remember Prec
-   returns a ~Maybe<Conat>~ not a ~Contat~).
+   natural numbers with an additional value, infinity. We define it
+   coinductively with the predecessor as its only destructor. The predecessor is
+   either not defined or another natural number. We use the type ~Maybe~ to
+   describe something which is either present (the constructor ~Just~) or
+   absent(the constructor ~Nothing~). We can define the successor as a
+   corecursion. The predecessor of the successor of ~x~ is just ~x~. So the only
+   case of corec returns a ~Just x~ (remember Prec returns a ~Maybe<Conat>~ not
+   a ~Contat~).
    #+begin_example
    data Maybe<A : Set> : Set where
      Nothing : Unit -> Maybe
      Just : A -> Maybe
+   nothing<A> = Nothing<A> @ ()
    codata Conat : Set where
      Prec : Conat -> Maybe<Conat>
    succ = corec Conat to Conat where
             Prec x -> Just<Conat> @ x
    #+end_example
+   We now define the values zero and infinity
+   #+begin_example
+   zero = (corec Unit to Conat where
+             {Prev x = nothing$\langle$Unit$\rangle$}) @ ()
+   infinity = (corec Unit to Conat where
+                 {Prev x = Just$\langle$Conat$\rangle$ @ ()}) @ ()
+   #+end_example
+   For ~zero~ the predecessor is absent, there is no predecessor of 0 in the
+   natural numbers , so we give pack ~Nothing~.  We then have to apply the
+   ~corec~ to ~()~ to get the value.  The predecessor of ~infinity~ should also
+   be ~infinity~.  We apply the ~corec~ to another ~Conat~, so the ~x~ is also a
+   ~Conat~.  We will no see that the predecessor on this values give back the
+   right value.
+   #+begin_example
+     Prev @ zero $\succ \widehat{\text{Maybe}\langle X\rangle} \left(\underbrace{
+        \begin{subarray}{l}
+          \text{(corec Unit to Conat where}\\
+          \quad\text{\{ Prec x = nothing}\langle\Unit\rangle \text{\}} @ x)
+        \end{subarray}}_{t_1}\right) @ x)$[nothing$\langle$Unit$\rangle$/x][()]
+                 = rec Maybe$\langle$Unit$\rangle$ to Maybe$\langle$Conat$\rangle$ where
+                     { Nothing u = Nothing$\langle$Conat$\rangle$ @ $\widehat{\text{Unit}}(t_1,x)$
+                       Just c = Just$\langle$Conat$\rangle$ @ $\widehat{X}(t_1,x)$} @ x [nothing$\langle$Unit$\rangle$/x][()]
+                 = $\underbrace{\begin{subarray}{l}
+                   \recT{\Maybe\langle\Unit\rangle}{\Maybe\langle\Conat\rangle} \\
+                   \quad\text{\{} \Nothing\; u = \Nothing\langle\Conat\rangle @ u \\
+                   \quad\;\Just\; c = \Just\langle\Conat\rangle @ t_1 \text{\}}
+                  \end{subarray}}_{t_2}$ @ nothing$\langle$Unit$\rangle$
+                 $\succ$ Nothing$\langle$Conat$\rangle$ @ u[$\widehat{\text{Unit}}$(t_2 @ x)/u][()]
+                 = Nothing$\langle$Conat$\rangle$ @ u[x/u][()]
+                 = Nothing$\langle$Conat$\rangle$ @ ()
+     Prev @ infinity $\succ \widehat{\text{Maybe}\langle X\rangle} \left(\underbrace{
+        \begin{subarray}{l}
+          \text{(corec Unit to Conat where}\\
+          \quad\text{\{ Prec x = Just}\langle\Unit\rangle @ () \text{\}} @ x)
+        \end{subarray}}_{t_1}\right) @ x)$[Just$\langle$Unit$\rangle$@()/x][()]
+                     = rec Maybe$\langle$Unit$\rangle$ to Maybe$\langle$Conat$\rangle$ where
+                         { Nothing u = Nothing$\langle$Conat$\rangle$ @ $\widehat{\text{Unit}}(t_1,x)$
+                           Just x = Just$\langle$Conat$\rangle$ @ $\widehat{X}(t_1,x)$} @ x [Just$\langle$Unit$\rangle$@()/x][()]
+                     = $\underbrace{\begin{subarray}{l}
+                       \recT{\Maybe\langle\Unit\rangle}{\Maybe\langle\Conat\rangle} \\
+                       \quad\text{\{} \Nothing\; u = \Nothing\langle\Conat\rangle @ u \\
+                       \quad\;\Just\; x = \Just\langle\Conat\rangle @ t_1 \text{\}}
+                      \end{subarray}}_{t_2}$ @ Just$\langle$Unit$\rangle$@()
+                     $\succ$ Just$\langle$Conat$\rangle$ @ $t_1$[$\widehat{\text{Unit}}(t_2 @ x)$/x][()]
+                     = Just$\langle$Conat$\rangle$ @ $t_1$[x/x][()]
+                     = Just$\langle$Conat$\rangle$ @ infinity
 
+   #+end_example
+   
 ** Binary Product and Coproduct
 
    The product is defined as a coinductive type.  It has two destructors. The
@@ -1748,8 +1798,8 @@
       Fst : Product -> A
       Snd : Product -> B
    pair<A : Set, B : Set> (x:A, y:B) = corec Unit where
-                                         { Fst _ -> x
-                                         ; Snd _ -> y} @ ()
+                                         { Fst u -> x
+                                         ; Snd u -> y} @ ()
    #+end_example
    For types with other contexts we have to define different Products.  For
    example if ~B~ depends on ~Nat~, we define product like the following.
@@ -1835,7 +1885,7 @@
    $\succ \widehat{\text{Nat}} \left(\underbrace{
       \begin{subarray}{c}
         \text{corec Unit to Pi where} \\
-        \text{\{Apply' v \_ = v\} @ x}
+        \text{  \{Apply' v \_ = v\} @ x}
       \end{subarray}}_t\right)$[v/x][one,()]
    = (rec Nat to Nat where
         Zero x = Zero @ ($\widehat{()}$(t,x))
@@ -1920,6 +1970,11 @@
       hd : (k : ExNat) -> PStr<A> (succE k) -> A
       tl : (k : ExNat) -> PStr<A> (succE k) -> PStr<A> @ k
    #+end_example
+   This streams are like vectors except they also can be infinite long. This is
+   in contrary to non dependent streams.  A non dependent stream could not be of
+   length zero.  Because then a call of ~hd~ and ~tl~ on it wouldn't be defined.  In the
+   dependent case the type checker wouldn't allow such a call because ~hd~ and
+   ~tl~ expect streams which are at least of length one.
 
 * Conclusion
   We have implemented a depend type theory with inductive and coinductive types.
