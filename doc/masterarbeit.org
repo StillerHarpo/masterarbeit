@@ -18,7 +18,7 @@
   languages , like coq and agda, we can define inductive types which depend on
   values and coinductive types but not coinductive types, which depend on values
 
-  In this work I will first give a survey of coinductive types in this languages
+  In this work I will first give a survey of coinductive types in these languages
   and then implement the type theory from cite:basold2016type. This type theory
   has both dependent inductive types and dependent coinductive types. In this
   type theory the dependent function space becomes definable. This leads to a
@@ -28,14 +28,14 @@
 
 * Introduction
   In functional programming we have functions which get an input and produce an
-  output. This functions don't depend on multiple value i.e. if they is no IO
+  output. These functions don't depend on multiple value i.e. if they is no IO
   involved they produce for the same input always the same output. For example
   if we call a function or on true and false we always get true. This makes the
   code more predictable.
 
   The or function should only be working on numbers. To call it on strings
-  "fu" and "bar", wouldn't make sense i.e. there is no defined output for this
-  inputs. To prevent calls like this some functional programming languages
+  'foo' and 'bar', wouldn't make sense i.e. there is no defined output for these
+  inputs. To prevent calls like these some functional programming languages
   introduced types.  Types contain only certain values.  For example the type
   bool contains only the values for true and false.  In Haskell we can define it
   like the following.
@@ -43,7 +43,7 @@
   data Bool = True | False
   #+end_src
   This says we can construct values of type ~Bool~ with the constructors ~True~
-  and ~False~. This which have constructors are called inductive types. We can
+  and ~False~. These types which have constructors are called inductive types. We can
   then define or like this
   #+begin_src haskell
   or :: Bool -> Bool -> Bool
@@ -62,9 +62,9 @@
   If we now want to change ~Bool~ to a three-valued logic, we have to add an third
   constructor to ~Bool~.  After that we to change every function which pattern
   matches on ~Bool~.  If we have many that would be a lot of repetitive work.
-  If haskell would have coinductive type this could be a lot less work.
+  If haskell would have coinductive type, this could be a lot less work.
   Coinductive types are types which are, in contrary to inductive types defined
-  over their destruction.  Se we could define ~Bool~ over its destructors.  This
+  over their destruction.  So we could define ~Bool~ over its destructors.  These
   would be or,and, etc.
 
   Through this work we will explain coinductive types at the examples of streams
@@ -74,7 +74,7 @@
   messenger might be infinitely long. We can never know if the chat is finished.
   This is of course limited by the hardware, but we are interested in abstract
   models. Functions are used every where in functional programming. In most of
-  this languages they are first-class objects. But in languages with coinductive
+  these languages they are first-class objects. But in languages with coinductive
   types we can define them. If we only have types which are defined through
   induction or coinduction, we get a symmetrical language. This is useful,
   because than we can change a inductive type to a coinductive one and vice
@@ -131,7 +131,7 @@
   #+end_example
 
   As you can see copattern matching works via observations i.e. we define what
-  should be the output of the fields applied to the result of the function. This
+  should be the output of the fields applied to the result of the function. These
   fields are also called observers, because we observe parts of the type.
   Because inhabitants of ~Stream~ are infinitely long we can't print out a
   stream. Because of this we also consider each expression with has a type,
@@ -246,8 +246,8 @@
   #+end_src
   Here ~split~ is just a function which gets a number and a list of numbers.
   It gives back a pair of two lists where the left list are all elements of
-  the input list which are smaller than the input number and the right this
-  which are bigger.  It is clear that this lists can't be longer than the
+  the input list which are smaller than the input number and the right these
+  which are bigger.  It is clear that these lists can't be longer than the
   input list.  So ~lower~ and ~upper~ can't be longer than ~xs~.  Here ~xs~ is
   structural smaller than the input ~cons x xs~.  So ~lower~ and ~upper~ are smaller
   than the input.  Therefore we know that ~quicksort~ is terminating.  But coq won't
@@ -740,7 +740,7 @@
    means the size of the input is smaller than the size of the output.  For
    inductive types, a size is an upper bound on the number of constructors.  With
    ~suc~ we add an constructor so the size has to increase  ~i~.  We can now define
-   subtraction on this sized nats.
+   subtraction on these sized nats.
    #+begin_src agda
    _-_ : {i : Size} → ℕ i → ℕ ∞ → ℕ i
    zero    - _      = zero
@@ -782,7 +782,7 @@
   $\Gamma\rat*$. Here $\Gamma$ is a context, which states to what terms we can
   apply the type. For example we can apply $A$ of kind $(x:B)\rat*$ only to a
   term of type $B$. If we apply it to $t$ of type $B$, we get a type of kind
-  $*$. We write $\rat$ instead of $\rightarrow$ to indicate, that this are not
+  $*$. We write $\rat$ instead of $\rightarrow$ to indicate, that these are not
   functions. We can also apply a term to annother term. For example $t@s$ means
   we apply the term $t$ to the term $s$.  Terms also can depend on contexts.
   For example if we have a term $t$ of type $(x:A)\rat B$ and apply it to a term
@@ -844,7 +844,7 @@
    In the following we will scratch out the abstract syntax. In contrast to
    cite:basold2016type we can't write anonymous inductive and coinductive types.
    We will give every inductive and coinductive type a name. They will be
-   defined via declarations. In this declarations we will give, their
+   defined via declarations. In these declarations we will give, their
    constructors/destructors. They will also be given names. In cite:basold2016type
    they are anonymous. We can then refer to the previously defined types. We
    will described declarations in section [[Declarations]] . We will also be able to
@@ -861,13 +861,13 @@
     keywords data and codata we define inductive and coinductive types
     respectively. After that we will write the name. We can only use names which
     aren't used already. Behind that we can give a parameter context. This is a
-    type context. This types are not polymorphic. They are merely macros to make
+    type context. These types are not polymorphic. They are merely macros to make
     the code more readable and allow the definition of nested types. If we want
-    to use this types we have to fully instantiate this context. This types can
+    to use these types we have to fully instantiate this context. These types can
     occur everywhere in the definition where a type is expected. A (co)inductive
     type can have a context, which is written before an arrow. ~Set~ stands for
     type (or * in the paper). If a type don't has a context we omit the arrow.
-    We will also give names to every constructor and destructor. This names have
+    We will also give names to every constructor and destructor. These names have
     to be unique. Constructors and destructors also have contexts. Additionally
     they have one argument which can has a recursive occurrence of the type we
     are defining. A constructor gives back a value of the type, where its
@@ -1087,7 +1087,7 @@
    i. e. which rule with which premises we have to apply. In the paper their are
    rules containing variables in the premises where their type isn't in the
    conclusion. So if we want to type-check something which is the conclusion of
-   such a rule we have no way of knowing what this variables are.
+   such a rule we have no way of knowing what these variables are.
 
    We don't need the weakening rules because we can lookup a variable in a
    context.  So we ignore them in our implementation.
@@ -1270,7 +1270,7 @@
 
 *** Unit type and expression introduction
     The paper defines one rule for the unit type and one for the unit value.
-    This are.
+    These are.
     \begin{center}
       \AxiomC{}
       \RightLabel{\textbf{($\top$-I)}}
@@ -1282,7 +1282,7 @@
       \DisplayProof
     \end{center}
     The first rule says that the type $\top$ has always an empty context.  The
-    second rule says its value $\lozenge$ is always of type $\top$. This rules
+    second rule says its value $\lozenge$ is always of type $\top$. These rules
     get rewritten to.
     \begin{center}
       \AxiomC{}
@@ -1338,7 +1338,7 @@
     \end{prooftree}
 
     In the rule from the paper we can only infer the type or kind of the last variable in the
-    context.  In our rules we just look up the variable in the context.  This
+    context.  In our rules we just look up the variable in the context.  These
     rules can check the same thing if we take the weakening rules into account.
     With them we can just weaken the context until we get to the desired
     variable.
@@ -1380,7 +1380,7 @@
       \TrinaryInfC{\graybox{$\Phi\mid\Theta$}$\mid\Gamma_1\vdash t@s:\Gamma_2[s/x]\rat B[s/x]$}
       \DisplayProof
     \end{center}
-    This rules are similar to the rule for type instantiation.  Here we have to
+    These rules are similar to the rule for type instantiation.  Here we have to
     check(or infer) a term instead of a type.  We also have to substitute $s$ in
     the result type of $t$(in the case of types its always $*$, which obviously
     has no free variables).
@@ -1412,7 +1412,7 @@
     \BinaryInfC{$\Theta \mid \emptyset \vdash \rho(X : \Gamma \rat *;\vv{\sigma};\vv{A}):\Gamma\rat *$}
     \end{prooftree}
     into multiple rules.  First we need rules to check the definitions of
-    (co)inductive types.  This are
+    (co)inductive types.  These are
     \begin{prooftree}
     \AxiomC{$\sigma_k:\Gamma_k\triangleright\Gamma$}
     \AxiomC{\graybox{$\Phi$}$\mid X:\Gamma\rat*\mid\Gamma_k\vdash A_k:*$}
@@ -1447,7 +1447,7 @@
     \BinaryInfC{\graybox{$\Phi\vdash$}$(\sigma,t):\Gamma_1\triangleright(\Gamma_2,x:A)$}
     \DisplayProof
     \end{center}
-    We also need a rule for the cases in which we are using this defined
+    We also need a rule for the cases in which we are using these defined
     variables.  This is.
     \begin{prooftree}
     \AxiomC{$\Phi\mid\Theta\mid\Gamma'\vdash \vv{A}:\Gamma_i \rat *$}
@@ -1459,7 +1459,7 @@
     just the context from the definition and $\Phi$ is the parameter context.
     Because we already typed checked this definition we just have to check if
     the types given for the parameters have the right kind.  Then we substitute
-    this parameters in its type.  We will now give the rules for checking if a
+    these parameters in its type.  We will now give the rules for checking if a
     list of parameters matches a parameter context.
     \begin{center}
     \AxiomC{}
@@ -1670,7 +1670,7 @@
 
   In this section we reiterate the example types from the paper.  We use our
   syntax, which is defined in [[Abstract Syntax]].  We will also show some functions
-  on this types.  On some of them we will show the reduction steps in detail.
+  on these types.  On some of them we will show the reduction steps in detail.
 
 ** Terminal and Initial Object
 
@@ -1809,7 +1809,7 @@
      Second : (n : Nat) $\rat$ Pair n $\rat$ B @ n
    #+end_example
    Here the product also depends on ~Nat~. If ~A~ or ~B~ depends on values the
-   product must also depend on this values. This is the product, which used is
+   product must also depend on these values. This is the product, which used is
    for the definition of vectors in cite:basold2016type.
 
    On ~Product~ we can define the swap function.
@@ -1860,15 +1860,15 @@
    The pi type is a generalization of the function type to dependent types.
    The type of the codomain or result of a function can depend on the value
    We define it as a coinductive type.  To destruct a function we just apply
-   it to a value.  So the destructor is ~Apply~.  To construct a function we
-   use corecursion on ~Unit~.  This is a lambda so we call it ~lambda~.
+   it to a value.  So the destructor is ~Apply~.
 
    #+begin_example
    codata Pi$\langle$A : Set,B : (x : A) $\rat$ Set$\rangle$ : Set where
       Apply : (x : A) $\rat$ Pi x $\rat$ B
    #+end_example
 
-   The identity function is defined like this
+   To construct a function we use corecursion on ~Unit~. The identity function
+   is defined like this
    #+begin_example
    id$\langle$A : Set$\rangle$ = corec Unit to Pi$\langle$A,(v:A).A$\rangle$ where
           { Apply v p = v } @ $\lozenge$
@@ -1962,7 +1962,7 @@
    \end{align*}
    here we write $1$ for ~Suc @ (Zero @ )~ and $0$ for ~Zero @ \lozenge~
 
-   With the help of extended naturals, we can define partial streams. This are
+   With the help of extended naturals, we can define partial streams. These are
    streams which depend on there definition depth. Like non-dependent streams
    they are coinductive and have 2 destructors for head and tail.
    #+begin_example
@@ -1970,7 +1970,7 @@
       hd : (k : ExNat) $\rat$ PStr$\langle$A$\rangle$ (succE k) $\rat$ A
       tl : (k : ExNat) $\rat$ PStr$\langle$A$\rangle$ (succE k) $\rat$ PStr$\langle$A$\rangle$ @ k
    #+end_example
-   This streams are like vectors except they also can be infinite long. This is
+   These streams are like vectors except they also can be infinite long. This is
    in contrary to non dependent streams.  A non dependent stream could not be of
    length zero.  Because then a call of ~hd~ and ~tl~ on it wouldn't be defined.  In the
    dependent case the type checker wouldn't allow such a call because ~hd~ and
