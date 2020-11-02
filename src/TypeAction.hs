@@ -47,7 +47,7 @@ typeAction (c :@ s)               j terms gammas as' bs =
   -- TODO Make sure j is right in all cases
   -- maybe variable in s should be marked until type action
   -- is finished (didn't work for one test)
-  flip (substExpr j) s
+  substExpr j s
   <$> typeAction c (j+1) terms gammas as' bs
 typeAction (Abstr _ _ c)         j terms gammas as' bs =
   typeAction c (j-1) terms gammas as' bs

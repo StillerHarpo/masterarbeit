@@ -42,7 +42,7 @@ evalExpr (f :@: arg)                       = do
       let StrDef{..} = strDefs ductive !! i
           openDuctive = ductive
           parametersTyExpr = parameters
-      recEval <- typeAction (substPars 0 (reverse parameters) a)
+      recEval <- typeAction (shiftFreeVarsTypeExpr 1 0 $ substPars 0 (reverse parameters) a)
                             1
                             [applyExprArgs (r, map (shiftFreeVarsExpr 1 0)
                                                $ idCtx (gamma ductive))
@@ -63,11 +63,11 @@ evalExpr (f :@: arg)                       = do
     (getExprArgs -> (Structor{num=i, ductive = duc2}, tau) , getExprArgs -> (c@Iter{..}, args))
       | inOrCoin ductive == IsCoin
         && inOrCoin duc2 == IsCoin
-        && length tau == length (gamma1 $ strDefs ductive !! i) -> do
+        && length tau == length (gamma1 $ strDefs duc2 !! i) -> do
       let StrDef{..} = strDefs ductive !! i
           openDuctive = ductive
           parametersTyExpr = parameters
-      recEval <- typeAction (substPars 0 (reverse parameters) a)
+      recEval <- typeAction (shiftFreeVarsTypeExpr 1 0 $ substPars 0 (reverse parameters) a)
                             1
                             [applyExprArgs (c, map (shiftFreeVarsExpr 1 0)
                                                $ idCtx (gamma ductive))
