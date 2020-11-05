@@ -1748,7 +1748,7 @@
    codata Conat : Set where
      Prec : Conat $\rat$ Maybe$\langle$Conat$\rangle$
    succ = corec Conat to Conat where
-            Prec x $\rat$ Just$\langle$Conat$\rangle$ @ x
+            Prec x = Just$\langle$Conat$\rangle$ @ x
    #+end_example
    We now define the values zero and infinity
    #+begin_example
@@ -1987,20 +1987,36 @@
    in contrary to non dependent streams.  A non dependent stream could not be of
    length zero.  Because then a call of ~hd~ and ~tl~ on it wouldn't be defined.  In the
    dependent case the type checker wouldn't allow such a call because ~hd~ and
-   ~tl~ expect streams which are at least of length one.
+   ~tl~ expect streams which are at least of length one.  We can then define
+   ~repeat~.
+   #+begin_example
+   repeat<A : Set>(x : A, n : Conat) =
+     corec (n : Conat).Unit to PStr<A> where
+       { Hd k s = x
+       ; Tl k s = () } @ n @ ()
+   #+end_example
+   This function gets a value and an extended natural number. It generate an
+   constant partial stream of that value with the number as its length.
+
 
 * Conclusion
   We have implemented a depend type theory with inductive and coinductive types.
   In this theory, contrary to coq and agda, coinductive types can also depend on
-  values.  The downside is that we don't have universes.  This prevents type
-  polymorphism.  Further work needs do be done to solve this.
+  values.  Contrary to the theory of the paper we can define schemata like
+  ~Maybe<A : Set>~ where ~A~ can be an arbitrary type of kind ~Set~.
 
-  Another problem is, that each constructor or destructor has at least one
-  argument. The argument with the recursive occurrence. For example we have to
-  apply an unit to the constructors of a boolean type. We could allow recursive
-  occurrences in the contexts of the constructors and destructors. This makes it
-  possible to remove the argument with the recursive occurrence. We then have to
-  change the evaluation rules.
+  One downside is that we don't have universes. This prevents type polymorphism.
+  Further work needs do be done to solve this. Another problem is, that each
+  constructor or destructor has at least one argument. The argument with the
+  recursive occurrence. For example we have to apply an unit to the constructors
+  of a boolean type. We could allow recursive occurrences in the contexts of the
+  constructors and destructors. This makes it possible to remove the argument
+  with the recursive occurrence. We then have to change the evaluation rules.
+
+  Our system allowed us to define the (depenend) function type.  Therefor we
+  don't have it as primitive expression.  We are hopeful, that in the future we
+  get an more mature languge where the dependend function is definable.  As
+  already mentioned in the introduction this would lead to a symmetrical language.
 
 \appendix
 
