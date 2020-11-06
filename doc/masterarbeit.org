@@ -211,7 +211,7 @@
   #+end_src
   That terms can occur in types makes it necessary to ensure that function
   terminate. Otherwise type checking wouldn't be decidable. If we have a
-  function ~f : Nat \rat Nat~ and we want to check a value ~a~ against a type 
+  function ~f : Nat \rat Nat~ and we want to check a value ~a~ against a type
   ~Vec (f 1)~ we have to know what ~f 1~ evaluates to. So ~f~ has to terminate.
   We check termination in coq via a structural decreasing argument. An argument
   is structural decreasing, if it is structural smaller in a recursive call.
@@ -997,7 +997,7 @@
 
     An ~Expr~ is either a ~rec~, a ~corec~, a con/destructor, an application
     ~@~,the only primitive unit expression ~\lozenge~ or a variable. With the
-    keyword ~rec~ we can destruct an inductive type. We write 
+    keyword ~rec~ we can destruct an inductive type. We write
     ~N ParInst? to TypeExrp~, where ~N~ is a previously defined inductive type
     and ~ParInst?~ the instantiation of its parameter context, after ~rec~ to
     facilitate type checking. It says we want to destruct an inductive type to
@@ -1621,7 +1621,7 @@
    implemented in the module ~TypeAction.hs~.  Both the type action and the
    evaluation are done in the ~Eval~ monad.  This monad has access to the
    previously defined declarations. We will now define the type action.
-   
+
    #+name: reduction-steps
    \begin{figure}
      \begin{align*}
