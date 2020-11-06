@@ -1729,7 +1729,32 @@
       Zero : Terminal $\rat$ Nat
       Suc : Nat $\rat$ Nat
    zero = Zero @ $\lozenge$
+   one = Suc @ zero
    #+end_example
+   We can then define a identity recursion on it to see how reduction works.
+   It's a recursion which goes from a ~Nat~ to ~Nat~ and gives back in every
+   case its input.
+   #+begin_example
+   id = rec Nat to Nat where
+          Zero u = Zero @ u
+          Succ n = Succ @ n
+   #+end_example
+
+   We use it on one to see all cases.
+   #+begin_example
+   id @ one = id @ (Succ @ zero)
+            $\succ$ Succ @ n[$\widehat{X}$(id @ x)/n] [zero]
+            = Succ @ $\widehat{X}$(id @ x) [zero]
+            = Succ @ (id @ x)[zero]
+            = Succ @ (id @ zero)
+            = Succ @ (id @ (Zero @ $\lozenge$))
+            $\succ$ Succ @ (Zero @ u[$\widehat{\text{Unit}}$(id @ x)/u][$\lozenge$])
+            = Succ @ (Zero @ u[$\widehat{\text{Unit}}$(id @ x)/u][$\lozenge$])
+            = Succ @ (Zero @ $\widehat{\text{Unit}}$(id @ x)[$\lozenge$])
+            = Succ @ (Zero @ x)[$\lozenge$]
+            = Succ @ (Zero @ x) = Succ @ zero = one
+   #+end_example
+   As expected the identity recursion applied to one gives back one.
 
    We will now define extended naturals. There are also called conat. There are
    natural numbers with an additional value, infinity. We define it
