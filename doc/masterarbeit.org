@@ -210,8 +210,8 @@
   hd (cons x _) = x
   #+end_src
   That terms can occur in types makes it necessary to ensure that function
-  terminate. Otherwise type checking wouldn't be decidable. If we have a
-  function ~f : Nat \rat Nat~ and we want to check a value ~a~ against a type
+  \linebreak terminate. Otherwise type checking wouldn't be decidable. If we have a
+  function \linebreak ~f : Nat \rat Nat~ and we want to check a value ~a~ against a type
   ~Vec (f 1)~ we have to know what ~f 1~ evaluates to. So ~f~ has to terminate.
   We check termination in coq via a structural decreasing argument. An argument
   is structural decreasing, if it is structural smaller in a recursive call.
@@ -467,9 +467,9 @@
       CoInductive U := { out : U }.
     #+end_src
 
-    ~U~ is now defined over its destructor ~out~, instead of its constructor ~in~.
-     Then ~in~ becomes just a function.  In Fact its just a definition, because
-     we don't recurse or corecurse on it.
+    ~U~ is now defined over its destructor ~out~, instead of its constructor
+     ~in~. Then ~in~ \linebreak becomes just a function. In Fact its just a
+     definition, because we don't recurse or corecurse on it.
 
     #+begin_src coq
       Definition In (y : U) : U := {| out := y |}.
@@ -683,7 +683,7 @@
    #+end_src
 
    We just use copattern matching to define it. If we apply a ~x~ to ~plus2~ we
-   get ~suc (suc x)~. ~\rightarrow'~ is just the non-dependent function it is defined
+   get \linebreak ~suc (suc x)~. ~\rightarrow'~ is just the non-dependent function it is defined
    using our pi type. Here it is.
 
    #+begin_src agda
@@ -1546,7 +1546,7 @@
       \DisplayProof
     \end{center}
     gets rewritten to
-    \begin{prooftree}
+    \begin{scprooftree}{0.95}
       \AxiomC{$\vdash C:\Gamma\rat*$}
       \AxiomC{\graybox{$\vdash\Gamma\equiv_\beta \Gamma'[\vv{D}]$}}
       \noLine
@@ -1557,7 +1557,7 @@
       \RightLabel{\textbf{(Ind-E)}}
       \TrinaryInfC{\graybox{$\Phi\mid\Theta\mid$}$\Delta\vdash$ rec \graybox{$\mu\langle\vv{D}\rangle$ to C};
         $\vv{\text{Constr}_k\vv{x_k}\text{ } y_k = g_k}:(\Gamma,y:\mu$\graybox{$[\vv{D}]$}$@id_\Gamma)\rat C@id_\Gamma$}
-     \end{prooftree}
+     \end{scprooftree}
 
      We are recursing over some previously inductivly defined type $\mu$ to some
      type $C$.  This types must have the same context.  Recursing is done by
@@ -1580,7 +1580,7 @@
       \DisplayProof
     \end{center}
     gets rewritten to
-    \begin{prooftree}
+    \begin{scprooftree}{0.95}
       \AxiomC{$\vdash C:\Gamma\rat*$}
       \AxiomC{\graybox{$\vdash\Gamma\equiv_\beta \Gamma'[\vv{D}]$}}
       \noLine
@@ -1591,7 +1591,7 @@
       \RightLabel{\textbf{(Coind-I)}}
       \TrinaryInfC{\graybox{$\Phi\mid\Theta\mid$}$\Delta\vdash$ corec \graybox{C to $\nu\langle\vv{D}\rangle$};
         $\vv{\text{Destr}_k\vv{x_k}\text{ } y_k = g_k}:(\Gamma,y:C@id_\Gamma)\rat \nu$\graybox{$[\vv{D}]$}$@id_\Gamma$}
-     \end{prooftree}
+     \end{scprooftree}
 
      A corecursion produces a coinductive type $\nu$.  We have to give it a type
      $C$ and list the destructors together with the expression they should be
@@ -1858,13 +1858,13 @@
              Snd x $\rat$ Fst x
     #+end_example
    This is a well typed function as shown by the following proof
-   \begin{prooftree}
+   \begin{scprooftree}{0.95}
    \AxiomC{$(A : *, B : *)||\vdash$ Product$\langle$A,B$\rangle$ : $*$}
    \AxiomC{$(A : *, B : *)||(x:A) \vdash$ Snd @ x : Product$\langle$A,B$\rangle$ \circled{a}}
     \noLine
     \UnaryInfC{$(A : *, B : *)||(y : B) \vdash$ Fst @ y : Product$\langle$A,B$\rangle$ \circled{b}}
     \BinaryInfC{$(A : *, B : *)|| \vdash$ swap : (p : Product$\langle$A,B$\rangle$) $\rat$ Product$\langle$B,A$\rangle$}
-    \end{prooftree}
+    \end{scprooftree}
     We show \circled{a} in the following proof.  \circled{b} works analog.
     \begin{prooftree}
     \AxiomC{$(A : *, B : *)||(x : A) \vdash$ Snd : $(x : A) \rat$ Product$\langle$A,B$\rangle$}
@@ -1974,7 +1974,7 @@
        Cons k v = Cons$\langle$A$\rangle$ @ (Suc @ k) @ v
    #+end_example
    The type checking of this function goes as follows.
-   \begin{scprooftree}{0.8}
+   \begin{scprooftree}{0.75}
    \AxiomC{(A : Set)||$\vdash$ (x).(Vec$\langle$A$\rangle$ @ (Suc @ x)) : (k: Nat) $\rat$ *}
    \noLine
    \UnaryInfC{(A: Set)||(u : A) $\vdash$ Cons$\langle$A$\rangle$ @ 0 @ (Nil$\langle$A$\langle$ @ ) : (x).(Vec$\langle$A$\rangle$ @ (Suc @ x)) @ 0}
@@ -2027,8 +2027,8 @@
 * Conclusion
   We have implemented a depend type theory with inductive and coinductive types.
   In this theory, contrary to coq and agda, coinductive types can also depend on
-  values.  Contrary to the theory of the paper we can define schemata like
-  ~Maybe<A : Set>~ where ~A~ can be an arbitrary type of kind ~Set~.
+  values. Contrary to the theory of the paper we can define schemata like
+  ~Maybe<A : Set>~ \linebreak where ~A~ can be an arbitrary type of kind ~Set~.
 
   One downside is that we don't have universes. This prevents type polymorphism.
   Further work needs do be done to solve this. Another problem is, that each
@@ -2132,7 +2132,7 @@
     We know from the first premise that $\Gamma=\Gamma_n$ and $\Gamma'=\emptyset$
 
     Here we got the prooftree
-    \begin{prooftree}
+    \begin{scprooftree}{0.9}
     \AxiomC{$\Gamma_n,x:A\vdash t:B$}
     \AxiomC{}
     \RightLabel{Thrm. \ref{abstrid}}
@@ -2144,7 +2144,7 @@
     \UnaryInfC{$B\longleftrightarrow_T(\Gamma_n).B@\id{\Gamma_n}$}
     \RightLabel{Conv}
     \BinaryInfC{$\Gamma_n,x:(\Gamma_n).A@\id{\Gamma_n}\vdash t_n:(\Gamma_n).B@\id{\Gamma_1}$}
-    \end{prooftree}
+    \end{scprooftree}
 
   +
     #+begin_export latex
@@ -2176,12 +2176,13 @@
   +
     #+begin_export latex
     $\mathcal{D}$ =
+      \begin{scprooftree}{0.8}
       \Di{1}
       \UnaryInfC{$X_1:\Gamma_1\rat*,\dots,X_n:\Gamma_n\mid\Gamma'\vdash C:\Gamma\rat*$}
       \Di{2}
       \UnaryInfC{$X_1:\Gamma_1\rat*,\dots,X_n:\Gamma_n\mid\Gamma'\vdash D:*$}
       \TyWeak{$X_1:\Gamma_1\rat*,\dots,X_n:\Gamma_n\rat*\mid\Gamma',y:D\vdash C:\Gamma\rat*$}
-      \DisplayProof
+      \end{scprooftree}
     #+end_export
 
     Here we got the prooftree
@@ -2224,7 +2225,7 @@
     \end{align*}
 
     We then got the following prooftree
-    \begin{prooftree}
+    \begin{scprooftree}{0.95}
       \AxiomC{$X_1:\Gamma_1\rat*,\dots,X_n\rat*\mid\Gamma_2'\vdash C'@s:\Gamma_2[s/y]\rat*$}
       \RightLabel{(*)}
       \UnaryInfC{$X_1:\Gamma_1\rat*,\dots,X_n:\Gamma_n\rat*\mid\Gamma_2'\vdash C':(y:D,\Gamma_2)\rat*$}
@@ -2232,7 +2233,7 @@
       \RightLabel{IdH.}
       \BinaryInfC{$\Gamma_2',y:D,\Gamma_2,x:\widehat{C'}(\vv{A})\vdash\widehat{C'}(\vv{t}):\widehat{C'}(\vv{B}) $}
       \UnaryInfC{$\Gamma_2',\Gamma_2[s/y],x:\widehat{C'}(\vv{A})[s/y]\vdash\widehat{C'}(\vv{t})[s/y]:\widehat{C'}(\vv{B})[s/y] $}
-    \end{prooftree}
+    \end{scprooftree}
     (=*=) This is the reverse of *(Ty-Inst)*.
 
   +
@@ -2258,14 +2259,14 @@
     \end{align*}
 
     The prooftree then becomes the following
-    \begin{prooftree}
+    \begin{scprooftree}{0.95}
       \AxiomC{$X_1:\Gamma_1\rat*,\dots,X_n:\Gamma_n\rat*\mid\Gamma'\vdash (y).C':(y:D,\Gamma)\rat*$}
       \RightLabel{(*)}
       \UnaryInfC{$X_1:\Gamma_1\rat*,\dots,X_n:\Gamma_n\rat*\mid y:D,\Gamma'\vdash C':\Gamma\rat*$}
       \AxiomC{$\Gamma_i,x:A_i\vdash t_i:B_i$}
       \RightLabel{IdH.}
       \BinaryInfC{$y:D,\Gamma',\Gamma,x:\widehat{C'}(\vv{A})\vdash\widehat{C'}(\vv{t}):\widehat{C'}(\vv{B})$}
-    \end{prooftree}
+    \end{scprooftree}
     (=*=) This is the reverse of *(Param-Abstr)*.
 
   +
@@ -2408,7 +2409,7 @@
       \Inst{$\Delta\vdash\alpha_k^\mu @\tau@u:\mu@\sigma_k$}
       \Inst{$\Delta\vdash(\rec^\mu\overline{(\Gamma_k,y_k).g_k}@(\sigma_k\circ\tau))@(\alpha_k^\mu @\tau@u):C@\sigma_k$}
     \end{scprooftree}
-    \begin{scprooftree}{0.5}
+    \begin{scprooftree}{0.45}
       \AxiomC{$\vdash\overbrace{\mu[\overline{(\Gamma_k).A_k}/\overline{X_k}]}^C:\Gamma\rat*$}
       \AxiomC{}
       \IndI{$\Gamma,x:\mu[\overline{(\Gamma_k).A_k}/\overline{X_k}]@\id{\Gamma},\Delta_k,y_k:A_k[\mu[\overline{(\Gamma_k).B_k}/\overline{X_k}]/X]\vdash\alpha_k^{\mu[\overline{(\Gamma_k).B_k}/\overline{X_k}]}:(\Delta_k,y_k:A_k[\overline{(\Gamma_k).B_k}/\overline{X_k}])\rat\mu[\overline{(\Gamma_k).B_k}/\overline{X_k}]@\sigma_k$}
