@@ -2279,13 +2279,14 @@
         \BinaryInfC{$X_1:\Gamma_1\rat*,\dots,X_{n}\rat*\mid\emptyset\vdash\mu(Y:\Gamma\rat*;\vv{\sigma};\vv{D}):\Gamma\rat*$}
     \end{prooftree}
     From this we know $\Gamma'=\emptyset$
+
     Calculated type actions:
     \begin{align*}
       &\widehat{\mu(Y:\Gamma\rat*;\vv{\sigma};\vv{D})}(\vv{A})\\
       &=\mu(Y:\Gamma\rat*;\vv{\sigma};\vv{D})[\vv{(\Gamma_i).A}/\vv{X}]@\id{\Gamma}\\
       &=\mu(Y:\Gamma\rat*;\vv{\sigma};\vv{D}[\vv{(\Gamma_i).A}/\vv{X}])@\id{\Gamma}\\
       &\widehat{\mu(Y:\Gamma\rat*;\vv{\sigma};\vv{D})}(\vv{t})\\
-      &=\text{rec}^{\mu(Y:\Gamma\rat*;\vv{\sigma};\vv{D}[(\Gamma_i).A/X])}\vv{(\Delta_k,x).\alpha_k@\id{\Delta_k}@\widehat{D_k}(\vv{t},x)}@\id{\Gamma}@x\\
+      &=\text{rec}^{\mu(Y:\Gamma\rat*;\vv{\sigma};\vv{D}[\vv{(\Gamma_i).A}/\vv{X}])}\vv{(\Delta_k,x).\alpha_k@\id{\Delta_k}@\widehat{D_k}(\vv{t},x)}@\id{\Gamma}@x\\
       &\widehat{\mu(Y:\Gamma\rat*;\vv{\sigma};\vv{D})}(\vv{B})\\
       &=\mu(Y:\Gamma\rat*;\vv{\sigma};\vv{D})[\vv{(\Gamma_i).B}/\vv{X}]@\id{\Gamma}\\
       &=\mu(Y:\Gamma\rat*;\vv{\sigma};\vv{D}[\vv{(\Gamma_i).B}/\vv{X}])@\id{\Gamma}
@@ -2314,43 +2315,47 @@
       \AxiomC{$\Gamma_i,x:A_i\vdash t_i:B_i$}
       \BinaryInfC{$\Delta_k,x:\widehat{D_k}(\vv{A},A_{n+1})\vdash\widehat{D_k}(\vv{t},y):\widehat{D_k}(\vv{B},B_{n+1}) $}
     \end{prooftree}
-    We than got the following proof
-    \begin{prooftree}
-     \AxiomC{$\Gamma,x:\widehat{C}(\vv{A}),\Delta_k,y_k:D_k[\mu/X]\vdash\widehat{D_k}(\vv{t},y):D_k[\vv{(\Gamma_i).B}/\vv{X}][(\Gamma_{n+1}).B_{n+1}/Y]$}
-     \UnaryInfC{$\Gamma,x:\widehat{C}(\vv{A}),\Delta_k,y_k:D_k[\mu/X]\vdash\alpha_k@\id{\Delta_k}@\widehat{D_k}(\vv{t},y):\mu@\sigma_k$}
-     \UnaryInfC{$\Gamma,x:\widehat{C}(\vv{A})\vdash\widehat{C}(t):\widehat{C}(\vv{B})$}
-    \end{prooftree}
+    See appendix [[Bigger proofs]] for a proof of it.
 
-  + $C=\nu(Y:\Gamma\rat*;\vv{\sigma};\vv{D})$:
+  + $\mathcal{D}$ =
+    \begin{prooftree}
+        \Di{1}
+        \UnaryInfC{$\sigma_k:\Delta_k\triangleright\Gamma$}
+        \Di{2}
+        \UnaryInfC{$X_1:\Gamma_1\rat*,\dots,X_n\rat*,X:\Gamma\rat*\mid\Delta_k\vdash D_k:*$}
+        \FPTy
+        \BinaryInfC{$X_1:\Gamma_1\rat*,\dots,X_{n}\rat*\mid\emptyset\vdash\nu(Y:\Gamma\rat*;\vv{\sigma};\vv{D}):\Gamma\rat*$}
+    \end{prooftree}
+    From this we know $\Gamma'=\emptyset$.
 
     Calculated type actions:
     \begin{align*}
-      &\widehat{\nu(Y:\Gamma_2\rat*;\vv{\sigma};\vv{D})}(\vv{A})\\
-      &=\nu(Y:\Gamma_2\rat*;\vv{\sigma};\vv{D})[\vv{(\Gamma_i).A}/\vv{X}]@\id{\Gamma_2}\\
-      &=\nu(Y:\Gamma_2\rat*;\vv{\sigma};\vv{D}[\vv{(\Gamma_i).A}/\vv{X}])@\id{\Gamma_2}\\
-      &\widehat{\nu(Y:\Gamma_2\rat*;\vv{\sigma};\vv{D})}(\vv{t})\\
-      &=\text{corec}^{\nu(Y:\Gamma_2\rat*;\vv{\sigma};\vv{D}[(\vv{\Gamma_i).B}/\vv{X}])}\vv{(\Delta_k,x)\widehat{D_k}(\vv{t},x)[(\xi_k@\id{\Delta_k}@x)/x]}@\id{\Gamma_2}@x\\
-      &\widehat{\nu(Y:\Gamma_2\rat*;\vv{\sigma};\vv{D})}(\vv{B})\\
-      &=\nu(Y:\Gamma_2\rat*;\vv{\sigma};\vv{D})[\vv{(\Gamma_i).B}/\vv{X}]@\id{\Gamma_2}\\
-      &=\nu(Y:\Gamma_2\rat*;\vv{\sigma};\vv{D}[\vv{(\Gamma_i).B}/\vv{X}])@\id{\Gamma_2}
+      &\widehat{\nu(Y:\Gamma\rat*;\vv{\sigma};\vv{D})}(\vv{A})\\
+      &=\nu(Y:\Gamma\rat*;\vv{\sigma};\vv{D})[\vv{(\Gamma_i).A}/\vv{X}]@\id{\Gamma}\\
+      &=\nu(Y:\Gamma\rat*;\vv{\sigma};\vv{D}[\vv{(\Gamma_i).A}/\vv{X}])@\id{\Gamma}\\
+      &\widehat{\nu(Y:\Gamma\rat*;\vv{\sigma};\vv{D})}(\vv{t})\\
+      &=\text{corec}^{\nu(Y:\Gamma\rat*;\vv{\sigma};\vv{D}[(\vv{\Gamma_i).B}/\vv{X}])}\vv{(\Delta_k,x)\widehat{D_k}(\vv{t},x)[(\xi_k@\id{\Delta_k}@x)/x]}@\id{\Gamma}@x\\
+      &\widehat{\nu(Y:\Gamma\rat*;\vv{\sigma};\vv{D})}(\vv{B})\\
+      &=\nu(Y:\Gamma\rat*;\vv{\sigma};\vv{D})[\vv{(\Gamma_i).B}/\vv{X}]@\id{\Gamma}\\
+      &=\nu(Y:\Gamma\rat*;\vv{\sigma};\vv{D}[\vv{(\Gamma_i).B}/\vv{X}])@\id{\Gamma}
     \end{align*}
 
     From the assumptions
     \begin{align*}
-    &X_1:\Gamma_1\rat*,\dots,X_n:\Gamma_n\rat*\mid\Gamma_2'\vdash \nu(Y:\Gamma_2\rat*;\vv{\sigma};\vv{D}):\Gamma_2\rat*\\
+    &X_1:\Gamma_1\rat*,\dots,X_n:\Gamma_n\rat*\mid\emptyset\vdash \nu(Y:\Gamma\rat*;\vv{\sigma};\vv{D}):\Gamma\rat*\\
     &\Gamma_i,x:A_i\vdash t_i:B_i
     \end{align*}
     We have to proof that in *Ctx*
     \begin{equation*}
-     \Gamma_2',\Gamma_2,x:\nu(Y:\Gamma_2\rat*;\vv{\sigma};\vv{D}[(\Gamma_1).A/X])@\id{\Gamma_2}
+     \Gamma,x:\nu(Y:\Gamma\rat*;\vv{\sigma};\vv{D}[(\Gamma_1).A/X])@\id{\Gamma}
     \end{equation*}
     the expression
     \begin{equation*}
-     \text{corec}^{\nu(Y:\Gamma_2\rat*;\vv{\sigma};\vv{D}[(\vv{\Gamma_i).B}/\vv{X}])}\vv{(\Delta_k,x)\widehat{D_k}(\vv{t},x)[(\xi_k@\id{\Delta_k}@x)/x]}@\id{\Gamma_2}@x\\
+     \text{corec}^{\nu(Y:\Gamma\rat*;\vv{\sigma};\vv{D}[(\vv{\Gamma_i).B}/\vv{X}])}\vv{(\Delta_k,x)\widehat{D_k}(\vv{t},x)[(\xi_k@\id{\Delta_k}@x)/x]}@\id{\Gamma}@x\\
     \end{equation*}
     has type
     \begin{equation*}
-    \nu(Y:\Gamma_2\rat*;\vv{\sigma};\vv{D}[\vv{(\Gamma_i).B}/\vv{X}])@\id{\Gamma_2}
+    \nu(Y:\Gamma\rat*;\vv{\sigma};\vv{D}[\vv{(\Gamma_i).B}/\vv{X}])@\id{\Gamma}
     \end{equation*}
     We can use the induction hypothesis
     \begin{prooftree}
@@ -2358,11 +2363,7 @@
       \AxiomC{$\Gamma_i,y_k:A_i\vdash t_i:B_i$}
       \BinaryInfC{$\Delta_k,y_k:\widehat{D_k}(\vv{A},A_{n+1})\vdash\widehat{D_k}(\vv{t},y):\widehat{D_k}(\vv{B},B_{n+1}) $}
     \end{prooftree}
-    We than got the following proof
-    \begin{prooftree}
-     \AxiomC{$\Gamma_2',\Gamma_2,x:\widehat{C}(\vv{A}),\Delta_k,y_k:\nu@\sigma_k\vdash\widehat{D_k}(\vv{t},x)[(\xi_k@\id{\Delta_k}@x)/x]:D_k[\vv{(\Gamma_i).A}/\vv{X}][\nu/X]$}
-     \UnaryInfC{$\Gamma_2',\Gamma_2,x:\widehat{C}(\vv{A})\vdash\widehat{C}(t):\widehat{C}(\vv{B})$}
-    \end{prooftree}
+    See appendix [[Bigger proofs]] for this proof.
 
   #+end_proof
 
