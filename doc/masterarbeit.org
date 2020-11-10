@@ -1030,11 +1030,14 @@
     and global variables. Global variables refer to previously defined
     expressions. We have to fully instantiate they parameter contexts and their
     expression contexts. We can also apply an expression to another with ~@~.
+    This application is left associative.  So if we write ~t @ s @ v~ we mean
+    ~(t @ s) @ v~.
 
     The ~typeExpr~ is either the unit type ~Unit~, a lambda abstraction on
     types, an application or a variable. In the lambda expression we have to
     give the type of the variable. We apply a type to a term (types can only
-    depend on terms) with ~@~. The unit type is the only primitive type
+    depend on terms) with ~@~.  As in the case of term application this is
+    also left associative.  The unit type is the only primitive type
     expression.
 
     The generated abstract syntax tree is given in listing
