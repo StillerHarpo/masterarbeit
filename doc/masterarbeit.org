@@ -1618,28 +1618,8 @@
      recursion.
 
 ** Evaluation
-   There are three kinds of reduction steps in this system. There are given in
-   figure [[reduction-steps]]. The implementation of this is in ~Eval.hs~. One is
-   standard beta reduction on the type level. If we apply a lambda to a term we
-   substitute the term for the binding variable in the body. This body is then
-   the result of the reduction. The other two are reductions on the term level,
-   for the (co)inductive types. Here $\sigma_k \bullet\tau$ is a context
-   morphism, where we first substitute with $\tau$ and then with $\sigma_k$. If
-   we apply a recursion to this context morphism and a constructor, which is
-   fully applied, we lookup the case for this constructor. In this case we
-   substitute $\tau$ for the variables from $\Gamma_k$ and $u$, where we apply
-   the recursion to all recursive occurrences, for $y_k$. So a recursion is
-   destructing an inductive type and all its recursive occurrences to another
-   type, while we use different cases for the different constructors of the
-   type. On the contrary corecursion is constructing a coinductive type. If we
-   apply a destructor on such a corecursion, we are taking the case of this
-   destructor. In this case we are applying the corecursion to all recursive
-   occurrences. $\tau$ and $u$ are substituted as in recursion. The type action
-   is responsible for the applying to the recursive occurrences. The variables
-   from $\id{\Gamma}$ get substituted by the type action.  The type action is
-   implemented in the module ~TypeAction.hs~.  Both the type action and the
-   evaluation are done in the ~Eval~ monad.  This monad has access to the
-   previously defined declarations. We will now define the type action.
+   There are two kinds of reduction steps in this system. There are given in
+   figure [[reduction-steps]]. The implementation of this is in ~Eval.hs~.
 
    #+name: reduction-steps
    \begin{figure}
@@ -1650,6 +1630,26 @@
      \end{align*}
    \caption{Reduction steps}
    \end{figure}
+
+   The first is a reduction on the type level, ~\longrightarrow~. It is standard
+   beta reduction. If we apply a lambda to a term we substitute the term for the
+   binding variable in the body. This body is then the result of the reduction.
+
+   The other is the reduction on the term level, ~\succ~.
+   To define this reduction we need a action on types and terms, where
+   the following holds.
+   \begin{prooftree}
+     \AxiomC{$X : \Gamma_1\rat*\mid\Gamma_2'\vdash C:\Gamma_2\rat*$}
+     \AxiomC{$\Gamma_1, x:A\vdash t:B$}
+     \BinaryInfC{$\Gamma_2',\Gamma_2,x:\hat{C}(A)\vdash\hat{C}(t):\hat{C}(B)$}
+   \end{prooftree}
+   Here we have a type $C$ with a free type variable $X$ and a term $t$ of type
+   $B$ with a free term variable $x$ of type $A$. If we use the action of this
+   type on $t$ we get a term with a type of this action on $B$. This term
+   contains a free term variable $x$ of type, the action applied to $A$. The
+   type action is implemented in the module ~TypeAction.hs~. Both the type
+   action and the evaluation are done in the ~Eval~ monad. This monad has access
+   to the previously defined declarations. We will now define the type action.
 
    \begin{definition}
      Let $n \in \mathbb{N}$ and $1 \leq i \leq n$.
@@ -1687,16 +1687,30 @@
        \hat{C}(\vv{A})=C[\vv{(\Gamma_i).A}/\vv{X}]@\id{\Gamma}
      \end{equation*}
    \end{definition}
+
    The type action generates a term with a free variable $x$.  In the type of
    this term we have changed all the free variables to the types of $\vv{t}$.
-   Therefore the following holds
-   \begin{prooftree}
-     \AxiomC{$X : \Gamma_1\rat*\mid\Gamma_2'\vdash C:\Gamma_2\rat*$}
-     \AxiomC{$\Gamma_1, x:A\vdash t:B$}
-     \BinaryInfC{$\Gamma_2',\Gamma_2,x:\hat{C}(\vv{A})\vdash\hat{C}(\vv{t}):\hat{C}(\vv{B})$}
-   \end{prooftree}
-
    We will show the proof in appendix [[Type action proof]].
+
+   The reduction on terms  is subdivided into an reduction on recursion and one
+   on corecursion. Here $\sigma_k \bullet\tau$ is a context morphism, where we
+   first substitute with $\tau$ and then with $\sigma_k$.
+
+   If we apply a recursion $\rec \vv{(\Gamma_k,y_k).g_k}$ to this context
+   morphism and a constructor $\alpha_k@\tau@u$, which is fully applied, we
+   lookup the case for this constructor. In this case we substitute $\tau$ for
+   the variables from $\Gamma_k$ and $u$, where we apply the recursion to all
+   recursive occurrences, for $y_k$. For this application we need the type
+   action. So a recursion is destructing an inductive type and all its recursive
+   occurrences to another type, while we use different cases for the different
+   constructors of the type.
+
+   On the contrary corecursion is constructing a coinductive type. If we apply a
+   destructor together with its arguments for it context ,$\xi_k@\tau$, on such a
+   construction $(\corec \vv{(\Gamma_k,y_k).g_k}@(\sigma_k\bullet\tau)@u)$, we
+   are taking the case of this destructor. In this case we are applying the
+   corecursion to all recursive occurrences. $\tau$ and $u$ are substituted as
+   in recursion.
 
 * Examples
 
