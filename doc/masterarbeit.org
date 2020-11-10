@@ -95,13 +95,29 @@
   codata Pi$\langle$A : Set, B : (x : A) $\rat$ Set$\rangle$ : Set where
     Inst : (x : A) $\rat$ Pi $\rat$ B @ x
   #+end_example
-  In chapter [[Coinductive Types]] we will see how coinductive types can be defined. We
-  will see in chapter [[Coinductive Types in dependent languages]] how they are
-  defined in the dependently typed languages coq and agda.  In chapter
-  [[Type Theory based on dependent Inductive and Coinductive Types]] we see how they
-  are defined in cite:basold2016type.  We will then in chapter [[*Implementation]]
-  explain how this theory is implemented.  At last we look at the examples from
-  this paper in the implemented syntax.
+
+  In chapter [[Coinductive Types]] we will see how coinductive types can be defined.
+  Here we will be defining the stream and function type. We will also define
+  some functions on the stream.
+
+  We will see in chapter [[Coinductive Types in dependent languages]] how
+  coinductive types are defined in the dependently typed languages coq and agda.
+  We will see that we can define them positive or negative. We will show why
+  defining them positive leads to problems.
+
+  In chapter [[Type Theory based on dependent Inductive and Coinductive Types]] we
+  see how they are defined in cite:basold2016type. With this theory we can than
+  define coinductive types which depend on values.  But we can not define types
+  which depend on types.
+
+  We will then in chapter [[*Implementation]] explain how this theory is
+  implemented. Therefore we need to rewrite the typing rules. It will also be
+  possible to define type schemata.
+
+  At last we look at the examples from this paper in the implemented syntax.
+  Here we will see the reduction steps for recursion and corecursion. We will
+  conclude this section with the example of partial streams, which is a
+  coinductive type which depends on a value.
 
 * Coinductive Types
   Inductive types are defined via their constructors.  Coinductive types on
