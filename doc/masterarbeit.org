@@ -1636,7 +1636,7 @@
      Let $n \in \mathbb{N}$ and $1 \leq i \leq n$.
      Let:
      \begin{align*}
-       X_1 : \Gamma_1 \rat \ast,\ldots,X_n : \Gamma_n \rat \ast\ |\ \Gamma' \vdash C : \Gamma \rat \ast \\
+       X_1 : \Gamma_1 \rat \ast,\ldots,X_n : \Gamma_n \rat \ast\ \mid\ \Gamma' \vdash C : \Gamma \rat \ast \\
        \Gamma_i \vdash A_i : \ast \\
        \Gamma_i \vdash B_i : \ast \\
        \Gamma_i, x : A_i \vdash t_i : B_i
@@ -1672,7 +1672,7 @@
    this term we have changed all the free variables to the types of $\vv{t}$.
    Therefore the following holds
    \begin{prooftree}
-     \AxiomC{$X : \Gamma_1\rat*|\Gamma_2'\vdash C:\Gamma_2\rat*$}
+     \AxiomC{$X : \Gamma_1\rat*\mid\Gamma_2'\vdash C:\Gamma_2\rat*$}
      \AxiomC{$\Gamma_1, x:A\vdash t:B$}
      \BinaryInfC{$\Gamma_2',\Gamma_2,x:\hat{C}(\vv{A})\vdash\hat{C}(\vv{t}):\hat{C}(\vv{B})$}
    \end{prooftree}
@@ -1859,18 +1859,18 @@
     #+end_example
    This is a well typed function as shown by the following proof
    \begin{scprooftree}{0.95}
-   \AxiomC{$(A : *, B : *)||\vdash$ Product$\langle$A,B$\rangle$ : $*$}
-   \AxiomC{$(A : *, B : *)||(x:A) \vdash$ Snd @ x : Product$\langle$A,B$\rangle$ \circled{a}}
+   \AxiomC{$(A : *, B : *)\mid\mid\vdash$ Product$\langle$A,B$\rangle$ : $*$}
+   \AxiomC{$(A : *, B : *)\mid\mid(x:A) \vdash$ Snd @ x : Product$\langle$A,B$\rangle$ \circled{a}}
     \noLine
-    \UnaryInfC{$(A : *, B : *)||(y : B) \vdash$ Fst @ y : Product$\langle$A,B$\rangle$ \circled{b}}
-    \BinaryInfC{$(A : *, B : *)|| \vdash$ swap : (p : Product$\langle$A,B$\rangle$) $\rat$ Product$\langle$B,A$\rangle$}
+    \UnaryInfC{$(A : *, B : *)\mid\mid(y : B) \vdash$ Fst @ y : Product$\langle$A,B$\rangle$ \circled{b}}
+    \BinaryInfC{$(A : *, B : *)\mid\mid \vdash$ swap : (p : Product$\langle$A,B$\rangle$) $\rat$ Product$\langle$B,A$\rangle$}
     \end{scprooftree}
     We show \circled{a} in the following proof.  \circled{b} works analog.
     \begin{prooftree}
-    \AxiomC{$(A : *, B : *)||(x : A) \vdash$ Snd : $(x : A) \rat$ Product$\langle$A,B$\rangle$}
+    \AxiomC{$(A : *, B : *)\mid\mid(x : A) \vdash$ Snd : $(x : A) \rat$ Product$\langle$A,B$\rangle$}
     \AxiomC{$(x : A )(x)\rightsquigarrow A$}
     \UnaryInfC{$(x : A) \vdash x : A$}
-    \BinaryInfC{$(A : *, B : *)||(x : A) \vdash$ Snd @ x : Product$\langle$A,B$\rangle$}
+    \BinaryInfC{$(A : *, B : *)\mid\mid(x : A) \vdash$ Snd @ x : Product$\langle$A,B$\rangle$}
     \end{prooftree}
     For brevity we omitted the beta equality premises and the checking for of
     the parameters. The beta equality premises wouldn't be interesting because
@@ -1975,9 +1975,9 @@
    #+end_example
    The type checking of this function goes as follows.
    \begin{scprooftree}{0.75}
-   \AxiomC{(A : Set)||$\vdash$ (x).(Vec$\langle$A$\rangle$ @ (Suc @ x)) : (k: Nat) $\rat$ *}
+   \AxiomC{(A : Set)$\mid\mid\vdash$ (x).(Vec$\langle$A$\rangle$ @ (Suc @ x)) : (k: Nat) $\rat$ *}
    \noLine
-   \UnaryInfC{(A: Set)||(u : A) $\vdash$ Cons$\langle$A$\rangle$ @ 0 @ (Nil$\langle$A$\langle$ @ ) : (x).(Vec$\langle$A$\rangle$ @ (Suc @ x)) @ 0}
+   \UnaryInfC{(A: Set)$\mid\mid$(u : A) $\vdash$ Cons$\langle$A$\rangle$ @ 0 @ (Nil$\langle$A$\langle$ @ ) : (x).(Vec$\langle$A$\rangle$ @ (Suc @ x)) @ 0}
    \noLine
    \UnaryInfC{(k : Nat, v : (x).(Vec @ (Suc @ x)) @ k) $\vdash$ Cons$\rangle$A$\langle$ @ (Suc @ k) @ v : (x).(Vec @ (Suc @ x)) @ (Suc @ k)}
    \UnaryInfC{$\vdash$ extend$\langle$A$\rangle$ : (k:Nat,y : Vec$\langle$A$\rangle$ @ k) $\rat$ (x).(Vec$\langle$A$\rangle$ @ (Suc x)) @ k}
