@@ -1084,7 +1084,7 @@
 ** Substitution
    In the following we will write $t[s/x]$ for "substitute every free
    occurrences of $x$ in $t$ by $s$". Substitution is done in the module
-   ~Subst.hs~. We use de-Bruijn indexes for bound variables to facilitate
+   ~Subst.hs~. We use de-Bruijn indexes cite:de1972lambda for bound variables to facilitate
    substitution. With this method every bound variable is a number instead of a
    string. The number says where the variable is bound. To find the binder of a
    variable we go outwards from it and count every binder until we reach the
