@@ -175,6 +175,7 @@ module SizedTypes where
   zero    - _      = zero
   n       - zero   = n
   (suc n) - (suc m) = n - m
+  infixl 20 _-_
 
   -test₁ : five - two ≡ three
   -test₁ = refl
@@ -182,6 +183,17 @@ module SizedTypes where
   _/_ : {i : Size} → ℕ i → ℕ ∞ → ℕ i
   zero  / _ = zero
   suc x / y = suc ( (x - y) / y)
+  infixl 30 _/_
+
+  _+_ : ℕ ∞ → ℕ ∞ → ℕ ∞
+  zero + y  = y
+  suc x + y = suc (x + y)
+  infixl 20 _+_
+
+  _*_ : ℕ ∞ → ℕ ∞ → ℕ ∞
+  zero * _ = zero
+  suc x * y = x + x * y
+  infixl 30 _*_
 
   min : {i : Size} → ℕ i → ℕ i → ℕ i
   min zero     _        = zero
@@ -212,7 +224,7 @@ module SizedTypes where
       tl : ∀ {j : Size< i} → Stream j A
   open Stream
 
-  cons : {i : Size} {j : Size< i} {A : Set} → A -> Stream j A → Stream i A
+  cons : {i : Size} {A : Set} → A -> Stream i A → Stream i A
   hd (cons x _)  = x
   tl (cons _ xs) = xs
 
@@ -229,9 +241,12 @@ module SizedTypes where
   leq (suc x) zero    _ f = f
   leq (suc x) (suc y) t f = leq x y t f
 
-
   merge : {i : Size} → Stream i (ℕ ∞) → Stream i (ℕ ∞) → Stream i (ℕ ∞)
   hd (merge xs ys) = min (hd xs) (hd ys)
   tl (merge xs ys) = leq (hd xs) (hd ys)
                          (cons (hd ys) (merge (tl xs) (tl ys)))
                          (cons (hd xs) (merge (tl xs) (tl ys)))
+
+  ham : {i : Size} → Stream i (ℕ ∞)
+  hd ham = one
+  tl ham = (merge (map (_*_ two) ham) (map (_*_ three) ham))
