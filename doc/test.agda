@@ -153,7 +153,7 @@ module NonTerminating where
   suc x / y = suc ( (x ∸ y) / y)
   -}
 
-module SizedTypes where
+module PositiveSizedTypes where
   open import Agda.Builtin.Size
 
   data ℕ : Size → Set where
@@ -217,6 +217,12 @@ module SizedTypes where
   test₈ : four / two ≡ two
   test₈ = refl
 
+module NegativSizedTypes where
+  open import Agda.Builtin.Size
+  open import Data.Nat
+  open import Data.Bool using (if_then_else_)
+  open import Relation.Nullary.Decidable using (⌊_⌋)
+
   record Stream (i : Size) (A : Set) : Set where
     coinductive
     field
@@ -228,25 +234,16 @@ module SizedTypes where
   hd (cons x _)  = x
   tl (cons _ xs) = xs
 
-  repeat : {A : Set} → A → Stream ∞ A
-  hd (repeat x) = x
-  tl (repeat x) = repeat x
-
   map : {A B : Set} {i : Size} → (A → B) → Stream i A → Stream i B
   hd (map f xs) = f (hd xs)
   tl (map f xs) = map f (tl xs)
 
-  leq : {C : Set} → ℕ ∞ → ℕ ∞ → C → C → C
-  leq zero    _       t _ = t
-  leq (suc x) zero    _ f = f
-  leq (suc x) (suc y) t f = leq x y t f
+  merge : {i : Size} → Stream i ℕ → Stream i ℕ → Stream i ℕ
+  hd (merge xs ys) = hd xs ⊓ hd ys
+  tl (merge xs ys) = if ⌊ hd xs ≤? hd ys ⌋
+                     then cons (hd ys) (merge (tl xs) (tl ys))
+                     else cons (hd xs) (merge (tl xs) (tl ys))
 
-  merge : {i : Size} → Stream i (ℕ ∞) → Stream i (ℕ ∞) → Stream i (ℕ ∞)
-  hd (merge xs ys) = min (hd xs) (hd ys)
-  tl (merge xs ys) = leq (hd xs) (hd ys)
-                         (cons (hd ys) (merge (tl xs) (tl ys)))
-                         (cons (hd xs) (merge (tl xs) (tl ys)))
-
-  ham : {i : Size} → Stream i (ℕ ∞)
-  hd ham = one
-  tl ham = (merge (map (_*_ two) ham) (map (_*_ three) ham))
+  ham : {i : Size} → Stream i ℕ
+  hd ham = 1
+  tl ham = (merge (map (_*_ 2) ham) (map (_*_ 3) ham))

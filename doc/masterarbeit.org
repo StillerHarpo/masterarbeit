@@ -34,7 +34,7 @@
   if we call a function ~or~ on the values ~true~ and ~false~ we always get
   ~true~. This makes the code more predictable.
 
-  The ~or~ function should only be working on numbers. To call it on strings
+  The ~or~ function should only be working on booleans. To call it on strings
   ~'foo'~ and ~'bar'~, wouldn't make sense i.e. there is no defined output for
   these inputs. To prevent calls like these some functional programming
   languages introduced types. Types contain only certain values. For example the
@@ -71,7 +71,7 @@
   Through this work we will explain coinductive types at the examples of streams
   and functions. They will be generalized to partial streams and the Pi type in
   dependently typed languages. Streams are lists which are infinitely long. They
-  are useful to modelling many IO interaction. For example a chat of a text
+  are useful to modeling many IO interaction. For example a chat of a text
   messenger might be infinitely long. We can never know if the chat is finished.
   This is of course limited by the hardware, but we are interested in abstract
   models. Functions are used every where in functional programming. In most of
@@ -96,28 +96,30 @@
     Inst : (x : A) $\rat$ Pi $\rat$ B @ x
   #+end_example
 
-  In chapter [[Coinductive Types]] we will see how coinductive types can be defined.
-  Here we will be defining the stream and function type. We will also define
-  some functions on the stream.
+  The rest of this thesis will be structured as follows.
 
-  We will see in chapter [[Coinductive Types in dependent languages]] how
-  coinductive types are defined in the dependently typed languages coq and agda.
-  We will see that we can define them positive or negative. We will show why
-  defining them positive leads to problems.
+  - In chapter [[Coinductive Types]] we will see how coinductive types can be defined.
+    Here we will be defining the stream and function type. We will also define
+    some functions on the stream.
 
-  In chapter [[Type Theory based on dependent Inductive and Coinductive Types]] we
-  see how they are defined in cite:basold2016type. With this theory we can than
-  define coinductive types which depend on values.  But we can not define types
-  which depend on types.
+  - We will see in chapter [[Coinductive Types in dependent languages]] how
+    coinductive types are defined in the dependently typed languages coq and agda.
+    We will see that we can define them positive or negative. We will show why
+    defining them positive leads to problems.
 
-  We will then in chapter [[*Implementation]] explain how this theory is
-  implemented. Therefore we need to rewrite the typing rules. It will also be
-  possible to define type schemata.
+  - In chapter [[Type Theory based on dependent Inductive and Coinductive Types]] we
+    see how they are defined in cite:basold2016type. With this theory we can than
+    define coinductive types which depend on values.  But we can not define types
+    which depend on types.
 
-  At last we look at the examples from this paper in the implemented syntax.
-  Here we will see the reduction steps for recursion and corecursion. We will
-  conclude this section with the example of partial streams, which is a
-  coinductive type which depends on a value.
+  - We will then in chapter [[*Implementation]] explain how this theory is
+    implemented. Therefore we need to rewrite the typing rules. It will also be
+    possible to define type schemata.
+
+  - At last we look at the examples from this paper in the implemented syntax.
+    Here we will see the reduction steps for recursion and corecursion. We will
+    conclude this section with the example of partial streams, which is a
+    coinductive type which depends on a value.
 
 * Coinductive Types
   Inductive types are defined via their constructors.  Coinductive types on
@@ -627,7 +629,6 @@
    because ~nth~ wants a stream.  It doesn't want a suspended stream.
    Productivity on coinductive types like stream is checked by only allowing non
    decreasing recursive calls behind the ~\sharp~ constructor.
-**** TODO Look up and cite it
 
 *** Negative Coinductive Types in Agda
     In agda we can also define negative coinductive types.  This is the
@@ -1618,30 +1619,25 @@
      recursion.
 
 ** Evaluation
-   There are two kinds of reduction steps in this system. There are given in
-   figure [[reduction-steps]]. The implementation of this is in ~Eval.hs~.
+   There are two kinds of reduction steps in this system. The implementation of
+   this is in ~Eval.hs~. Will give the formal definition in the following.
 
-   #+name: reduction-steps
-   \begin{figure}
-     \begin{align*}
-       ((x).A) @ t \longrightarrow_p A[t/x]\\
-       \rec \vv{(\Gamma_k,y_k).g_k}@(\sigma_k\bullet\tau)@(\alpha_k@\tau@u)\succ g_k\left[ \hat{A_k}(\rec\vv{(\Gamma_k,y_k).g_k}@\id{\Gamma}@x)/y_k \right][\tau,u]\\
-       \xi_k@\tau@(\corec \vv{(\Gamma_k,y_k).g_k}@(\sigma_k\bullet\tau)@u)\succ \hat{A_k}(\corec\vv{(\Gamma_k,y_k).g_k}@\id{\Gamma}@x)[g_k/x] [\tau,u]
-     \end{align*}
-   \caption{Reduction steps}
-   \end{figure}
+   The first is a reduction on the type level, ~\longrightarrow~. It is defined
+   like follows.
+   \begin{align*}
+     ((x).A) @ t \longrightarrow_p A[t/x]\\
+   \end{align*}
+   It is standard beta reduction. If we apply a lambda $(x).A)$ to a term $t$ we
+   substitute this term for the binding variable $x$ in the body. This body is
+   then the result of the reduction.
 
-   The first is a reduction on the type level, ~\longrightarrow~. It is standard
-   beta reduction. If we apply a lambda to a term we substitute the term for the
-   binding variable in the body. This body is then the result of the reduction.
-
-   The other is the reduction on the term level, ~\succ~.
-   To define this reduction we need a action on types and terms, where
-   the following holds.
+   The other is the reduction on the term level, ~\succ~. To define this
+   reduction we need a action on types (written $\widehat{C}(A)$) and terms
+   (written $\widehat{C}(t)$), where the following holds.
    \begin{prooftree}
      \AxiomC{$X : \Gamma_1\rat*\mid\Gamma_2'\vdash C:\Gamma_2\rat*$}
      \AxiomC{$\Gamma_1, x:A\vdash t:B$}
-     \BinaryInfC{$\Gamma_2',\Gamma_2,x:\hat{C}(A)\vdash\hat{C}(t):\hat{C}(B)$}
+     \BinaryInfC{$\Gamma_2',\Gamma_2,x:\widehat{C}(A)\vdash\widehat{C}(t):\widehat{C}(B)$}
    \end{prooftree}
    Here we have a type $C$ with a free type variable $X$ and a term $t$ of type
    $B$ with a free term variable $x$ of type $A$. If we use the action of this
@@ -1684,7 +1680,7 @@
      \end{align*}
      And the type action on types as follow
      \begin{equation*}
-       \hat{C}(\vv{A})=C[\vv{(\Gamma_i).A}/\vv{X}]@\id{\Gamma}
+       \widehat{C}(\vv{A})=C[\vv{(\Gamma_i).A}/\vv{X}]@\id{\Gamma}
      \end{equation*}
    \end{definition}
 
@@ -1696,6 +1692,10 @@
    on corecursion. Here $\sigma_k \bullet\tau$ is a context morphism, where we
    first substitute with $\tau$ and then with $\sigma_k$.
 
+   The reduction on recursion is defined as follows
+   \begin{align*}
+     \rec \vv{(\Gamma_k,y_k).g_k}@(\sigma_k\bullet\tau)@(\alpha_k@\tau@u)\succ g_k\left[ \widehat{A_k}(\rec\vv{(\Gamma_k,y_k).g_k}@\id{\Gamma}@x)/y_k \right][\tau,u]\\
+   \end{align*}
    If we apply a recursion $\rec \vv{(\Gamma_k,y_k).g_k}$ to this context
    morphism and a constructor $\alpha_k@\tau@u$, which is fully applied, we
    lookup the case for this constructor. In this case we substitute $\tau$ for
@@ -1705,12 +1705,16 @@
    occurrences to another type, while we use different cases for the different
    constructors of the type.
 
-   On the contrary corecursion is constructing a coinductive type. If we apply a
-   destructor together with its arguments for it context ,$\xi_k@\tau$, on such a
-   construction $(\corec \vv{(\Gamma_k,y_k).g_k}@(\sigma_k\bullet\tau)@u)$, we
-   are taking the case of this destructor. In this case we are applying the
-   corecursion to all recursive occurrences. $\tau$ and $u$ are substituted as
-   in recursion.
+   On the contrary corecursion is constructing a coinductive type. It is defined
+   like follows.
+   \begin{align*}
+     \xi_k@\tau@(\corec \vv{(\Gamma_k,y_k).g_k}@(\sigma_k\bullet\tau)@u)\succ \widehat{A_k}(\corec\vv{(\Gamma_k,y_k).g_k}@\id{\Gamma}@x)[g_k/x] [\tau,u]
+   \end{align*}
+   If we apply a destructor together with its arguments for it context
+   ,$\xi_k@\tau$, on such a construction $(\corec
+   \vv{(\Gamma_k,y_k).g_k}@(\sigma_k\bullet\tau)@u)$, we are taking the case of
+   this destructor. In this case we are applying the corecursion to all
+   recursive occurrences. $\tau$ and $u$ are substituted as in recursion.
 
 * Examples
 
@@ -2071,10 +2075,11 @@
   constructors and destructors. This makes it possible to remove the argument
   with the recursive occurrence. We then have to change the evaluation rules.
 
-  Our system allowed us to define the (depenend) function type.  Therefor we
-  don't have it as primitive expression.  We are hopeful, that in the future we
-  get an more mature languge where the dependend function is definable.  As
-  already mentioned in the introduction this would lead to a symmetrical language.
+  Our system allowed us to define the (depenend) function type. Therefor we
+  don't have it as primitive expression. We are hopeful, that in the future we
+  get an more mainstream language, like Coq or Agda, where the depended function
+  is definable. As already mentioned in the introduction this would lead to a
+  symmetrical language.
 
 \appendix
 
