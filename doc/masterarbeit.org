@@ -75,22 +75,33 @@
   messenger might be infinitely long. We can never know if the chat is finished.
   This is of course limited by the hardware, but we are interested in abstract
   models. Functions are used every where in functional programming. In most of
-  these languages they are first-class objects. But in languages with coinductive
-  types we can define them. If we only have types which are defined through
-  induction or coinduction, we get a symmetrical language. This is useful,
-  because than we can change an inductive type to a coinductive one and vice
-  versa. It is straight forward to add function which destruct an inductive type
-  by pattern matching on the constructor. But it is hard to add a new
-  constructor. We then have to add this constructor to every pattern matching
-  on that type. For coinductive types its the other way around. For more on this
-  see cite:binder2019decomposition.  In the implemented syntax we can define
-  partial streams like the following.
+  these languages they are first-class objects. But in languages with
+  coinductive types we can define them. If we only have inductive and
+  coinductive types , we get a symmetrical language. This is useful, because
+  than we can change an inductive type to a coinductive one and vice versa. It
+  is straight forward to add function which destruct an inductive type by
+  pattern matching on the constructor. But it is hard to add a new constructor.
+  We then have to add this constructor to every pattern matching on that type.
+  For coinductive types its the other way around. For more on this see
+  cite:binder2019decomposition. In the implemented syntax we can define streams
+  like the following.
+  #+begin_example
+  codata Stream$\langle$A : Set$\rangle$ : Set where Hd : Stream (succ @ k)
+    Hd : Stream $\rat$ A
+    Tl : Stream $\rat$ Stream
+  #+end_example
+  And functions like follows.
+  #+begin_example
+  codata Fun$\langle$A : Set, B : Set$\rangle$ : Set where
+    Inst : (x : A) $\rat$ Fun $\rat$ B
+  #+end_example
+  We can generalize streams to partial streams as the following.
   #+begin_example
   codata PStr$\langle$A : Set$\rangle$ : (n : Conat) $\rat$ Set where
     Hd : (k : Conat) $\rat$ PStr (succ @ k) $\rat$ A
     Tl : (k : Conat) $\rat$ PStr (succ @ k) $\rat$ PStr @ k
   #+end_example
-  And the Pi type
+  And functions to the Pi type.
   #+begin_example
   codata Pi$\langle$A : Set, B : (x : A) $\rat$ Set$\rangle$ : Set where
     Inst : (x : A) $\rat$ Pi $\rat$ B @ x
