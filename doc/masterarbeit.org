@@ -1885,7 +1885,7 @@
    zero = (corec Unit to Conat where
              {Prev x = nothing$\langle$Unit$\rangle$}) @ $\lozenge$
    infinity = (corec Unit to Conat where
-                 {Prev x = Just$\langle$Conat$\rangle$ @ }) @ $\lozenge$
+                 {Prev x = Just$\langle$Conat$\rangle$ @ x}) @ $\lozenge$
    #+end_example
    For ~zero~ the predecessor is absent, there is no predecessor of 0 in the
    natural numbers, so we give pack ~Nothing~.  We then have to apply the
@@ -1893,41 +1893,45 @@
    be ~infinity~.  We apply the ~corec~ to another ~Conat~, so the ~x~ is also a
    ~Conat~.  We will know see that the predecessor on this values give back the
    right value.
-   #+begin_example
-     Prev @ zero $\succ \widehat{\text{Maybe}\langle X\rangle} \left(\underbrace{
+   #+begin_export latex
+   {\scriptsize
+   \begin{flalign*}
+     \Prev \apply \zero &\succ \widehat{\Maybe\langle X\rangle} \left(\underbrace{
         \begin{subarray}{l}
-          \text{(corec Unit to Conat where}\\
-          \quad\text{\{ Prec x = nothing}\langle\Unit\rangle \text{\}} @ x)
-        \end{subarray}}_{t_1}\right) @ x)$[nothing$\langle$Unit$\rangle$/x][$\lozenge$]
-                 = rec Maybe$\langle$Unit$\rangle$ to Maybe$\langle$Conat$\rangle$ where
-                     { Nothing u = Nothing$\langle$Conat$\rangle$ @ $\widehat{\text{Unit}}(t_1,x)$
-                       Just c = Just$\langle$Conat$\rangle$ @ $\widehat{X}(t_1,x)$} @ x [nothing$\langle$Unit$\rangle$/x][$\lozenge$]
-                 = $\underbrace{\begin{subarray}{l}
+          \corecT{\Unit}{\Conat}\\
+          \quad\{\;\Prev\; x = \nothing\langle\Unit\rangle\;\}
+        \end{subarray}}_{t_1}\apply x\right) [\nothing\langle\Unit\rangle/x][\lozenge]&\\
+                 &= \recT{\Maybe\langle\Unit\rangle}{\Maybe\langle\Conat\rangle}&\\
+                 &\quad\quad \{ \Nothing\; u = \Nothing\langle\Conat\rangle \apply \widehat{\Unit}(t_1,u)&\\
+                 &\quad\quad  \;\Just\; c = \Just\langle\Conat\rangle \apply \widehat{X}(t_1,c)\} \apply x [\nothing\langle\Unit\rangle/x][\lozenge]&\\
+                 &= \underbrace{\begin{subarray}{l}
                    \recT{\Maybe\langle\Unit\rangle}{\Maybe\langle\Conat\rangle} \\
-                   \quad\text{\{} \Nothing\; u = \Nothing\langle\Conat\rangle @ u \\
-                   \quad\;\Just\; c = \Just\langle\Conat\rangle @ t_1 \text{\}}
-                  \end{subarray}}_{t_2}$ @ nothing$\langle$Unit$\rangle$
-                 $\succ$ Nothing$\langle$Conat$\rangle$ @ u[$\widehat{\text{Unit}}$(t_2 @ x)/u][$\lozenge$]
-                 = Nothing$\langle$Conat$\rangle$ @ u[x/u][$\lozenge$]
-                 = Nothing$\langle$Conat$\rangle$ @ $\lozenge$
-     Prev @ infinity $\succ \widehat{\text{Maybe}\langle X\rangle} \left(\underbrace{
+                   \quad \{\; \Nothing\; u = \Nothing\langle\Conat\rangle \apply u \\
+                   \quad \;\;\Just\; c = \Just\langle\Conat\rangle \apply t_1 \}
+                  \end{subarray}}_{t_2} \apply \nothing\langle\Unit\rangle&\\
+                 &\succ \Nothing\langle\Conat\rangle \apply u[\widehat{\Unit}(t_2 \apply x)/u][\lozenge]&\\
+                 &= \Nothing\langle\Conat\rangle \apply u[x/u][\lozenge]&\\
+                 &= \Nothing\langle\Conat\rangle \apply \lozenge&
+   \end{flalign*}                     
+   \begin{flalign*}
+     \Prev \apply \infinity &\succ \widehat{\Maybe\langle X\rangle} \left(\underbrace{
         \begin{subarray}{l}
-          \text{(corec Unit to Conat where}\\
-          \quad\text{\{ Prec x = Just}\langle\Unit\rangle @  \text{\}} @ x)
-        \end{subarray}}_{t_1}\right) @ x)$[Just$\langle$Unit$\rangle$@/x][$\lozenge$]
-                     = rec Maybe$\langle$Unit$\rangle$ to Maybe$\langle$Conat$\rangle$ where
-                         { Nothing u = Nothing$\langle$Conat$\rangle$ @ $\widehat{\text{Unit}}(t_1,x)$
-                           Just x = Just$\langle$Conat$\rangle$ @ $\widehat{X}(t_1,x)$} @ x [Just$\langle$Unit$\rangle$@/x][$\lozenge$]
-                     = $\underbrace{\begin{subarray}{l}
+          \corecT{\Unit}{\Conat}\\
+          \quad\{\; \Prev\; x = \Just\langle\Unit\rangle \apply x\; \}
+        \end{subarray}}_{t_1} \apply x \right) [\Just\langle\Unit\rangle\apply/x][\lozenge]&\\
+                     &= \recT{\Maybe\langle\Unit\rangle}{\Maybe\langle\Conat\rangle}&\\
+                     &\quad\quad \{\; \Nothing\; u = \Nothing\langle\Conat\rangle \apply \widehat{\Unit}(t_1,u)&\\
+                     &\quad\quad \;\;\Just\; c = \Just\langle\Conat\rangle \apply \widehat{X}(t_1,c)\;\} \apply x [\Just\langle\Unit\rangle\apply/x][\lozenge]&\\
+                     &= \underbrace{\begin{subarray}{l}
                        \recT{\Maybe\langle\Unit\rangle}{\Maybe\langle\Conat\rangle} \\
-                       \quad\text{\{} \Nothing\; u = \Nothing\langle\Conat\rangle @ u \\
-                       \quad\;\Just\; x = \Just\langle\Conat\rangle @ t_1 \text{\}}
-                      \end{subarray}}_{t_2}$ @ Just$\langle$Unit$\rangle$@
-                     $\succ$ Just$\langle$Conat$\rangle$ @ $t_1$[$\widehat{\text{Unit}}(t_2 @ x)$/x][$\lozenge$]
-                     = Just$\langle$Conat$\rangle$ @ $t_1$[x/x][$\lozenge$]
-                     = Just$\langle$Conat$\rangle$ @ infinity
-
-   #+end_example
+                       \quad \{\; \Nothing\; u = \Nothing\langle\Conat\rangle \apply u \\
+                       \quad \;\;\Just\; c = \Just\langle\Conat\rangle \apply t_1\; \}
+                      \end{subarray}}_{t_2} \apply \Just\langle\Unit\rangle\apply&\\
+                     &\succ \Just\langle\Conat\rangle \apply t_1[\widehat{\Unit}(t_2 \apply x)/x][\lozenge]&\\
+                     &= \Just\langle\Conat\rangle \apply t_1[x/x][\lozenge]&\\
+                     &= \Just\langle\Conat\rangle \apply \infinity&
+   \end{flalign*}}
+   #+end_export
 
 ** Binary Product and Coproduct
 
@@ -2089,20 +2093,23 @@
    \end{scprooftree}
    As an example we evaluate a vector of length 1 with this function.  We choose length one
    to see all rec cases.
-   \begin{align*}
-     &\text{extend$\langle$Nat$\rangle$} @ 1 @ (\text{Cons$\langle$Nat$\rangle$} @ 0 @ 0 @ \text{nil$\langle$Nat$\rangle$})\\
-     &= \text{extend$\langle$Nat$\rangle$}@(\text{Suc} @ k \bullet 0) @ (\text{Cons$\langle$Nat$\rangle$} @ 0 @ 0 @ \text{nil$\langle$Nat$\rangle$})\\
-     &\succ \text{Cons$\langle$Nat$\rangle$} @ (\text{Suc} @ k) @ v \left[ \widehat{X@k}(\text{extend$\langle$Nat$\rangle$} @ n @ x)/v \right][0,\text{nil$\langle$Nat$\rangle$}]\\
-     &= \text{Cons$\langle$Nat$\rangle$} @ (\text{Suc} @ k) @ v \left[ \widehat{X}(\text{extend$\langle$Nat$\rangle$} @ n @ x)[k/n]/v \right][0,\text{nil$\langle$Nat$\rangle$}]\\
-     &= \text{Cons$\langle$Nat$\rangle$} @ (\text{Suc} @ k) @ v \left[ \text{extend} @ n @ x[k/n]/v \right][0, \text{nil$\langle$Nat$\rangle$}]\\
-     &= \text{Cons$\langle$Nat$\rangle$} @ (\text{Suc} @ k) @ v \left[ \text{extend} @ k @ x/v \right][0, \text{nil$\langle$Nat$\rangle$}]\\
-     &= \text{Cons$\langle$Nat$\rangle$} @ (\text{Suc} @ k) @ (\text{extend} @ k @ x) [0,\text{nil$\langle$Nat$\rangle$}]\\
-     &= \text{Cons$\langle$Nat$\rangle$} @ (\text{Suc} @ 0) @ (\text{extend} @ 0 @ (\text{nil$\langle$Nat$\rangle$}))\\
-     &= \text{Cons$\langle$Nat$\rangle$} @ 1 @ (\text{extend} @ 0 @ (\text{Nil$\langle$Nat$\rangle$} @ ))\\
-     &\succ \text{Cons$\langle$Nat$\rangle$} @ 1 @ (\text{Cons$\langle$Nat$\rangle$} @ 0 @ (\text{Nil$\langle$Nat$\rangle$} @ ))\left[ \widehat{\text{Unit}}(\text{extend} @ k @ x) / u  \right][\lozenge]\\
-     &= \text{Cons$\langle$Nat$\rangle$} @ 1 @ (\text{Cons$\langle$Nat$\rangle$} @ 0 @ (\text{Nil$\langle$Nat$\rangle$} @ x))[\lozenge]\\
-     &= \text{Cons$\langle$Nat$\rangle$} @ 1 @ (\text{Cons$\langle$Nat$\rangle$} @ 0 @ (\text{Nil$\langle$Nat$\rangle$} @ ))
-   \end{align*}
+   #+begin_export latex
+   {\scriptsize
+   \begin{flalign*}
+     &\extend\langle\Nat\rangle \apply 1 \apply (\Cons\langle\Nat\rangle \apply 0 \apply 0 \apply \nil\langle\Nat\rangle)&\\
+     &= \extend\langle\Nat\rangle\apply(\Suc \apply k \bullet 0) \apply (\Cons\langle\Nat\rangle \apply 0 \apply 0 \apply \nil\langle\Nat\rangle)&\\
+     &\succ \Cons\langle\Nat\rangle \apply (\Suc \apply k) \apply v \left[ \widehat{X\apply k}(\extend\langle\Nat\rangle \apply n \apply x)/v \right][0,\nil\langle\Nat\rangle]&\\
+     &= \Cons\langle\Nat\rangle \apply (\Suc \apply k) \apply v \left[ \widehat{X}(\extend\langle\Nat\rangle \apply n \apply x)[k/n]/v \right][0,\nil\langle\Nat\rangle]&\\
+     &= \Cons\langle\Nat\rangle \apply (\Suc \apply k) \apply v \left[ \extend \apply n \apply x[k/n]/v \right][0, \nil\langle\Nat\rangle]&\\
+     &= \Cons\langle\Nat\rangle \apply (\Suc \apply k) \apply v \left[ \extend \apply k \apply x/v \right][0, \nil\langle\Nat\rangle]&\\
+     &= \Cons\langle\Nat\rangle \apply (\Suc \apply k) \apply (\extend \apply k \apply x) [0,\nil\langle\Nat\rangle]&\\
+     &= \Cons\langle\Nat\rangle \apply (\Suc \apply 0) \apply (\extend \apply 0 \apply (\nil\langle\Nat\rangle))&\\
+     &= \Cons\langle\Nat\rangle \apply 1 \apply (\extend \apply 0 \apply (\Nil\langle\Nat\rangle \apply ))&\\
+     &\succ \Cons\langle\Nat\rangle \apply 1 \apply (\Cons\langle\Nat\rangle \apply 0 \apply (\Nil\langle\Nat\rangle \apply ))\left[ \widehat{\Unit}(\extend \apply k \apply x) / u  \right][\lozenge]&\\
+     &= \Cons\langle\Nat\rangle \apply 1 \apply (\Cons\langle\Nat\rangle \apply 0 \apply (\Nil\langle\Nat\rangle \apply x))[\lozenge]&\\
+     &= \Cons\langle\Nat\rangle \apply 1 \apply (\Cons\langle\Nat\rangle \apply 0 \apply (\Nil\langle\Nat\rangle \apply ))&
+   \end{flalign*}}
+   #+end_export
    Here we write $1$ for ~Suc @ (Zero @ )~ and $0$ for ~Zero @ \lozenge~.
 
    With the help of extended naturals, we can define partial streams. These are
