@@ -801,6 +801,63 @@
    smaller than ~suc x~ and the function is decreasing on the first argument.
    Also, agda accepts this definition.
 
+   We can also use sized types for coinductive types.  To show this we will
+   define the hamming function.  This produces a stream of all composites of two
+   and three in order.  First we will define the sized stream type.
+   #+begin_src agda
+   record Stream (i : Size) (A : Set) : Set where
+     coinductive
+     field
+       hd : A
+       tl : ∀ {j : Size< i} → Stream j A
+   open Stream
+   #+end_src
+   This stream has a new parameter of type ~Size~. This size gives the minimal
+   defintion depth of the stream. The definition depth says how often we can
+   destruct the stream without diverging. If we take the tail of an stream, the
+   output streams depth would be one smaller. Because in agda coinductive types
+   can't have indexes, we can only say that its depth is smaller. We will now
+   define some helper functions for the hamming function. First we need a cons
+   function.
+   #+begin_src agda
+   cons : {i : Size} {A : Set} → A -> Stream i A → Stream i A
+   hd (cons x _)  = x
+   tl (cons _ xs) = xs
+   #+end_src
+   This just appends an element at the front of the stream.  Because the output
+   streams depth is larger than the input and the size is a minimum, we can give
+   the output the same size parameter as the input.  Now we will define map over
+   stream.
+   #+begin_src agda
+   map : {A B : Set} {i : Size} → (A → B) → Stream i A → Stream i B
+   hd (map f xs) = f (hd xs)
+   tl (map f xs) = map f (tl xs)
+   #+end_src
+   This function just changes the contend of the stream so the size stays the
+   same.  The last helper function we need is the merge function.
+   #+begin_src agda
+   merge : {i : Size} → Stream i ℕ → Stream i ℕ → Stream i ℕ
+   hd (merge xs ys) = hd xs ⊓ hd ys
+   tl (merge xs ys) = if ⌊ hd xs ≤? hd ys ⌋
+                      then cons (hd ys) (merge (tl xs) (tl ys))
+                      else cons (hd xs) (merge (tl xs) (tl ys))
+   #+end_src
+   This functions just merges two streams. It always compares one element of
+   each stream with each other and puts the bigger after the smaller. This is
+   clear in the case for ~hd~ (~\sqcup~ is just the binary minimum function in
+   agda). in the ~tl~ case we just compare the heads of the stream and construct
+   the tail with ~cons~ accordingly. Both input streams have a minimal
+   definition depth of ~i~. Because ~cons~ isn't destructing the stream (the
+   minimal depth doesn't get smaller) we can say that the minimal depth of the
+   output also won't get smaller. With all this function we can now define the
+   ham function. Here it is.
+   #+begin_src agda
+   ham : {i : Size} → Stream i ℕ
+   hd ham = 1
+   tl ham = (merge (map (_*_ 2) ham) (map (_*_ 3) ham))
+   #+end_src
+   None of the used function is destructing the stream, so this definition gets
+   accepted.
 * Type Theory based on dependent Inductive and Coinductive Types
   In the paper cite:basold2016type a type theory, where inductive types and
   coinductive types can depend on values, is developed. For example we can, in
