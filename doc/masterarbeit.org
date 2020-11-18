@@ -2429,7 +2429,7 @@
       \AxiomC{$\Gamma_i,x:A_i\vdash t_i:B_i$}
       \BinaryInfC{$\Delta_k,x:\widehat{D_k}(\vv{A},A_{n+1})\vdash\widehat{D_k}(\vv{t},y):\widehat{D_k}(\vv{B},B_{n+1}) $}
     \end{prooftree}
-    See appendix [[Bigger proofs]] for a proof of it.
+    See \ref{sec:prc} for a proof of it.
 
   + $\mathcal{D}$ =
     \begin{prooftree}
@@ -2477,18 +2477,19 @@
       \AxiomC{$\Gamma_i,y_k:A_i\vdash t_i:B_i$}
       \BinaryInfC{$\Delta_k,y_k:\widehat{D_k}(\vv{A},A_{n+1})\vdash\widehat{D_k}(\vv{t},y):\widehat{D_k}(\vv{B},B_{n+1}) $}
     \end{prooftree}
-    See appendix [[Bigger proofs]] for this proof.
+    See \ref{sec:prc} for this proof.
 
   #+end_proof
 
-* Bigger proofs
+    \begin{landscape}
+    \section{Proofs for recursion and corecursion}
+    \label{sec:prc}
   \begin{prooftree}
      \AxiomC{$\Gamma_1\vdash\sigma:\Gamma_2$}
      \AxiomC{$\Gamma_3\vdash\tau:\Gamma_1$}
      \RightLabel{($*$)}
      \BinaryInfC{$\Gamma_3\vdash\sigma\circ\tau:\Gamma_2$}
   \end{prooftree}
-    \begin{landscape}
         \begin{prooftree}
         \D
         \UnaryInfC{$\Delta,\Gamma_k,y_k:A_k[C/X]\vdash g_k:C@\sigma_k$}
@@ -2500,7 +2501,7 @@
         \UnaryInfC{$\Delta\vdash u:A_k[\mu/X]$}
         \TrinaryInfC{$\Delta\vdash g_k[\widehat{A_k}(\rec^\mu\overline{(\Gamma_k,y_k).g_k}@\id{\Gamma}@x)/y_k][\tau,u]:C@\sigma_k$}
       \end{prooftree}
-    \begin{scprooftree}{0.6}
+    \begin{scprooftree}{0.7}
       \D
       \UnaryInfC{$\Delta,\Gamma_k,y_k:\Delta_k[C/X]\vdash g_k: C@\sigma_k$}
       \IndE
@@ -2522,7 +2523,7 @@
       \Inst{$\Delta\vdash\alpha_k^\mu @\tau@u:\mu@\sigma_k$}
       \Inst{$\Delta\vdash(\rec^\mu\overline{(\Gamma_k,y_k).g_k}@(\sigma_k\circ\tau))@(\alpha_k^\mu @\tau@u):C@\sigma_k$}
     \end{scprooftree}
-    \begin{scprooftree}{0.45}
+    \begin{scprooftree}{0.48}
       \AxiomC{$\vdash\overbrace{\mu[\overline{(\Gamma_k).A_k}/\overline{X_k}]}^C:\Gamma\rat*$}
       \AxiomC{}
       \IndI{$\Gamma,x:\mu[\overline{(\Gamma_k).A_k}/\overline{X_k}]@\id{\Gamma},\Delta_k,y_k:A_k[\mu[\overline{(\Gamma_k).B_k}/\overline{X_k}]/X]\vdash\alpha_k^{\mu[\overline{(\Gamma_k).B_k}/\overline{X_k}]}:(\Delta_k,y_k:A_k[\overline{(\Gamma_k).B_k}/\overline{X_k}])\rat\mu[\overline{(\Gamma_k).B_k}/\overline{X_k}]@\sigma_k$}
@@ -2533,7 +2534,7 @@
       \AxiomC{$\ldots$}
       \Inst{$\Gamma,x:\mu[\overline{(\Gamma_k).A_k}/\overline{X_k}]@\id{\Gamma}\vdash\rec^{\mu[\overline{(\Gamma_k).A_k}/\overline{X_k}]}\overline{(\Delta_k,y_k).\alpha_k^{\mu[\overline{(\Gamma_k).B_k}/\overline{X_k}]}@\id{\Delta_k}@\widehat{A_k}(\overline{t},y_k)}@\id{\Gamma}@x:\mu[\overline{(\Gamma_k).B_k}/\overline{X_k}]@\id{\Gamma}$}
     \end{scprooftree}
-    \begin{scprooftree}{0.7}
+    \begin{scprooftree}{0.78}
       \AxiomC{$\vdash\overbrace{\nu[\overline{(\Gamma_k).A_k}/\overline{X_k}]}^C:\Gamma\rat*$}
       \AxiomC{$\Gamma,x:\nu[\overline{(\Gamma_k).A_k}/\overline{X_k}]@\id{\Gamma},\Delta_k,y_k:\nu[\overline{(\Gamma_k).A_k}/\overline{X_k}]@\sigma_k\vdash\widehat{A_k}(\overline{t},y_k)[(\xi_k^{\nu[\overline{(\Gamma_k).A_k}/\overline{X_k}]}@\id{\Delta_k}@y_k)/y_k]:A_k[\nu[\overline{(\Gamma_k).A_k}/\overline{X_k}]/X]$}
       \IndE
