@@ -22,24 +22,24 @@
   languages and then implement the type theory from cite:basold2016type. This
   type theory has both dependent inductive types and dependent coinductive
   types. In this type theory the dependent function space becomes definable.
-  This leads to a more symmetricalapproach of coinduction in dependently typed
+  This leads to a more symmetrical approach of coinduction in dependently typed
   languages.
 
 #+TOC: headlines 2
 
 * Introduction
   In functional programming we have functions which get an input and produce an
-  output. These functions don't depend on mutible values i.e. if they is no IO
-  involved they produce for the same input always the same output. For example
+  output. These functions don't depend on multiple values i.e. if there is no IO
+  involved, they produce for the same input always the same output. For example,
   if we call a function ~or~ on the values ~true~ and ~false~ we always get
   ~true~. This makes the code more predictable.
 
-  The ~or~ function should only be working on booleans. To call it on strings
-  ~'foo'~ and ~'bar'~, wouldn't make sense i.e. there is no defined output for
-  these inputs. To prevent calls like these some functional programming
+  The ~or~ function should only be working on Booleans. To call it on strings
+  ~'foo'~ and ~'bar'~ wouldn't make sense i.e. there is no defined output for
+  these inputs. To prevent calls like these, some functional programming
   languages introduced types. Types contain only certain values. For example the
   type for truth values contains only the values for true and false. In Haskell
-  we can define it like the following.
+  we can define it like the following:
   #+begin_src haskell
   data Bool = True | False
   #+end_src
@@ -52,50 +52,50 @@
   or _    True = True
   or _    _    = False
   #+end_src
-  Here we just list equations which say what the output for a given input is.
-  For example in the first equation, we say if the first value is constructed
-  with the constructor ~True~ we give back ~True~.  We don't care about the
+  Here, we just list equations which say what the output for a given input is.
+  For example, in the first equation, we say if the first value is constructed
+  with the constructor ~True~, we give back ~True~.  We don't care about the
   second value, therefor we write ~_~.  We are matching on the construction of
   the input values.  Therefor we call this method pattern matching.
   If we call this function somewhere in the code on values which aren't of type
   ~Bool~,  Haskell won't compile our code.  Instead it gives back a type error.
 
-  If we now want to change ~Bool~ to a three-valued logic, we have to add an
+  If we now want to change ~Bool~ to a three-valued logic, we have to add a
   third constructor to ~Bool~. After that we have to change every function which
-  pattern matches on ~Bool~. If we have many that would be a lot of repetitive
-  work. If Haskell would have coinductive type, this could be a lot less work.
-  Coinductive types are types which are, in contrary to inductive types defined
-  over their destruction. So we could define ~Bool~ over its destructors. These
-  would be or, and, etc.
+  pattern matches on ~Bool~. If there are a lot of those kinds of functions,
+  this would be lot of repetitive work. If Haskell would have coinductive type,
+  this could be a lot less work. Coinductive types are types which are, in
+  contrary to inductive types defined over their destruction. So we could define
+  ~Bool~ over its destructors. These would be or, and, etc.
 
   Through this work we will explain coinductive types at the examples of streams
   and functions. They will be generalized to partial streams and the Pi type in
   dependently typed languages. Streams are lists which are infinitely long. They
-  are useful to modeling many IO interaction. For example a chat of a text
+  are useful for modeling many IO interactions. For example, a chat of a text
   messenger might be infinitely long. We can never know if the chat is finished.
   This is of course limited by the hardware, but we are interested in abstract
   models. Functions are used every where in functional programming. In most of
   these languages they are first-class objects. But in languages with
   coinductive types we can define them. If we only have inductive and
-  coinductive types , we get a symmetrical language. This is useful, because
-  than we can change an inductive type to a coinductive one and vice versa. It
-  is straight forward to add function which destruct an inductive type by
+  coinductive types, we get a symmetrical language. This is useful, because
+  then we can change an inductive type to a coinductive one and vice versa. It
+  is straight forward to add functions which destruct an inductive type by
   pattern matching on the constructor. But it is hard to add a new constructor.
   We then have to add this constructor to every pattern matching on that type.
   For coinductive types its the other way around. For more on this see
   cite:binder2019decomposition. In the implemented syntax we can define streams
-  like the following.
+  like the following:
   #+begin_example
   codata Stream$\langle$A : Set$\rangle$ : Set where Hd : Stream (succ @ k)
     Hd : Stream $\rat$ A
     Tl : Stream $\rat$ Stream
   #+end_example
-  And functions like follows.
+  And functions like follows:
   #+begin_example
   codata Fun$\langle$A : Set, B : Set$\rangle$ : Set where
     Inst : (x : A) $\rat$ Fun $\rat$ B
   #+end_example
-  We can generalize streams to partial streams as the following.
+  We can generalize streams to partial streams as the following:
   #+begin_example
   codata PStr$\langle$A : Set$\rangle$ : (n : Conat) $\rat$ Set where
     Hd : (k : Conat) $\rat$ PStr (succ @ k) $\rat$ A
@@ -107,7 +107,7 @@
     Inst : (x : A) $\rat$ Pi $\rat$ B @ x
   #+end_example
 
-  The rest of this thesis will be structured as follows.
+  The rest of this thesis will be structured as follows:
 
   - In chapter [[Coinductive Types]] we will see how coinductive types can be defined.
     Here we will be defining the stream and function type. We will also define
@@ -136,7 +136,7 @@
   Inductive types are defined via their constructors.  Coinductive types on
   the other hand are defined via their destructors.  In the paper cite:abel2013copatterns
   functions, which have coinductive types as their output, are implemented via
-  copattern matching.  In this paper streams are defined like the following.
+  copattern matching.  In this paper streams are defined like the following:
 
   #+begin_example
   record Stream A = { head : A,
@@ -168,7 +168,7 @@
   which is coinductive, as a value. To get a subpart of this value we have to
   use observers . For example we can look at the third value of ~repeat 2~ via
   ~head (tail (tail (repeat 2)))~ which should evaluate to 2. We can also
-  implement a function which looks at the nth. value. Here it is.
+  implement a function which looks at the nth. value. Here it is:
 
   #+begin_example
   nth : Nat $\rat$ Stream A $\rat$ A
@@ -179,7 +179,7 @@
   As you can see we use ordinary pattern matching on the left hand side and
   observers on the right hand side. ~nth 3 (repeat 2)~ will output ~2~ as expected.
   Functions can also be defined via a recursive record.  It is defined like the
-  following.
+  following:
 
   #+begin_example
   record A $\rat$ B = { apply : A $\leadsto$ B }
@@ -202,7 +202,7 @@
   list, except their length is contained in their type. For example a vector of
   natural numbers of length 2 has type ~Vec Nat 2~. This type depends on two
   things. Namely the type ~Nat~ and the value ~2~, which is itself of type ~Nat~.
-  We can define vectors in coq like follows.
+  We can define vectors in coq like follows:
   #+begin_src coq
   Inductive Vec (A : Set) : nat -> Set :=
     | Nil : Vec A 0
@@ -214,7 +214,7 @@
   element at the front of a vector called ~Cons~. ~Nil~ just returns a vector
   of length ~0~. And ~Cons~ gets an ~A~ and a vector of length ~k~. It returns a
   vector of length ~S k~ (~S~ is just the successor of k). This type can also be
-  defined in agda like follows.
+  defined in agda like follows:
   #+begin_src agda
   data Vec (A : Set) : ℕ → Set where
     Nil : Vec A 0
@@ -246,7 +246,7 @@
   is structural decreasing, if it is structural smaller in a recursive call.
   Structural smaller means it is a recursive occurrence in a constructor. As an
   example we look at the definition of the natural numbers and the function for addition
-  on them. We define the natural numbers in coq like follows.
+  on them. We define the natural numbers in coq like follows:
   #+begin_src coq
   Inductive nat : Set :=
   | O : nat
@@ -254,7 +254,7 @@
   #+end_src
   ~O~ is the constructor for 0 and ~S~ is the successor of its argument. Here
   the recursive argument to ~S~ is structural smaller than S applied to it i.e.
-  ~n~ is structural smaller than ~S n~. Then we can define addition like follows.
+  ~n~ is structural smaller than ~S n~. Then we can define addition like follows:
   #+begin_src coq
   Fixpoint add (n m : nat) : nat :=
   match n with
@@ -265,7 +265,7 @@
   In the recursive call the first argument is structural decreasing. ~p~ is
   smaller than ~s p~. So coq accepts this definition.  The classical example
   for a function where an argument is decreasing, but not structural decreasing
-  is quicksort.  A naive implementation would be the following.
+  is Quicksort.  A naive implementation would be the following:
   #+begin_src coq
   Fixpoint quicksort (l : list nat) : list nat :=
   match l with
@@ -300,17 +300,17 @@
   [[Termination Checking with Sized Types]].
 ** Coinductive Types in Coq
    There are two approaches to define coinductive types in coq. The older one is
-   described in [[Postive Coinductive Types]]. It works over constructors. Therefore
+   described in [[Positive Coinductive Types]]. It works over constructors. Therefore
    they are called positive coinductive types. The newer and recommended one is
    described in section [[Negative Coinductive Types]]. They are defined over
    primitive records (a relatively new feature of coq). Therefore they are
    called negative coinductive Types.
 
-*** Postive Coinductive Types
+*** Positive Coinductive Types
    Positive coinductive types are defined over constructors in coq.  The keyword
    \linebreak ~CoInductive~ is used to indicate that we about to define a coinductive type.
    This is the only syntactical difference from the definition of inductive
-   types. For example streams are defined like the following.
+   types. For example streams are defined like the following:
 
    #+begin_src coq
      CoInductive Stream (A : Set) : Set :=
@@ -322,7 +322,7 @@
    if the recursive call to the function occurs as an argument to a coinductive
    constructor. In addition to the guard condition the constructor can only be
    nested in other constructors, fun or match expressions. With all of this in
-   mind we can define ~repeat~ like the following.
+   mind we can define ~repeat~ like the following:
 
    #+begin_src coq
      CoFixpoint repeat (A : Set) (x : A) : Stream A := Cons A x (repeat A x).
@@ -338,7 +338,7 @@
    definition is accepted.
 
    We can use the normal pattern matching of coq to destruct a coinductive type.
-   We define ~nth~ like the following.
+   We define ~nth~ like the following:
 
    #+begin_src coq
      Fixpoint nth (A : Set) (n : nat) (s : Stream A) {struct n} : A :=
@@ -349,7 +349,7 @@
    #+end_src
 
    The guard condition is necessary to ensure every expression is terminating.
-   If we didn't have the guard condition we could define the following.
+   If we didn't have the guard condition we could define the following:
 
    #+begin_src coq
      CoFixpoint loop (A : Set) : Stream A = loop A.
@@ -373,7 +373,7 @@
    #+end_src
 
    This is just one normal pattern match on ~Stream~.  If we didn't had the
-   other condition we could define the following.
+   other condition we could define the following:
 
    #+begin_src coq
      CoFixpoint bad : Stream nat := tl nat (Cons nat 0 bad).
@@ -449,7 +449,7 @@
    #+end_src
 
    But ~u~ is not definitional equal to ~In u~.  As mentioned above expression
-   with a coinductive type are always values to prevent inifinite evaluation.
+   with a coinductive type are always values to prevent infinite evaluation.
    So ~In u~ is a value and ~u~ is also a value.  But values are only
    definitional equal, if they are exactly the same.  The next section will
    solve this problem through negative coinductive types.
@@ -458,7 +458,7 @@
     In coq 8.5. primitive records were introduced. With this it is now possible
     to define types over there destructors. So we can have negative , especially
     negative coinductive, types in coq. With primitive records we can define
-    streams like the following.
+    streams like the following:
 
     #+begin_src coq
       CoInductive Stream (A : Set) : Set :=
@@ -512,7 +512,7 @@
     #+end_src
 
     With coinductive types it is know possible to define the pi type (the depend
-    funcion type).
+    function type).
 
     #+begin_src coq
       CoInductive Pi (A : Set) (B : A -> Set) := { Apply (x : A) : B x }.
@@ -539,7 +539,7 @@
     than one argument we just use currying i.e. we use the type ~Pi~ as the
     second argument to ~Pi~. For example a 2-ary non-dependent function from ~A~
     and ~B~ to ~C~ would have type ~Pi A (fun _ => Pi B (fun _ => C))~.  It
-    would be fortunate if we could define ~plus~ like the following.
+    would be fortunate if we could define ~plus~ like the following:
 
     #+begin_src coq
       CoFixpoint plus : Pi nat (fun _ => Pi nat (fun _ => nat)) :=
@@ -566,7 +566,7 @@
     #+end_src
     This just appends 2 units at a vector of length ~n~.  Here the second
     argument and the result depend on the first argument i.e. the first argument
-    is the lenght of the input vector and the output vector is this lenght plus
+    is the length of the input vector and the output vector is this length plus
     two.
 
 ** Coinductive Types in Agda
@@ -646,7 +646,7 @@
     recommended way.  Agda implements the previously mentioned copattern matching.
     We can define a record with the keyword ~record~.  We use the keyword ~coinductive~
     to make it possible to define recursive fields.  Stream is defined like the
-    following.
+    following:
 
     #+begin_src agda
       record Stream (A : Set) : Set where
@@ -677,8 +677,8 @@
     the head.  Therefor we just write ~x~.  In the second and last copattern we
     define what the tail of the stream is.  The tail is just ~repeat x~.
     Infinitely often repeated ~x~ is the same as x and then infinitely repeated
-    ~x~.  We can use normal pattern matchings and the destructors for functions
-    which consume streams.  We define ~nth~ like the following.
+    ~x~.  We can use normal pattern matching and the destructors for functions
+    which consume streams.  We define ~nth~ like the following:
 
    #+begin_src agda
      nth : ∀ {A : Set} → ℕ → Stream A → A
@@ -712,7 +712,7 @@
 
    We just use copattern matching to define it. If we apply a ~x~ to ~plus2~ we
    get \linebreak ~suc (suc x)~. ~\rightarrow'~ is just the non-dependent function it is defined
-   using our pi type. Here it is.
+   using our pi type. Here it is:
 
    #+begin_src agda
      _→'_ : Set → Set → Set
@@ -741,9 +741,9 @@
    is unit.
 
 *** Termination Checking with Sized Types
-    They are many functions, which are total but are not accepted by agda's
+    They are many functions, which are total but are not accepted by Agda's
     termination checker.  For example we could try to define  division with
-    rest on natural numbers like the following.
+    rest on natural numbers like the following:
 
    #+begin_src agda
    _/_ :  ℕ → ℕ → ℕ
@@ -759,7 +759,7 @@
 
    To remedy this problem sized types where introduced first to mini-agda (a
    language specifically developed to explore them) by cite:abel2010miniagda.
-   Later they got introduced to agda itself. Sized types allow us to annote data
+   Later they got introduced to agda itself. Sized types allow us to annotate data
    with their size. Functions can use this sizes to check termination and
    productivity.
 
@@ -775,7 +775,7 @@
    means the size of the input is smaller than the size of the output.  For
    inductive types, a size is an upper bound on the number of constructors.  With
    ~suc~ we add a constructor so the size has to increase  ~i~.  We can now define
-   subtraction on these sized nats.
+   subtraction on these sized natural numbers.
    #+begin_src agda
    _-_ : {i : Size} → ℕ i → ℕ ∞ → ℕ i
    zero    - _      = zero
@@ -813,7 +813,7 @@
    open Stream
    #+end_src
    This stream has a new parameter of type ~Size~. This size gives the minimal
-   defintion depth of the stream. The definition depth says how often we can
+   definition depth of the stream. The definition depth says how often we can
    destruct the stream without diverging. If we take the tail of an stream, the
    output streams depth would be one smaller. Because in agda coinductive types
    can't have indexes, we can only say that its depth is smaller. We will now
@@ -850,7 +850,7 @@
    definition depth of ~i~. Because ~cons~ isn't destructing the stream (the
    minimal depth doesn't get smaller) we can say that the minimal depth of the
    output also won't get smaller. With all this function we can now define the
-   ham function. Here it is.
+   ham function. Here it is:
    #+begin_src agda
    ham : {i : Size} → Stream i ℕ
    hd ham = 1
@@ -867,7 +867,7 @@
   universe $n+1$(This is how it is done in coq cite:sozeau2014universe and agda
   cite:agdadocuniverselevels). Therefore types can only depend on values, not on
   other types. We only have functions on the type level. These functions abstract
-  over terms. For example $\lambda x.A$ is a type where all occurences of the
+  over terms. For example $\lambda x.A$ is a type where all occurrences of the
   term variable $x$ in $A$ are bound.  We will see that functions are definable
   on the term level. We can apply types to terms. For example $A @ t$ means we
   apply the term $A$ to $x$. Every type has a kind. A kind is either $*$ or
@@ -875,7 +875,7 @@
   apply the type. For example we can apply $A$ of kind $(x:B)\rat*$ only to a
   term of type $B$. If we apply it to $t$ of type $B$, we get a type of kind
   $*$. We write $\rat$ instead of $\rightarrow$ to indicate, that these are not
-  functions. We can also apply a term to annother term. For example $t@s$ means
+  functions. We can also apply a term to another term. For example $t@s$ means
   we apply the term $t$ to the term $s$.  Terms also can depend on contexts.
   For example if we have a term $t$ of type $(x:A)\rat B$ and apply it to a term
   $s$ of type $A$ we get a term of type $B$.  We can also define our own types.
@@ -889,18 +889,18 @@
   sequence of terms, which depend on $\Gamma_k$ and instantiate $\Gamma$.
   $\vv{\sigma}$, $\vv{A}$ and $\vv{\Gamma}$ are of the same length.
 
-  In this theory we can define partial streams on some type $A$ like the following.
+  In this theory we can define partial streams on some type $A$ like the following:
   \begin{align*}
   &\text{PStr }A := \nu(X:(n:\text{Conat})\rat*;(\text{succ} @ n, \text{succ} @ n);(A, X @ n))\\
   &\text{with } \Gamma_1 = (n:\text{Conat}) \text{ and } \Gamma_2 = (n:\text{Conat})
   \end{align*}
-  Here ~succ~ is the successor on conats.  Conats are natural numbers with one
-  additional element, infinity. See [[Natural Numbers and Extended Naturals]] for
-  their definition. Here the first destructor is the head. It becomes a stream
-  with lenght $\text{succ} @ N$ and returns an $A$. The second destructor is the
-  tail. It becomes also a stream of length $\text{succ} @ N$. It gives back an
-  $X @ n$, which is a stream of length $n$. We can also define the Pi type from
-  $A$ to $B$, where $B$ can depend on $A$.
+  Here ~succ~ is the successor on co-natural numbers.  Co-natural numbers are
+  natural numbers with one additional element, infinity. See [[Natural Numbers and Extended Naturals]]
+  for their definition. Here the first destructor is the head. It becomes a
+  stream with length $\text{succ} @ N$ and returns an $A$. The second destructor
+  is the tail. It becomes also a stream of length $\text{succ} @ N$. It gives
+  back an $X @ n$, which is a stream of length $n$. We can also define the Pi
+  type from $A$ to $B$, where $B$ can depend on $A$.
   \begin{align*}
   &\Pi x:A.B := \nu(\_:*;\epsilon_1;B)\\
   &\text{with } \Gamma_1 = (x:A)
@@ -910,12 +910,12 @@
   on $x$ of type $A$.  It is the function application.
 
   To construct an inductive types we use constructors (written
-  $\alpha_k^{\mu(X:\Gamma\rat*;\vv{\sigma};\vv{A})}$ in the paper, which is the k'st
+  $\alpha_k^{\mu(X:\Gamma\rat*;\vv{\sigma};\vv{A})}$ in the paper, which is the k-th
   constructor of the given type).  We can destruct it with recursion (written
-  rec $\vv{(\Gamma_k.y_k).g_k}$).  Coinductive type work the other way around.
+  ~rec~ $\vv{(\Gamma_k.y_k).g_k}$).  Coinductive type work the other way around.
   We destruct them with destructors (written
   $\xi_k^{\nu(X:\Gamma\rat*;\vv{\sigma};\vv{A})}$) and construct them with
-  corecursion (written corec $\vv{(\Gamma_k.y_k).g_k}$).
+  corecursion (written ~corec~ $\vv{(\Gamma_k.y_k).g_k}$).
 
   We will give the rules for the theory in section [[Typing rules]] and a detailed
   explanation of the reduction in [[Evaluation]].
@@ -945,7 +945,7 @@
    of expressions. This will mostly be in one to one correspondence with the
    syntax of cite:basold2016type. Note however that we use the names of the
    constructors instead of anonymous constructors together with their type and
-   number. Also the order of the matches in rec and corec is irrelevant. We use
+   number. Also the order of the matches in ~rec~ and ~corec~ is irrelevant. We use
    the names of the Con/Destructors to identify them. In the following section
    [[Examples]] we will see how the examples from the paper look in our concrete
    syntax.
@@ -997,7 +997,7 @@
     \caption{Syntax for declarations}
     \end{figure}
 
-    The declarations in Figure [[syntax-for-declarations]] correspond to $\rho(X:\Gamma\rat*;\vv\sigma;\vv{A}):\Gamma\rat*$ as follows.
+    The declarations in Figure [[syntax-for-declarations]] correspond to $\rho(X:\Gamma\rat*;\vv\sigma;\vv{A}):\Gamma\rat*$ as follows:
     + The first $N$ is X
     + The other $N$ will be used later for
       $\alpha_1^{\mu(X:\Gamma\rat *;\vv\sigma;\vv A)},\alpha_2^{\mu(X:\Gamma\rat *;\vv\sigma;\vv A)},\dots$
@@ -1009,7 +1009,7 @@
     + The first $EC$ is $\Gamma$
     + The other $EC$ stand for $\Gamma_1,\dots,\Gamma_m$
 
-    To parse the abstract syntax we use megaparsec. The parser generates an
+    To parse the abstract syntax we use Megaparsec. The parser generates an
     abstract syntax tree, which is given for declarations in Listing
     [[Abstract Syntax Tree for Declarations]]. The field ~ty~ in ~ExprDef~ is used later in
     type checking. The parser just fills them in with ~Nothing~. data and codata
@@ -1113,7 +1113,7 @@
     [[abstract-syntax-tree-for-expressions]]. The variables for expressions are
     separated in ~LocalExprVar~ and ~GlobalExprVar~. ~LocalExprVar~ should refer
     to variables which are only locally defined i.e. in ~Rec~ and ~Corec~. We
-    use de-Brujin indexes for them. This facilitates substitution which we will
+    use de Bruijn indexes for them. This facilitates substitution which we will
     describe in section [[Substitution]]. ~GlobalExprVar~ refers to variables from
     definitions. Here we just use names. We do the same thing for ~LocalTypeVar~
     and ~GlobalTypeVar~. In the abstract syntax tree we use anonymous
@@ -1121,7 +1121,7 @@
     ~Structor~. We know from the field ~ductive~ if it is a constructor or a
     destructor. The types in field ~parameters~ are to fill in the parameter
     context of the field ~ductive~. The field ~nameStr~ in ~Constructor~ and
-    ~Destructor~ are just for printing. We combine rec and corec to ~Iter~.
+    ~Destructor~ are just for printing. We combine ~rec~ and ~corec~ to ~Iter~.
 
     #+name: abstract-syntax-tree-for-expressions
     #+caption: Implementation of the abstract syntax of fig. [[syntax-for-expressions]]
@@ -1153,7 +1153,7 @@
 ** Substitution
    In the following we will write $t[s/x]$ for "substitute every free
    occurrences of $x$ in $t$ by $s$". Substitution is done in the module
-   ~Subst.hs~. We use de-Bruijn indexes cite:de1972lambda for bound variables to facilitate
+   ~Subst.hs~. We use de Bruijn indexes cite:de1972lambda for bound variables to facilitate
    substitution. With this method every bound variable is a number instead of a
    string. The number says where the variable is bound. To find the binder of a
    variable we go outwards from it and count every binder until we reach the
@@ -1201,7 +1201,7 @@
    gray. We use variables $\Phi,\Phi',\Phi_1,\Phi_2,\dots$ for parameter contexts,
    $\Theta,\Theta',\Theta_1,\Theta_2,\dots$ for type variable contexts and
    $\Gamma,\Gamma',\Gamma_1,\Gamma_2,\dots$ for term variable contexts.
-   The judgements in our rules are of one of the following form.
+   The judgments in our rules are of one of the following form.
    + $\Phi\mid\Theta\mid\Gamma\vdash\Theta'$ - The type variable context
      $\Theta'$ is well formed in the combined context $\Phi\mid\Theta\mid\Gamma$.
    + $\Phi\mid\Theta\mid\Gamma\vdash\Gamma'$ - The term variable context
@@ -1430,7 +1430,7 @@
       \UnaryInfC{\graybox{$\Phi\mid\Theta\mid$}$\Gamma\vdash x:A$}
       \DisplayProof
     \end{center}
-    The rule for looking something up in the parameter context is.
+    The rule for looking something up in the parameter context is:
     \begin{prooftree}
       \AxiomC{$\Phi(X)\rightsquigarrow\Gamma\rat*$}
       \AxiomC{$\vdash \Gamma_1$ \Ctx}
@@ -1548,7 +1548,7 @@
     \DisplayProof
     \end{center}
     We also need a rule for the cases in which we are using these defined
-    variables.  This is.
+    variables.  This is:
     \begin{prooftree}
     \AxiomC{$\Phi\mid\Theta\mid\Gamma'\vdash \vv{A}:\Gamma_i \rat *$}
     \UnaryInfC{$\Phi\mid\Theta\mid\Gamma'\vdash X\langle\vv{A}\rangle : \Gamma[\vv{A}]\rat *$}
@@ -1647,7 +1647,7 @@
         $\vv{\text{Constr}_k\vv{x_k}\text{ } y_k = g_k}:(\Gamma,y:\mu$\graybox{$[\vv{D}]$}$@id_\Gamma)\rat C@id_\Gamma$}
      \end{scprooftree}
 
-     We are recursing over some previously inductivly defined type $\mu$ to some
+     We are recursing over some previously inductively defined type $\mu$ to some
      type $C$.  This types must have the same context.  Recursing is done by
      listing each constructor with the result, which the whole expression should
      have if we apply it to this constructor.  This result can refer to the
@@ -1691,7 +1691,7 @@
    this is in ~Eval.hs~. Will give the formal definition in the following.
 
    The first is a reduction on the type level, ~\longrightarrow~. It is defined
-   like follows.
+   like follows:
    \begin{align*}
      ((x).A) @ t \longrightarrow_p A[t/x]\\
    \end{align*}
@@ -1774,7 +1774,7 @@
    constructors of the type.
 
    On the contrary corecursion is constructing a coinductive type. It is defined
-   like follows.
+   like follows:
    \begin{align*}
      \xi_k@\tau@(\corec \vv{(\Gamma_k,y_k).g_k}@(\sigma_k\bullet\tau)@u)\succ \widehat{A_k}(\corec\vv{(\Gamma_k,y_k).g_k}@\id{\Gamma}@x)[g_k/x] [\tau,u]
    \end{align*}
@@ -1861,15 +1861,15 @@
    #+end_example
    As expected the identity recursion applied to one gives back one.
 
-   We will now define extended naturals. There are also called conat. There are
-   natural numbers with an additional value, infinity. We define it
+   We will now define extended naturals. There are also called co-natural numbers.
+   There are natural numbers with an additional value, infinity. We define it
    coinductively with the predecessor as its only destructor. The predecessor is
    either not defined or another natural number. We use the type ~Maybe~ to
    describe something which is either present (the constructor ~Just~) or
    absent(the constructor ~Nothing~). We can define the successor as a
    corecursion. The predecessor of the successor of ~x~ is just ~x~. So the only
-   case of corec returns a ~Just x~ (remember Prec returns a ~Maybe\langle Conat\rangle~ not
-   a ~Conat~).
+   case of ~corec~ returns a ~Just x~ (remember ~Prec~ returns a ~Maybe\langle Conat\rangle~
+   not a ~Conat~).
    #+begin_example
    data Maybe$\langle$A : Set$\rangle$ : Set where
      Nothing : Unit $\rat$ Maybe
@@ -1949,7 +1949,7 @@
                                          ; Snd u $\rat$ y} @ $\lozenge$
    #+end_example
    For types with other contexts we have to define different Products.  For
-   example if ~B~ depends on ~Nat~, we define product like the following.
+   example if ~B~ depends on ~Nat~, we define product like the following:
    #+begin_example
    codata Pair$\langle$A : Set, B : (n : Nat) $\rat$ Set$\rangle$ : (n : Nat) $\rat$ Set where
      First : (n : Nat) $\rat$ Pair n $\rat$ A
@@ -2021,7 +2021,7 @@
           { Apply v p = v } @ $\lozenge$
    #+end_example
 
-   Evaluation on one goes as follows.
+   Evaluation on one goes as follows:
 
    #+begin_example
    apply = Apply$\langle$Nat,(v : Nat).Nat$\rangle$
@@ -2082,7 +2082,7 @@
        Nil u = Cons$\langle$A$\rangle$ @ x @ nil$\langle$A$\rangle$
        Cons k v = Cons$\langle$A$\rangle$ @ (Suc @ k) @ v
    #+end_example
-   The type checking of this function goes as follows.
+   The type checking of this function goes as follows:
    \begin{scprooftree}{0.75}
    \AxiomC{(A : Set)$\mid\mid\vdash$ (x).(Vec$\langle$A$\rangle$ @ (Suc @ x)) : (k: Nat) $\rat$ *}
    \noLine
@@ -2092,7 +2092,7 @@
    \UnaryInfC{$\vdash$ extend$\langle$A$\rangle$ : (k:Nat,y : Vec$\langle$A$\rangle$ @ k) $\rat$ (x).(Vec$\langle$A$\rangle$ @ (Suc x)) @ k}
    \end{scprooftree}
    As an example we evaluate a vector of length 1 with this function.  We choose length one
-   to see all rec cases.
+   to see all ~rec~ cases.
    #+begin_export latex
    {\scriptsize
    \begin{flalign*}
@@ -2150,7 +2150,7 @@
   constructors and destructors. This makes it possible to remove the argument
   with the recursive occurrence. We then have to change the evaluation rules.
 
-  Our system allowed us to define the (depenend) function type. Therefor we
+  Our system allowed us to define the (depended) function type. Therefor we
   don't have it as primitive expression. We are hopeful, that in the future we
   get an more mainstream language, like Coq or Agda, where the depended function
   is definable. As already mentioned in the introduction this would lead to a
