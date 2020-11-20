@@ -1,0 +1,106 @@
+#+TITLE: Implementation of Type Theory based on dependent Inductive and Coinductive Types
+#+AUTHOR: Florian Engel
+#+OPTIONS: toc:nil
+#+options: H:1
+#+latex_class: beamer
+#+columns: %45ITEM %10BEAMER_env(Env) %10BEAMER_act(Act) %4BEAMER_col(Col) %8BEAMER_opt(Opt)
+#+beamer_theme: default
+#+beamer_color_theme:
+#+beamer_font_theme:
+#+beamer_inner_theme:
+#+beamer_outer_theme:
+#+beamer_header: \input{headerSlides}
+
+* Inductive types
+  + defined over their constructors
+  + each constructor has to give back this type
+** Examples
+   + Booleans
+     #+begin_example
+     data Bool : Set where
+       True : Unit $\rat$ Bool
+       False : Unit $\rat$ Bool
+     #+end_example
+   + Natural numbers
+     #+begin_example
+     data Nat : Set where
+       Zero : Unit $\rat$ Nat
+       Succ : Nat $\rat$ Nat
+     #+end_example
+* Destructing inductive types
+  + also called recursion
+  + pattern matches on the constructor
+  + gives back values of same type in each match
+** Examples
+   + negation
+     #+begin_example
+     rec Bool to Bool where
+       True u = False @ $\lozenge$
+       False u = True @ $\lozenge$
+     #+end_example
+   + isZero
+     #+begin_example
+     rec Nat to Bool where
+       Zero u = True @ $\lozenge$
+       Succ n = False @ $\lozenge$ 
+     #+end_example
+* postive coinductive types
+  + treats recursive occurence like a value
+  + otherwise like inductive types
+  + functions which produce such types have to be productive
+** Example
+   + Stream in coq
+     #+begin_src coq
+       CoInductive Stream (A : Set) : Set :=
+         Cons : A -> Stream A -> Stream A.
+     #+end_src
+   + repeat function
+     #+begin_src coq
+       CoFixpoint repeat (A : Set) (x : A) : Stream A :=
+         Cons A x (repeat A x).
+     #+end_src
+* What is wrong about positve coinductive types
+  + Symmetry between witch inductive types not clear
+  + Breaks subject reduction
+  
+* negative coinductive types
+  + defined over their destructors
+  + functions use copattern matching
+** Examples
+   + Stream
+     #+begin_example
+     codata Stream$\langle$A : Set$\rangle$ : Set where
+       Hd : Stream $\rat$ A
+       Tl : Stream $\rat$ Stream
+     #+end_example
+   + repeat function
+     #+begin_example
+     repeat$\langle$A : Set$\rangle$(x : A) =
+       corec Unit to Stream$\langle$A$\rangle$ where
+         { Hd s = x
+         ; Tl s = $\lozenge$ } @ $\lozenge$
+     #+end_example
+
+* Type Theory based on dependent Inductive and Coinductive Types
+  + kinds: $(x_1:A_1,\dots,x_n:A_n)\rat*$
+  + types: $(x_1:A_1,\dots,x_n:A_n)\rat B$
+  + lambda abstraction: $(x).A$
+  + type application: $A@t$
+  + term application: $t@s$
+  + inductive types: $\mu(X:\Gamma\rat*;\vv{\sigma};\vec{A})$
+  + coinductive types $\nu(X:\Gamma\rat*;\vv{\sigma};\vec{A})$
+  + recursion: rec $\vv{(\Gamma_k,y_k).g_k}$
+  + corecursion: corec $\vv{(\Gamma_k,y_k).g_k}$
+
+* Dependent coinductive types
+  
+* 
+  #+begin_center
+  \Huge Demo
+  #+end_center
+
+* Other topics in the thesis
++ Termination and productivity checking with sized types
++ Implementation details
+  + Rules rewritting
+  + De-Brujin indexes
