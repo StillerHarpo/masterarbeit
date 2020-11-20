@@ -2039,7 +2039,7 @@
         Succ x = Suc @ ($\widehat{Y}$(t,x)))@x[v/x][one,$\lozenge$]
    = (rec Nat to Nat where
         Zero x = Zero @ ($\widehat{\text{Unit}}$(t))
-        Succ x = Suc @ x)@x[v/x][one,]
+        Succ x = Suc @ x)@x[v/x][one,$\lozenge$]
    = (rec Nat to Nat where
         Zero x = Zero @ ($\widehat{\text{Unit}}$())
         Succ x = Suc @ x) @ x[v/x][one,$\lozenge$]
@@ -2130,7 +2130,7 @@
    repeat$\langle$A : Set$\rangle$(x : A, n : Conat) =
      corec (n : Conat).Unit to PStr$\langle$A$\rangle$ where
        { Hd k s = x
-       ; Tl k s = () } @ n @ ()
+       ; Tl k s = $\lozenge$ } @ n @ $\lozenge$
    #+end_example
    This function gets a value and an extended natural number. It generate an
    constant partial stream of that value with the number as its length.
