@@ -2127,8 +2127,8 @@
    ~tl~ expect streams which are at least of length one.  We can then define
    ~repeat~.
    #+begin_example
-   repeat<A : Set>(x : A, n : Conat) =
-     corec (n : Conat).Unit to PStr<A> where
+   repeat$\langle$A : Set$\rangle$(x : A, n : Conat) =
+     corec (n : Conat).Unit to PStr$\langle$A$\rangle$ where
        { Hd k s = x
        ; Tl k s = () } @ n @ ()
    #+end_example
@@ -2140,7 +2140,8 @@
   We have implemented a depend type theory with inductive and coinductive types.
   In this theory, contrary to coq and agda, coinductive types can also depend on
   values. Contrary to the theory of the paper we can define schemata like
-  ~Maybe<A : Set>~ \linebreak where ~A~ can be an arbitrary type of kind ~Set~.
+  ~Maybe\langle A : Set\rangle~ \linebreak where ~A~ can be an arbitrary type
+  of kind ~Set~.
 
   One downside is that we don't have universes. This prevents type polymorphism.
   Further work needs do be done to solve this. Another problem is, that each
