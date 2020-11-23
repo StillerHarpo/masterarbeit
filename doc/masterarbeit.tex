@@ -1,0 +1,2599 @@
+% Created 2020-11-23 Mon 12:35
+% Intended LaTeX compiler: pdflatex
+\documentclass[a4paper,cleardoubleempty,BCOR1cm]{scrbook}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{graphicx}
+\usepackage{grffile}
+\usepackage{longtable}
+\usepackage{wrapfig}
+\usepackage{rotating}
+\usepackage[normalem]{ulem}
+\usepackage{amsmath}
+\usepackage{textcomp}
+\usepackage{amssymb}
+\usepackage{capt-of}
+\usepackage{hyperref}
+\input{header}
+\author{Florian Engel}
+\date{\today}
+\title{Implementation of Type Theory based on dependent Inductive and Coinductive Types}
+\hypersetup{
+ pdfauthor={Florian Engel},
+ pdftitle={Implementation of Type Theory based on dependent Inductive and Coinductive Types},
+ pdfkeywords={},
+ pdfsubject={},
+ pdfcreator={Emacs 26.1 (Org mode 9.1.9)}, 
+ pdflang={English}}
+\begin{document}
+
+\maketitle
+\input{teaser}
+
+\chapter*{Abstract}
+  Dependent types are a useful tool to restrict types even further than types of
+  strongly typed languages like Haskell. This gives us further type safety. With
+  them, we can also prove theorems. Coinductive types allow us to define types by
+  their observations rather than by their constructors. This is useful for
+  infinite types like streams. In many common dependently typed languages, like
+  coq and agda, we can define inductive types which depend on values and
+  coinductive types but not coinductive types, which depend on values.
+
+In this work, we will first give a survey of coinductive types in these
+languages and then implement the type theory from \cite{basold2016type}. This
+type theory has both dependent inductive types and dependent coinductive
+types. In this type theory the dependent function space becomes definable.
+This leads to a more symmetrical approach of coinduction in dependently typed
+languages.
+
+\setcounter{tocdepth}{2}
+\tableofcontents
+
+\chapter{Introduction}
+\label{sec:orge12dd80}
+In functional programming, we have functions that get input and produce
+output. These functions don't depend on multiple values i.e. if there is no IO
+involved, they produce for the same input always the same output. For example,
+if we call a function $\mathtt{or}$\;on the values $\mathtt{true}$\;and $\mathtt{false}$\;we always get
+$\mathtt{true}$. This makes the code more predictable.
+
+The $\mathtt{or}$\;function should only be working on Booleans. To call it on strings
+$\mathtt{'foo'}$\;and $\mathtt{'bar'}$\;wouldn't make sense i.e. there is no defined output for
+these inputs. To prevent calls like these, some functional programming
+languages introduced types. Types contain only certain values. For example, the
+type for truth values contains only the values for true and false. In Haskell
+we can define it like the following:
+\begin{minted}[fontsize=\scriptsize]{haskell}
+data Bool = True | False
+\end{minted}
+This says we can construct values of type $\mathtt{Bool}$\;with the constructors $\mathtt{True}$
+and $\mathtt{False}$. These types which have constructors are called inductive types. We can
+then define $\mathtt{or}$\;like this:
+\begin{minted}[fontsize=\scriptsize]{haskell}
+or :: Bool -> Bool -> Bool
+or True _    = True
+or _    True = True
+or _    _    = False
+\end{minted}
+Here, we just list equations that define what the output for a given input is.
+For example, in the first equation, we say if the first value is constructed
+with the constructor $\mathtt{True}$, we give back $\mathtt{True}$.  We don't care about the
+second value, therefore we write $\mathtt{\_}$.  We are matching on the construction of
+the input values.  Therefore, we call this method pattern matching.
+If we call this function somewhere in the code on values that aren't of type
+$\mathtt{Bool}$,  Haskell won't compile our code.  Instead, it gives back a type error.
+
+If we now want to change $\mathtt{Bool}$\;to a three-valued logic, we have to add a
+third constructor to $\mathtt{Bool}$. After that, we have to change every function which
+pattern matches on $\mathtt{Bool}$. If there are a lot of those kinds of functions,
+this would be a lot of repetitive work. If Haskell would have coinductive types,
+this could be a lot less work. Coinductive types are types that are, 
+contrary to inductive types, defined over their destruction. So we could define
+$\mathtt{Bool}$\;over its destructors. These would be or, and, etc.
+
+Through this work, we will explain coinductive types at the examples of streams
+and functions. They will be generalized to partial streams and the Pi type in
+dependently typed languages. Streams are lists that are infinitely long. They
+are useful for modeling many IO interactions. For example, a chat of a text
+messenger might be infinitely long. We can never know if the chat is finished.
+This is of course limited by the hardware, but we are interested in abstract
+models. Functions are used everywhere in functional programming. In most of
+these languages, they are first-class objects. But in languages with
+coinductive types, we can define them. If we only have inductive and
+coinductive types, we get a symmetrical language. This is useful because
+then we can change an inductive type to a coinductive one and vice versa. It
+is straight forward to add functions which destruct an inductive type by
+pattern matching on the constructor. But it is hard to add a new constructor.
+Then, we add this constructor to every pattern matching on that type.
+For coinductive types it's the other way around. For more on this, see
+\cite{binder2019decomposition}. In the implemented syntax we can define streams
+like the following:
+\begin{lstlisting}
+codata Stream$\langle$A : Set$\rangle$ : Set where Hd : Stream (succ @ k)
+  Hd : Stream $\rat$ A
+  Tl : Stream $\rat$ Stream
+\end{lstlisting}
+And functions like follows:
+\begin{lstlisting}
+codata Fun$\langle$A : Set, B : Set$\rangle$ : Set where
+  Inst : (x : A) $\rat$ Fun $\rat$ B
+\end{lstlisting}
+We can generalize streams to partial streams as the following:
+\begin{lstlisting}
+codata PStr$\langle$A : Set$\rangle$ : (n : Conat) $\rat$ Set where
+  Hd : (k : Conat) $\rat$ PStr (succ @ k) $\rat$ A
+  Tl : (k : Conat) $\rat$ PStr (succ @ k) $\rat$ PStr @ k
+\end{lstlisting}
+And functions to the Pi type.
+\begin{lstlisting}
+codata Pi$\langle$A : Set, B : (x : A) $\rat$ Set$\rangle$ : Set where
+  Inst : (x : A) $\rat$ Pi $\rat$ B @ x
+\end{lstlisting}
+
+The rest of this thesis is structured as follows:
+
+\begin{itemize}
+\item Chapter \ref{sec:orgc231b78} shows how coinductive types can be defined.
+Here, we will define the stream and function type, as well as some
+functions on the stream.
+
+\item We will see in chapter \ref{sec:org7c6cefc} how
+coinductive types are defined in the dependently typed languages coq and agda.
+We will see that we can define them positive or negative. We will show why
+defining them positive leads to problems.
+
+\item In chapter \ref{sec:org6ed2dce} we
+see how they are defined by \cite{basold2016type}. With this theory we can then
+define coinductive types which depend on values.  But we can not define types
+that depend on types.
+
+\item We will then in chapter \ref{sec:org7c57481} explain how this theory is
+implemented. Therefore, we need to rewrite the typing rules. It will also be
+possible to define type schemata.
+
+\item At last, we look at the examples from this paper \cite{basold2016type} in the implemented syntax.
+Here, we will see the reduction steps for recursion and corecursion. We will
+conclude this section with the example of partial streams, which is a
+coinductive type that depends on a value.
+\end{itemize}
+
+\chapter{Coinductive Types}
+\label{sec:orgc231b78}
+Inductive types are defined via their constructors.  Coinductive types on
+the other hand are defined via their destructors.  In the paper \cite{abel2013copatterns}
+functions, which have coinductive types as their output, are implemented via
+copattern matching.  In that paper streams are defined like the following:
+
+\begin{lstlisting}
+record Stream A = { head : A,
+                    tail : Stream A }
+\end{lstlisting}
+
+The $\mathtt{A}$\;in the definition should be a concrete type. The type system in the
+paper doesn't have dependent types. What differentiates this from regular record
+types (for example in Haskell) is the recursive field tail. So they call it a
+recursive record. In a strict language without coinductive types we could never
+instantiate such a type because to do this we already need something of type
+$\mathtt{Stream\;A}$\;to fill in the field $\mathtt{tail}$. The paper defines
+copattern matching to remedy this. With the help of copattern matching, we can define functions
+that output expressions of type $\mathtt{Stream\;A}$. As an example, we look at the
+definition of repeat. This function takes in a value of type $\mathtt{Nat}$\;and
+generates a stream that just infinitely repeats it.
+
+\begin{lstlisting}
+repeat : Nat $\rat$ Stream Nat
+head (repeat x) = x
+tail (repeat x) = repeat x
+\end{lstlisting}
+
+As we can see copattern matching works via observations i.e. we define what
+should be the output of the fields applied to the result of the function. These
+fields are also called observers because we observe parts of the type.
+Because inhabitants of $\mathtt{Stream}$\;are infinitely long we can't print out a
+stream. Because of this we also consider each expression which has a type,
+which is coinductive, as a value. To get a subpart of this value we use
+observers. For example, we can look at the third value of $\mathtt{repeat\;2}$\;via \texttt{head
+\;\;(tail\;(tail\;(repeat\;2)))}\;which should evaluate to 2. We can also implement a
+function that looks at the nth. value. Here it is:
+
+\begin{lstlisting}
+nth : Nat $\rat$ Stream A $\rat$ A
+nth 0     x = head x
+nth (S n) x = nth n (tail x)
+\end{lstlisting}
+
+As you can see we use ordinary pattern matching on the left-hand side and
+observers on the right-hand side. $\mathtt{nth\;3\;(repeat\;2)}$\;will output $\mathtt{2}$\;as expected.
+Functions can also be defined via a recursive record.  It is defined as the
+following:
+
+\begin{lstlisting}
+record A $\rat$ B = { apply : A $\leadsto$ B }
+\end{lstlisting}
+
+Here, we differentiate between our defined function $\mathtt{A\;\rat\;B}$\;and $\mathtt{\leadsto}$\;in the
+destructor. Constructor applications or, as is the case here, destructor
+applications are not the same as function applications, like in Haskell. In the
+paper $\mathtt{f\;x}$\;means $\mathtt{apply\;f\;x}$. We will also use this convention in the
+following. In fact, we already used it in the definitions of the functions
+$\mathtt{repeat}$\;and $\mathtt{nth}$. $\mathtt{nth\;0\;x\;=\;head\;x}$\;is just a nested copattern. We can also write it
+with $\mathtt{apply}$\;like so: $\mathtt{apply\;(apply\;nth\;0)\;x\;=\;head\;x}$. Here, we use currying.
+So the first apply is the sole observer of type $\mathtt{Stream\;A\;\rat\;A}$\;and the second
+of type $\mathtt{Nat\;\rat\;(Stream\;A\;\rat\;A)}$.
+
+\chapter{Coinductive Types in dependent languages}
+\label{sec:org7c6cefc}
+In this section, we will look at how coinductive types are implemented in
+dependently typed languages. In dependently typed languages types can depend on
+values. The classical example of such a type is the type for vectors. Vectors are like
+lists, except their length is contained in their type. For example, a vector of
+natural numbers of length 2 has type $\mathtt{Vec\;Nat\;2}$. This type depends on two
+things. Namely the type $\mathtt{Nat}$\;and the value $\mathtt{2}$, which is itself of type $\mathtt{Nat}$.
+We can define vectors in coq as follows:
+\begin{minted}[fontsize=\scriptsize]{coq}
+Inductive Vec (A : Set) : nat -> Set :=
+  | Nil : Vec A 0
+  | Cons : forall {k : nat}, A -> Vec A k -> Vec A (S k).
+\end{minted}
+Contrary to a list the type constructor $\mathtt{Vec}$\;has a second argument $\mathtt{nat}$.
+This is the already mentioned length of the vector. A Vector has two
+constructors. One for an empty vector called $\mathtt{Nil}$\;and one to append an
+element at the front of a vector called $\mathtt{Cons}$. $\mathtt{Nil}$\;just returns a vector
+of length $\mathtt{0}$. And $\mathtt{Cons}$\;gets an $\mathtt{A}$\;and a vector of length $\mathtt{k}$. It returns a
+vector of length $\mathtt{S\;k}$\;($\mathtt{S}$\;is just the successor of k). This type can also be
+defined in agda as follows:
+\begin{minted}[fontsize=\scriptsize]{agda}
+data Vec (A : Set) : ℕ → Set where
+  Nil : Vec A 0
+  Cons : {k : ℕ} → A → Vec A k → Vec A (suc k)
+\end{minted}
+One advantage of vectors in comparison to lists is that we can define a total function
+(a function which is defined for every input) that takes the head of a
+vector. This function can't be total for lists, because we cannot know if the
+input list is empty. An empty list has no head. For vectors, we can enforce this
+in coq like follows:
+\begin{minted}[fontsize=\scriptsize]{coq}
+Definition hd {A : Set} {k : nat} (v : Vec A (S k)) : A :=
+  match v with
+  | Cons _ x _ => x
+  end.
+\end{minted}
+We just pattern match on $\mathtt{v}$.  The only pattern is for the $\mathtt{Cons}$\;constructor.  The $\mathtt{Nil}$\;constructor
+is a vector of length 0.  But $\mathtt{v}$\;has type $\mathtt{Vec\;A\;(S\;k)}$.  So it can't be a vector of length 0.
+In agda the function looks like follows:
+\begin{minted}[fontsize=\scriptsize]{agda}
+hd : {A : Set} {k : ℕ} → Vec A (suc k) → A
+hd (cons x _) = x
+\end{minted}
+That types can depent on terms makes it necessary to ensure that function
+\linebreak terminate. Otherwise, type checking wouldn't be decidable. If we have a
+function \linebreak $\mathtt{f\;:\;Nat\;\rat\;Nat}$\;and we want to check a value $\mathtt{a}$\;against a type
+$\mathtt{Vec\;(f\;1)}$\;we have to know what $\mathtt{f\;1}$\;evaluates to. So $\mathtt{f}$\;has to terminate.
+We check termination in coq via a structural decreasing argument. An argument
+is structural decreasing if it is structural smaller in a recursive call.
+Structural smaller means it is a recursive occurrence in a constructor. As an
+example, we look at the definition of the natural numbers and the function for addition
+on them. We define the natural numbers in coq like follows:
+\begin{minted}[fontsize=\scriptsize]{coq}
+Inductive nat : Set :=
+| O : nat
+| S : nat -> nat.
+\end{minted}
+$\mathtt{O}$\;is the constructor for 0 and $\mathtt{S}$\;is the successor of its argument. Here,
+the recursive argument to $\mathtt{S}$\;is structurally smaller than $\mathtt{S}$\;applied to it i.e.
+$\mathtt{n}$\;is structurally smaller than $\mathtt{S\;n}$. Then, we can define addition like follows:
+\begin{minted}[fontsize=\scriptsize]{coq}
+Fixpoint add (n m : nat) : nat :=
+match n with
+| O => m
+| S p => S (add p m)
+end.
+\end{minted}
+In the recursive call, the first argument is structural decreasing. The
+expression $\mathtt{p}$\;is smaller than the expression $\mathtt{s\;p}$. So Coq accepts this
+definition. The classical example of a function where an argument is
+decreasing but not structural decreasing is Quicksort. A naive implementation
+would be the following:
+\begin{minted}[fontsize=\scriptsize]{coq}
+Fixpoint quicksort (l : list nat) : list nat :=
+match l with
+| nil => nil
+| cons x xs => match split x xs with
+              | (lower, upper) => app (quicksort lower) (cons x (quicksort upper))
+              end
+end.
+\end{minted}
+Here, $\mathtt{split}$\;is just a function that gets a number and a list of numbers. It
+gives back a pair of two lists where the elements of the left list are all
+elements of the input list which are smaller than the input number and the
+right these which are bigger. It is clear that these lists can't be longer
+than the input list. So $\mathtt{lower}$\;and $\mathtt{upper}$\;can't be longer than $\mathtt{xs}$. Here
+$\mathtt{xs}$\;is structurally smaller than the input $\mathtt{cons\;x\;xs}$. So $\mathtt{lower}$\;and $\mathtt{upper}$
+are smaller than the input. Therefore, we know that $\mathtt{quicksort}$\;is terminating.
+But coq won't accept our code, because no argument is structural decreasing.
+
+For coinductive types termination means that functions that produce them
+should be productive. If a function is productive it produces in each step a
+new part of the infinitely large coinductive type.
+
+In section \ref{sec:org4d092af} we will look at the implementation in coq.
+There are two ways to define them. The older way uses positive coinductive
+types. This is known to violate subject reduction. Therefore, it is highly
+discouraged to use them. To fix this the new way uses negative coinductive
+types. In section \ref{sec:org986a982} we look at the implementation in
+agda. Agda also has these two ways of defining such types. One special thing
+about it, is that it implements copattern matching. To help agda with
+termination checking we can use sized types.  We will explain them in section
+\ref{sec:org05644cd}.
+\section{Coinductive Types in Coq}
+\label{sec:org4d092af}
+There are two approaches to define coinductive types in coq. The older one is
+described in \ref{sec:orgdc0f923}. It works over constructors. Therefore
+they are called positive coinductive types. The newer and recommended one is
+described in section \ref{sec:org42e3278}. They are defined over
+primitive records (a relatively new feature of coq). Therefore, they are
+called negative coinductive Types.
+
+\subsection{Positive Coinductive Types}
+\label{sec:orgdc0f923}
+Positive coinductive types are defined over constructors in coq.  The keyword
+\linebreak $\mathtt{CoInductive}$\;is used to indicate that we about to define a coinductive type.
+This is the only syntactical difference from the definition of inductive
+types. For example, streams are defined like the following:
+
+\begin{minted}[fontsize=\scriptsize]{coq}
+CoInductive Stream (A : Set) : Set :=
+  Cons : A -> Stream A -> Stream A.
+\end{minted}
+
+If this was an inductive type we couldn't generate a value of this type. To
+generate values of coinductive types coq uses guarded recursion. This checks
+if the recursive call to the function occurs as an argument to a coinductive
+constructor. In addition to the guard condition, the constructor can only be
+nested in other constructors, fun or match expressions. With all of this in
+mind we can define $\mathtt{repeat}$\;like the following:
+
+\begin{minted}[fontsize=\scriptsize]{coq}
+CoFixpoint repeat (A : Set) (x : A) : Stream A := Cons A x (repeat A x).
+\end{minted}
+
+Then, we can produce the constant zero stream with $\mathtt{repeat\;nat\;0}$. If we used
+a normal coq function i.e. write $\mathtt{Fixpoint}$\;instead of $\mathtt{CoFixpoint}$\;coq
+wouldn't accept our code. It rejects it because there is no argument which is
+structural decreasing. $\mathtt{x}$\;stays always the same. Functions defined with
+$\mathtt{CoFixpoint}$\;on the other hand only check the previously mentioned
+conditions. It sees the recursive call $\mathtt{repeat\;A\;x}$\;occurs as an argument to
+constructor $\mathtt{Cons}$\;of the coinductive type $\mathtt{Stream}$. This constructor is also
+not nested. So our definition is accepted.
+
+We can use the normal pattern matching of coq to destruct a coinductive type.
+We define $\mathtt{nth}$\;like the following:
+
+\begin{minted}[fontsize=\scriptsize]{coq}
+Fixpoint nth (A : Set) (n : nat) (s : Stream A) {struct n} : A :=
+  match s with
+    Cons _ a s' =>
+    match n with 0 => a | S p => nth A p s' end
+  end.
+\end{minted}
+
+The guard condition is necessary to ensure every expression is terminating.
+If we didn't have the guard condition we could define the following:
+
+\begin{minted}[fontsize=\scriptsize]{coq}
+CoFixpoint loop (A : Set) : Stream A = loop A.
+\end{minted}
+
+Here, the recursive call doesn't occur in a constructor. So the guard
+condition is violated. With this definition the expression $\mathtt{nth\;0\;loop}$
+wouldn't terminate. The function $\mathtt{nth}$\;would try to pattern match on $\mathtt{loop}$. But to
+succeed in that $\mathtt{loop}$\;has to unfold to something of the form $\mathtt{Cons\;a\;?}$
+which it never does. So $\mathtt{nth\;0\;loop}$\;will never evaluate to a value. This
+would lead to undecidable type checking.
+
+We illustrate the purpose of the other conditions on an example taken from
+\cite{chlipala2013certified}.  First, we implement the function $\mathtt{tl}$\;like so:
+
+\begin{minted}[fontsize=\scriptsize]{coq}
+Definition tl A (s : Stream A) : Stream A :=
+  match s with
+  | Cons _ _ s' => s'
+  end.
+\end{minted}
+
+This is just one normal pattern match on $\mathtt{Stream}$.  If we didn't have the
+other condition we could define the following:
+
+\begin{minted}[fontsize=\scriptsize]{coq}
+CoFixpoint bad : Stream nat := tl nat (Cons nat 0 bad).
+\end{minted}
+
+This doesn't violate the guard condition.  The recursive call $\mathtt{bad}$\;is an
+argument to the constructor $\mathtt{Cons}$.  But the constructor is nested in a
+function.  If we would allow this, $\mathtt{nth\;0\;bad}$\;would loop forever.  To
+understand why we first unfold $\mathtt{tl}$\;in $\mathtt{bad}$.  So we get:
+
+\begin{minted}[fontsize=\scriptsize]{coq}
+nth 0 (cofix bad : Stream nat :=
+         match (Cons 0 bad) with
+         | Cons _ s' => s'
+         end)
+\end{minted}
+
+We can now simplify this to just:
+
+\begin{minted}[fontsize=\scriptsize]{coq}
+nth 0 (cofix bad : Stream nat := bad)
+\end{minted}
+
+After that $\mathtt{bad}$\;isn't any more an argument to a constructor.  Here, we can also
+see easily that the expression $\mathtt{cofix\;bad\;:\;Stream\;nat\;:=\;bad}$\;loops forever.
+So we never get the value at position $\mathtt{0}$.
+
+An important property of typed languages is subject reduction. Subject
+reduction says if we evaluate an expression \(e_1\) of type \(t\) to an expression
+\(e_2\), \(e_2\) should also be of type \(t\). With positive coinductive types subject
+reduction is no longer valid. We illustrate this by Oury's counterexample
+\cite{oury2008}. First, we define the codata type $\mathtt{U}$\;as follows:
+
+\begin{minted}[fontsize=\scriptsize]{coq}
+CoInductive U : Set := In : U -> U.
+\end{minted}
+
+We can now define a value of u with the following $\mathtt{Cofixpoint}$\;like so:
+
+\begin{minted}[fontsize=\scriptsize]{coq}
+CoFixpoint u : U := In u.
+\end{minted}
+
+This generates an infinite succession of $\mathtt{In}$.  We use the function $\mathtt{force}$
+to force $\mathtt{U}$\;to evaluate one step i.e. $\mathtt{x}$\;becomes $\mathtt{In\;y}$.
+
+\begin{minted}[fontsize=\scriptsize]{coq}
+Definition force (x: U) : U :=
+  match x with
+    In y => In y
+  end.
+\end{minted}
+
+The same trick will be used to define $\mathtt{eq}$\;which states that $\mathtt{x}$\;is
+definitional equal to $\mathtt{force\;x}$.
+
+\begin{minted}[fontsize=\scriptsize]{coq}
+Definition eq (x : U) : x = force x :=
+  match x with
+    In y => eq_refl
+  end.
+\end{minted}
+
+This first matches on $\mathtt{x}$\;to force it, to reduce to $\mathtt{In\;y}$. Then, the new goal
+becomes $\mathtt{In\;y\;=\;force\;(In\;y)}$. $\mathtt{force\;(In\;y)}$\;evaluates to just $\mathtt{In\;y}$, as it
+is just pattern matching on $\mathtt{In\;y}$. So the final goal is $\mathtt{In\;y\;=\;In\;y}$\;which
+can be shown by $\mathtt{eq\_refl}$. The expression $\mathtt{eq\_refl}$\;is a constructor for $\mathtt{=}$
+where both sides of $\mathtt{=}$\;are exactly the same. If we now instantiate $\mathtt{eq}$\;with
+$\mathtt{u}$\;we become $\mathtt{eq\;u}$.
+
+\begin{minted}[fontsize=\scriptsize]{coq}
+Definition eq_u : u = In u := eq u
+\end{minted}
+
+But $\mathtt{u}$\;is not definitional equal to $\mathtt{In\;u}$.  As mentioned above expressions
+with a coinductive type are always values to prevent infinite evaluation.
+So $\mathtt{In\;u}$\;is a value and $\mathtt{u}$\;is also a value.  But values are only
+definitional equal if they are exactly the same.  The next section will
+solve this problem through negative coinductive types.
+
+\subsection{Negative Coinductive Types}
+\label{sec:org42e3278}
+In coq 8.5. primitive records were introduced. With this, it is now possible
+to define types over their destructors. So we can have negative, especially
+negative coinductive, types in coq. With primitive records we can define
+streams like the following:
+
+\begin{minted}[fontsize=\scriptsize]{coq}
+CoInductive Stream (A : Set) : Set :=
+  Seq { hd : A; tl : Stream A }.
+\end{minted}
+
+Now we can define $\mathtt{repeat}$\;over the fields of $\mathtt{Stream}$.
+
+\begin{minted}[fontsize=\scriptsize]{coq}
+CoFixpoint repeat (A : Set) (x : A) : Stream A :=
+  {| hd := x; tl := repeat A x|}.
+\end{minted}
+
+To define $\mathtt{repeat}$\;we must define what is the head of the constructed stream
+and its tail.  The guard condition says now that corecursive
+occurrences must be guarded by a record field.  We can see that the
+corecursive call $\mathtt{repeat}$\;is a direct argument to the field $\mathtt{tl}$\;of the
+corecursive type $\mathtt{Stream\;A}$.  This means coq accepts the above definition.
+If we want to access parts of a stream we use the destructors $\mathtt{hd}$\;and
+$\mathtt{tl}$.  With them, we can define $\mathtt{nth}$\;again for the negative stream.
+
+\begin{minted}[fontsize=\scriptsize]{coq}
+Fixpoint nth (A : Set) (n : nat) (s : Stream A) : list A :=
+  match n with
+  | 0 => s.(hd A)
+  | S n' => nth A n' s.(tl A)
+  end.
+\end{minted}
+
+With negative coinductive types, we can't form the above-mentioned
+counterexample to subject reduction anymore, because we can't pattern match
+on negative types. Oury's example becomes.
+
+\begin{minted}[fontsize=\scriptsize]{coq}
+CoInductive U := { out : U }.
+\end{minted}
+
+$\mathtt{U}$\;is now defined over its destructor $\mathtt{out}$, instead of its constructor
+ $\mathtt{in}$. Then, $\mathtt{in}$\;\linebreak becomes just a function. In fact, it's just a
+ definition because we don't recurse or corecurse on it.
+
+\begin{minted}[fontsize=\scriptsize]{coq}
+Definition In (y : U) : U := {| out := y |}.
+\end{minted}
+
+We define it over the only field $\mathtt{out}$.  When we put a $\mathtt{y}$\;in then we get
+the same $\mathtt{y}$\;out.  We can also again define $\mathtt{u}$.
+
+\begin{minted}[fontsize=\scriptsize]{coq}
+CoFixpoint u : U := {| out := u |}.
+\end{minted}
+
+With coinductive types, it is now possible to define the pi type (the dependent
+function type).
+
+\begin{minted}[fontsize=\scriptsize]{coq}
+CoInductive Pi (A : Set) (B : A -> Set) := { Apply (x : A) : B x }.
+\end{minted}
+
+The pi type is defined over its destructor $\mathtt{Apply}$.  If we evaluate $\mathtt{Apply}$
+on a value of $\mathtt{Pi}$\;(which is a function) and an argument, we get the result
+i.e. we apply the value to the function.  It looks like the pi type becomes definable
+in coq.  But we are cheating.  The type of $\mathtt{Apply}$\;is already a pi type because
+we identify constructors and destructors with functions.  We will see that the theory of
+the paper avoids this identification. To define a function we use
+$\mathtt{CoFixpoint}$.  As a simple nonrecursive, nondependent example we use the
+function $\mathtt{plus2}$.
+
+\begin{minted}[fontsize=\scriptsize]{coq}
+CoFixpoint plus2 : Pi nat (fun _ => nat) :=
+  {| Apply x  := S (S x) |}.
+\end{minted}
+
+If we apply (i.e. call the destructor $\mathtt{Apply}$) a $\mathtt{x}$\;to $\mathtt{plus2}$\;it gives back
+$\mathtt{S\;(S\;x)}$.  Which is twice the successor on $\mathtt{x}$.  So we add 2 to $\mathtt{x}$.  We
+use $\mathtt{\_}$\;here because $\mathtt{plus2}$\;is not a dependent function i.e. the result
+type $\mathtt{nat}$\;doesn't depend on the input value.  To define functions with more
+than one argument we just use currying i.e. we use the type $\mathtt{Pi}$\;as the
+second argument to $\mathtt{Pi}$. For example, a 2-ary non-dependent function from $\mathtt{A}$
+and $\mathtt{B}$\;to $\mathtt{C}$\;would have type $\mathtt{Pi\;A\;(fun\;\_\;=>\;Pi\;B\;(fun\;\_\;=>\;C))}$.  It
+would be fortunate if we could define $\mathtt{plus}$\;like the following:
+
+\begin{minted}[fontsize=\scriptsize]{coq}
+CoFixpoint plus : Pi nat (fun _ => Pi nat (fun _ => nat)) :=
+  {| Apply := fun (n : nat)  =>
+       match n with
+       | O => {| Apply (m : nat) := m |}
+       | S n' => {| Apply m := S (Apply _ _ (Apply _ _  plus n') m) |}
+       end
+  |}.
+\end{minted}
+
+But coq doesn't accept this definition. The guard condition is violated. The
+expression $\mathtt{plus\;n'}$\;is not a direct argument of the field $\mathtt{Apply}$. The
+definition should terminate because we are decreasing $\mathtt{n}$\;and the case for
+$\mathtt{0}$\;is accepted. In the case of $\mathtt{0}$, there is no recursive call.
+
+We can also define a dependent function.  We define append2Units like
+follows
+\begin{minted}[fontsize=\scriptsize]{coq}
+CoFixpoint append2Units : Pi nat
+                             (fun n => Pi (Vec unit n)
+                                       (fun _ => Vec unit (S (S n)))) :=
+  {| Apply n := {| Apply v := Cons _ tt (Cons _ tt v) |} |}.
+\end{minted}
+This just appends 2 units at a vector of length $\mathtt{n}$.  Here, the second
+argument and the result depend on the first argument i.e. the first argument
+is the length of the input vector and the output vector is this length plus
+two.
+
+\section{Coinductive Types in Agda}
+\label{sec:org986a982}
+In agda coinductive types were first also introduced as positive types. In
+section \ref{sec:org3d29d3d} we will look at them in
+detail. In section \ref{sec:org2b35864} we describe the correct
+way to implement coinductive types in agda. There are functions which
+terminate but are rejected by the type checker. In fact, in any total language,
+there have to be such functions. We can show that by trying to list all total
+functions. The following table lists functions per row. The columns say what
+the output of the functions for the given input is.
+\begin{center}
+\begin{tabular}{lrrrrl}
+ & 1 & 2 & 3 & 4 & \(\dots\)\\
+\hline
+\(f_1\) & 2 & 7 & 8 & 6 & \(\dots\)\\
+\(f_2\) & 4 & 4 & 6 & 19 & \(\dots\)\\
+\(f_3\) & 6 & 257 & 1 & 2 & \(\dots\)\\
+\(f_4\) & 7 & 121 & 23188 & 2313 & \(\dots\)\\
+\(\vdots\) & \(\vdots\) & \(\vdots\) & \(\vdots\) & \(\vdots\) & \(\ddots\)\\
+\end{tabular}
+\end{center}
+We can now define a function \(g(n)=f_n(n)+1\) this function is total and not
+in the list because it is different from any function in the list for at least
+one input.  To allow more functions we can use a unique feature of agda, sized
+types. They are described in section \ref{sec:org05644cd}.
+
+\subsection{Positive Coinductive Types in Agda}
+\label{sec:org3d29d3d}
+Agda doesn't have a special keyword to define coinductive types like coq.  It
+uses the symbol $\mathtt{\infty}$\;to mark arguments to constructors as coinductive.
+This symbol says that the computation of arguments of this type are suspended.
+$\mathtt{\infty}$\;is just a type constructor.  So agda ensures productivity over type
+checking. We define streams like so.
+
+\begin{minted}[fontsize=\scriptsize]{agda}
+data Stream (A : Set) : Set where
+  cons : A → ∞ (Stream A) → Stream A
+\end{minted}
+
+Here, the second argument to $\mathtt{cons}$\;is marked with $\mathtt{\infty}$. This is the tail of
+the stream. Because it is infinitely long (we don't have a constructor of an
+empty stream) we can't compute it completely, so we suspend the computation.
+We can delay a computation with the constructor $\mathtt{\sharp}$\;and force it with
+the function $\mathtt{\flat}$. Their types are given below.
+
+\begin{minted}[fontsize=\scriptsize]{agda}
+♯_ : ∀ {a} {A : Set a} → A → ∞ A
+♭  : ∀ {a} {A : Set a} → ∞ A → A
+\end{minted}
+
+We can now again define our usual functions.  We begin with $\mathtt{repeat}$.
+
+\begin{minted}[fontsize=\scriptsize]{agda}
+repeat : {A : Set} → A → Stream A
+repeat x = cons x (♯ (repeat x))
+\end{minted}
+
+We first apply $\mathtt{cons}$\;to $\mathtt{x}$. So the head of the stream is $\mathtt{x}$. We then apply
+it to the corecursive call $\mathtt{repeat}$. So the tail will be a repetition of
+$\mathtt{xs}$. We have to call the $\mathtt{repeat}$\;with $\mathtt{\sharp}$\;to suspend the computation.
+Otherwise, the code doesn't type check. If we would write this function
+without $\mathtt{\sharp}$\;on a stream which has no $\mathtt{\infty}$\;on the second argument of
+$\mathtt{cons}$, the function would run forever. In fact, the termination checker won't
+allow us to write such a function. We can also write $\mathtt{nth}$\;again, which
+consumes a stream.
+
+\begin{minted}[fontsize=\scriptsize]{agda}
+nth : {A : Set} → ℕ → Stream A → A
+nth 0       (cons x _)  = x
+nth (suc n) (cons _ xs) = nth n (♭ xs)
+\end{minted}
+
+Here, we have to use $\mathtt{\flat}$\;on the right-hand side of the second case, to
+force the computation of the tail of the input stream.  We have to do that
+because $\mathtt{nth}$\;wants a stream.  It doesn't want a suspended stream.
+Productivity on coinductive types like stream is checked by only allowing non
+decreasing recursive calls behind the $\mathtt{\sharp}$\;constructor.
+
+\subsection{Negative Coinductive Types in Agda}
+\label{sec:org2b35864}
+In agda we can also define negative coinductive types.  This is the
+recommended way.  Agda implements the previously mentioned copattern matching.
+We can define a record with the keyword $\mathtt{record}$.  We use the keyword $\mathtt{coinductive}$
+to make it possible to define recursive fields.  Stream is defined as the
+following:
+
+\begin{minted}[fontsize=\scriptsize]{agda}
+record Stream (A : Set) : Set where
+  coinductive
+  field
+    hd : A
+    tl : Stream A
+\end{minted}
+
+A Stream has 2 fields. The field $\mathtt{hd}$\;is the head of the stream. It has type
+$\mathtt{A}$. The field $\mathtt{tl}$\;is the tail of the stream. It is another stream, so it
+has type $\mathtt{Stream\;A}$. $\mathtt{tl}$\;is a recursive field. So agda wouldn't accept the
+definition without $\mathtt{coinductive}$. A stream can never be empty. Every stream
+has a head (a field $\mathtt{hd}$) and an empty stream wouldn't have a head. So the
+tail of a stream can never be empty. Therefore, every stream is infinitely
+long. We can now define $\mathtt{repeat}$\;with copattern matching.
+
+\begin{minted}[fontsize=\scriptsize]{agda}
+repeat : ∀ {A : Set} → A → Stream A
+hd (repeat x) = x
+tl (repeat x) = repeat x
+\end{minted}
+
+We have to copattern match on every field of $\mathtt{Stream}$, namely $\mathtt{hd}$\;and $\mathtt{tl}$.
+Because agda is total it won't accept non-exhaustive (co)pattern matches
+like Haskell.  First, we define what the head of $\mathtt{repeat\;x}$\;is.  We just
+repeat $\mathtt{x}$\;infinitely often.  So every element of the steam is $\mathtt{x}$, including
+the head.  Therefore, we just write $\mathtt{x}$.  In the second and last copattern we
+define what the tail of the stream is.  The tail is just $\mathtt{repeat\;x}$.
+Infinitely often repeated $\mathtt{x}$\;is the same as x and then infinitely repeated
+$\mathtt{x}$.  We can use normal pattern matching and the destructors for functions
+that consume streams.  We define $\mathtt{nth}$\;like the following:
+
+\begin{minted}[fontsize=\scriptsize]{agda}
+nth : ∀ {A : Set} → ℕ → Stream A → A
+nth zero s = hd s
+nth (suc n) s = nth n (tl s)
+\end{minted}
+
+Here, we just pattern match on the first argument (excluding the implicit
+argument of the type).  If it is zero the result is just the head of the
+stream.  If it is \(n+1\) the result is the recursive call of $\mathtt{nth}$\;on $\mathtt{n}$\;and
+$\mathtt{tl\;s}$.  Agda accepts this code because it is structural decreasing on the
+first (or second if we count the implicit) argument.
+
+We can also define the pi type.  We use $\mathtt{\_\$\_}$\;as the apply operator.  This
+operator is taken from Haskell.
+
+\begin{minted}[fontsize=\scriptsize]{agda}
+record Pi (A : Set) (B : A → Set) : Set where
+  field _$_ : (x : A) → B x
+  infixl 20 _$_
+open Pi
+\end{minted}
+
+Like in coq we are using the first-class pi type to define the pi type. We
+can also define a function which adds 2 to a number $\mathtt{plus2}$\;in agda.
+
+\begin{minted}[fontsize=\scriptsize]{agda}
+plus2 : ℕ →' ℕ
+plus2 $ x = suc (suc x)
+\end{minted}
+
+We just use copattern matching to define it. If we apply a $\mathtt{x}$\;to $\mathtt{plus2}$\;we
+get \linebreak $\mathtt{suc\;(suc\;x)}$. $\mathtt{\rightarrow'}$\;is just the non-dependent function it is defined
+using our pi type. Here it is:
+
+\begin{minted}[fontsize=\scriptsize]{agda}
+_→'_ : Set → Set → Set
+A →' B = Pi A (λ _ → B)
+infixr 20 _→'_
+\end{minted}
+
+In agda it becomes possible to define plus. We just use nested copattern
+matching.
+
+\begin{minted}[fontsize=\scriptsize]{agda}
+plus : ℕ →' ℕ →' ℕ
+plus $ 0       $ m = m
+plus $ (suc n) $ m = suc (plus $ n $ m)
+\end{minted}
+
+If we change $\mathtt{\rightarrow'}$\;to $\mathtt{\rightarrow}$\;and remove $\mathtt{\$}$\;we get the
+standard definition for plus in agda. We can also define a dependent function
+$\mathtt{repeatUnit}$\;like follow:
+\begin{minted}[fontsize=\scriptsize]{agda}
+repeatUnit : Pi ℕ (λ n → Vec ⊤ n)
+repeatUnit $ 0     = nil
+repeatUnit $ suc n = tt :: (repeatUnit $ n)
+\end{minted}
+This function gives back a vector with the length of the input, where every element
+is unit.
+
+\subsection{Termination Checking with Sized Types}
+\label{sec:org05644cd}
+They are many functions which are total but are not accepted by Agda's
+termination checker.  For example, we could try to define  division with
+rest on natural numbers like the following:
+
+\begin{minted}[fontsize=\scriptsize]{agda}
+_/_ :  ℕ → ℕ → ℕ
+zero / y = zero
+suc x / y = suc ( (x - y) / y)
+\end{minted}
+
+The problem with this definition is that agda doesn't know that $\mathtt{x-y}$\;is
+smaller than $\mathtt{x+1}$, which is clearly the case ($\mathtt{x}$\;and $\mathtt{y}$\;are positive).  This
+definition would work perfectly fine in a language without termination
+checking (like Haskell).  Agda only checks if an argument is structurally
+decreasing.  Here, it is neither the case for $\mathtt{x}$\;nor for $\mathtt{y}$.
+
+To remedy this problem sized types were introduced first to mini-agda (a
+language specifically developed to explore them) by \cite{abel2010miniagda}.
+Later, they got introduced to agda itself. Sized types allow us to annotate data
+with their size. Functions can use these sizes to check termination and
+productivity.
+
+We can now define the natural numbers depending on a size argument.
+\begin{minted}[fontsize=\scriptsize]{agda}
+data ℕ (i : Size) : Set where
+  zero : ℕ i
+  suc : ∀{j : Size< i} → ℕ j → ℕ i
+\end{minted}
+The natural number now depends on the size $\mathtt{i}$.  The constructor $\mathtt{zero}$\;is of
+arbitrary size $\mathtt{i}$.  The constructor $\mathtt{suc}$\;gets a size $\mathtt{j}$\;which is smaller than $\mathtt{i}$, a
+natural number of size $\mathtt{j}$\;and gives back a natural number of size $\mathtt{i}$.  This
+means the size of the input is smaller than the size of the output.  For
+inductive types, size is an upper bound on the number of constructors.  With
+$\mathtt{suc}$\;we add a constructor so the size has to increase  $\mathtt{i}$.  We can now define
+subtraction on these sized natural numbers.
+\begin{minted}[fontsize=\scriptsize]{agda}
+_-_ : {i : Size} → ℕ i → ℕ ∞ → ℕ i
+zero    - _      = zero
+n       - zero   = n
+(suc n) - (suc m) = n - m
+\end{minted}
+Through the sized annotations we know now that the result isn't larger than
+the first input.  \(\infty\) means that the size isn't bound.  If the first
+argument is zero the result is also zero, which has the same type.  If the
+second argument is zero we return just the first.  In the last, case both
+arguments are non-zero.  We call subtraction recursively on the predecessors
+of the inputs.  Here, the size and both arguments are smaller.  So the
+function terminates.  Though the type is smaller than \(i\), the result type
+checks because sizes are upper bounds.  We can now define division.
+\begin{minted}[fontsize=\scriptsize]{agda}
+_/_ : {i : Size} → ℕ i → ℕ ∞ → ℕ i
+zero  / _ = zero
+suc x / y = suc ( (x - y) / y)
+\end{minted}
+From the definition of $\mathtt{suc}$\;we know that the size of $\mathtt{x}$\;is smaller than $\mathtt{i}$.
+Because the result of $\mathtt{-}$\;has the same size as its first input (here $\mathtt{x}$),
+we also know that $\mathtt{(x\;-\;y)}$\;has the same size as $\mathtt{x}$. Therefore, $\mathtt{(x\;-\;y)}$\;is
+smaller than $\mathtt{suc\;x}$\;and the function is decreasing on the first argument.
+Also, Agda accepts this definition.
+
+We can also use sized types for coinductive types.  To show this we will
+define the hamming function.  This produces a stream of all composites of two
+and three in order.  First, we will define the sized stream type.
+\begin{minted}[fontsize=\scriptsize]{agda}
+record Stream (i : Size) (A : Set) : Set where
+  coinductive
+  field
+    hd : A
+    tl : ∀ {j : Size< i} → Stream j A
+open Stream
+\end{minted}
+This stream has a new parameter of type $\mathtt{Size}$. This size gives the minimal
+definition depth of the stream. The definition depth says how often we can
+destruct the stream without diverging. If we take the tail of a stream, the
+output stream's depth would be one smaller. Because in Agda coinductive types
+can't have indexes, we can only say that its depth is smaller. We will now
+define some helper functions for the hamming function. First, we need a cons
+function.
+\begin{minted}[fontsize=\scriptsize]{agda}
+cons : {i : Size} {A : Set} → A -> Stream i A → Stream i A
+hd (cons x _)  = x
+tl (cons _ xs) = xs
+\end{minted}
+This just appends an element at the front of the stream.  Because the output
+stream's depth is larger than the input and the size is a minimum, we can give
+the output the same size parameter as the input.  Now we will define map over
+streams.
+\begin{minted}[fontsize=\scriptsize]{agda}
+map : {A B : Set} {i : Size} → (A → B) → Stream i A → Stream i B
+hd (map f xs) = f (hd xs)
+tl (map f xs) = map f (tl xs)
+\end{minted}
+This function just changes the content of the stream so the size stays the
+same.  The last helper function we need is the merge function.
+\begin{minted}[fontsize=\scriptsize]{agda}
+merge : {i : Size} → Stream i ℕ → Stream i ℕ → Stream i ℕ
+hd (merge xs ys) = hd xs ⊓ hd ys
+tl (merge xs ys) = if ⌊ hd xs ≤? hd ys ⌋
+                   then cons (hd ys) (merge (tl xs) (tl ys))
+                   else cons (hd xs) (merge (tl xs) (tl ys))
+\end{minted}
+This function just merges two streams. It always compares one element of
+each stream with each other and puts the bigger after the smaller. This is
+clear in the case for $\mathtt{hd}$\;($\mathtt{\sqcup}$\;is just the binary minimum function in
+Agda). In the $\mathtt{tl}$\;case we just compare the heads of the stream and construct
+the tail with $\mathtt{cons}$\;accordingly. Both input streams have a minimal
+definition depth of $\mathtt{i}$. Because $\mathtt{cons}$\;isn't destructing the stream (the
+minimal depth doesn't get smaller) we can say that the minimum depth of the
+output also won't get smaller. With all this function we can now define the
+ham function. Here it is:
+\begin{minted}[fontsize=\scriptsize]{agda}
+ham : {i : Size} → Stream i ℕ
+hd ham = 1
+tl ham = (merge (map (_*_ 2) ham) (map (_*_ 3) ham))
+\end{minted}
+None of the used function is destructing the stream, so this definition gets
+accepted.
+\chapter{Type Theory based on dependent Inductive and Coinductive Types}
+\label{sec:org6ed2dce}
+In the paper \cite{basold2016type} a type theory, where inductive types and
+coinductive types can depend on values, is developed. For example, we can, in
+contrast to the coinductive types of coq and Agda, define streams which depend
+on their definition length. The theory differentiates types from terms. We
+don't have infinite universes, where a term in universe \(n\) has a type in
+universe \(n+1\)(This is how it is done in coq \cite{sozeau2014universe} and Agda
+\cite{agdadocuniverselevels}). Therefore, types can only depend on values, not on
+other types. We only have functions on the type level. These functions abstract
+over terms. For example, \(\lambda x.A\) is a type where all occurrences of the
+term variable \(x\) in \(A\) are bound.  We will see that functions are definable
+on the term level. We can apply types to terms. For example, \(A @ t\) means we
+apply the term \(A\) to \(x\). Every type has a kind. A kind is either \(*\) or
+\(\Gamma\rat*\). Here, \(\Gamma\) is a context which states to what terms we can
+apply the type. For example, we can apply \(A\) of kind \((x:B)\rat*\) only to a
+term of type \(B\). If we apply it to \(t\) of type \(B\), we get a type of kind
+\(*\). We write \(\rat\) instead of \(\rightarrow\) to indicate, that these are not
+functions. We can also apply a term to another term. For example, \(t@s\) means
+we apply the term \(t\) to the term \(s\).  Terms also can depend on contexts.
+For example, if we have a term \(t\) of type \((x:A)\rat B\) and apply it to a term
+\(s\) of type \(A\) we get a term of type \(B\).  We can also define our own types.
+\(\mu(X:\Gamma\rat*;\vv{\sigma};\vv{A})\) is an inductive type and
+\(\nu(X:\Gamma\rat*;\vv{\sigma};\vv{A})\) is a coinductive type. \(X\) is a
+variable that stands for the recursive occurrence of the type. It has the
+same kind \(\Gamma\rat*\) as the defined type. The \(\vv{A}\) can contain this
+variable. There are also contexts \(\vv{\Gamma}\), which are implicit in the
+paper. \(\sigma_k\) and \(A_k\) can contain variables from \(\Gamma_k\). \(\sigma_k\)
+is a context morphism from \(\Gamma_k\) to \(\Gamma\). A context morphism is a
+sequence of terms, which depend on \(\Gamma_k\) and instantiate \(\Gamma\).
+\(\vv{\sigma}\), \(\vv{A}\) and \(\vv{\Gamma}\) are of the same length.
+
+In this theory, we can define partial streams on some type \(A\) like the following:
+\begin{align*}
+&\text{PStr }A := \nu(X:(n:\text{Conat})\rat*;(\text{succ} @ n, \text{succ} @ n);(A, X @ n))\\
+&\text{with } \Gamma_1 = (n:\text{Conat}) \text{ and } \Gamma_2 = (n:\text{Conat})
+\end{align*}
+Here, $\mathtt{succ}$\;is the successor on co-natural numbers.  Co-natural numbers are
+natural numbers with one additional element, infinity. See \ref{sec:orgba3bc01}
+for their definition. Here, the first destructor is the head. It becomes a
+stream with length \(\text{succ} @ N\) and returns an \(A\). The second destructor
+is the tail. It becomes also a stream of length \(\text{succ} @ N\). It gives
+back an \(X @ n\), which is a stream of length \(n\). We can also define the Pi
+type from \(A\) to \(B\), where \(B\) can depend on \(A\).
+\begin{align*}
+&\Pi x:A.B := \nu(\_:*;\epsilon_1;B)\\
+&\text{with } \Gamma_1 = (x:A)
+\end{align*}
+By \(\_\) we mean, we are ignoring this variable. \(\epsilon_1\) is one empty
+context morphism.  So the only destructor gives back a \(B\) which can depend
+on \(x\) of type \(A\).  It is the function application.
+
+To construct an inductive types we use constructors (written
+\(\alpha_k^{\mu(X:\Gamma\rat*;\vv{\sigma};\vv{A})}\) in the paper, which is the k-th
+constructor of the given type).  We can destruct it with recursion (written
+$\mathtt{rec}$\;\(\vv{(\Gamma_k.y_k).g_k}\)).  Coinductive type work the other way around.
+We destruct them with destructors (written
+\(\xi_k^{\nu(X:\Gamma\rat*;\vv{\sigma};\vv{A})}\)) and construct them with
+corecursion (written $\mathtt{corec}$\;\(\vv{(\Gamma_k.y_k).g_k}\)).
+
+We will give the rules for the theory in section \ref{sec:org04a42de} and a detailed
+explanation of the reduction in \ref{sec:orgbe03e8e}.
+
+\chapter{Implementation}
+\label{sec:org7c57481}
+In this section, we look at the implementation details.  We use the functional
+programming language Haskell for implementing the theory. Haskell is a pure
+language. This means functions which aren't in the IO monad have no side
+effects. The only IO we are doing is reading a file and as the last step
+printing it. Because everything between this is pure, we can test it without
+bordering on side effects. Another feature of Haskell, which will get
+useful in our implementation is pattern matching. We will see its usefulness
+in section \ref{sec:org04a42de}.
+
+In section \ref{sec:org949bf11} we will develop the abstract syntax of our language
+from the raw syntax in the paper. Then, we rewrite the typing rules in \ref{sec:org04a42de}. At last we look at the implementation of the reduction in \ref{sec:orgbe03e8e}
+\section{Abstract Syntax}
+\label{sec:org949bf11}
+In the following, we will scratch out the abstract syntax. In contrast to
+\cite{basold2016type} we can't write anonymous inductive and coinductive types.
+We will give every inductive and coinductive type a name. They will be
+defined via declarations. In these declarations, we will give, their
+constructors/destructors. They will also be given names. In \cite{basold2016type}
+they are anonymous. We can then refer to the previously defined types. We
+will describe declarations in section \ref{sec:org4f8193a}. We will also be able to
+bind expressions to names. In section \ref{sec:org07afe58} we will define the syntax
+of expressions. This will mostly be in one to one correspondence with the
+syntax of \cite{basold2016type}. Note however, that we use the names of the
+constructors instead of anonymous constructors together with their type and
+number. Also, the order of the matches in $\mathtt{rec}$\;and $\mathtt{corec}$\;is irrelevant. We use
+the names of the Con/Destructors to identify them. In the following section
+\ref{sec:orgff2417f}, we will see how the examples from the paper look in our concrete
+syntax.
+\subsection{Declarations}
+\label{sec:org4f8193a}
+The abstract syntax is given in figure \ref{syntax-for-declarations}. With the
+keywords data and codata we define inductive and coinductive types
+respectively. After that, we will write the name. We can only use names that
+aren't used already. Behind that, we can give a parameter context. This is a
+type context. These types are not polymorphic. They are merely macros to make
+the code more readable and allow the definition of nested types. If we want
+to use these types we have to fully instantiate this context. These types can
+occur everywhere in the definition where a type is expected. A (co)inductive
+type can have a context which is written before an arrow. $\mathtt{Set}$\;stands for
+type (or * in the paper). If a type doesn't have a context we omit the arrow.
+We will also give names to every constructor and destructor. These names have
+to be unique. Constructors and destructors also have contexts. Additionally,
+they have one argument which can have a recursive occurrence of the type we
+are defining. A constructor gives back a value of the type, where its
+context is instantiated. This instantiation corresponds to the sigmas in the
+paper. If we write a name before an equal sign we can bind the following
+expression to the name. Every such defined name can depend on a parameter
+context and an argument context. We write the parameter context like in the
+case for data types behind the name. After that, we can give a term context
+between round parenthesis.
+
+\begin{figure}
+ \begin{align*}
+   \begin{array}{llll}
+    N &:= &[A-Z][a-zA-Z0-9]* &\text{Names for types,}\\
+         & &&          \text{constructors}\\
+         & &&          \text{and destructors}\\
+    n &:= &[a-z][a-zA-Z0-9]* &\text{Names for expressions}\\
+    EV &:= &x,y,z,\dots &\text{Expression variables} \\
+    TV &:= &X,Y,Z,\dots &\text{Type expression} \\
+         & &&          \text{variables}\\
+    PV  &:= &A,B,C,\dots &\text{Parameter variables} \\
+    EC &:= &\lozenge &\text{Expression Context} \\
+           &| &\text{(} EV \text { : } TV (,EV \text{ : } TV)*\text{)}& \\
+    PC &:= &\langle\rangle &\text{Parameter Context} \\
+       &| &\langle(PV \text{ : } EC \rightarrow \text{ Set})*\rangle & \\
+    Decl &:= &\text{data } N\; PC \text{ : } (EC \rightarrow)? \text{ Set where} &\text{Declarations}\\
+              &&\quad(N \text{ : }  (EC \rightarrow)? TypeExpr \rightarrow N\; Expr*)* &\\
+         &| &\text{codata } N\; PC \text{ : } (EC \rightarrow)? \text{ Set where}& \\
+     &&\quad(N \text{ : }  (EC \rightarrow)? N\; Expr* \rightarrow TypeExpr)*& \\
+    &| &n \; PC \; EC \text{ = } Expr & \\
+  \end{array}
+\end{align*}
+\caption{Syntax for declarations}
+\label{syntax-for-declarations}
+\end{figure}
+
+The declarations in Figure \ref{syntax-for-declarations} correspond to \(\rho(X:\Gamma\rat*;\vv\sigma;\vv{A}):\Gamma\rat*\) as follows:
+\begin{itemize}
+\item The first \(N\) is X
+\item The other \(N\) will be used later for
+\(\alpha_1^{\mu(X:\Gamma\rat *;\vv\sigma;\vv A)},\alpha_2^{\mu(X:\Gamma\rat *;\vv\sigma;\vv A)},\dots\)
+in the case of inductive types and
+\(\xi_1^{\nu(X:\Gamma\rat *;\vv\sigma;\vv A)},\xi_2^{\nu(X:\Gamma\rat *;\vv\sigma;\vv A)},\dots\)
+in the coinductive case
+\item The \(TypExpr\) are the \(\vv{A}\)
+\item The \(Expr*\) are the \(\vv{\sigma}\)
+\item The first \(EC\) is \(\Gamma\)
+\item The other \(EC\) stand for \(\Gamma_1,\dots,\Gamma_m\)
+\end{itemize}
+
+To parse the abstract syntax we use Megaparsec. The parser generates an
+abstract syntax tree, which is given for declarations in Listing
+\ref{Abstract Syntax Tree for Declarations}. The field $\mathtt{ty}$\;in $\mathtt{ExprDef}$\;is used later in
+type checking. The parser just fills them in with $\mathtt{Nothing}$. Data and codata
+definitions are both saved in $\mathtt{TypeDef}$. The Haskell type $\mathtt{OpenDuctive}$\;contains all the
+information for inductive and coinductive types. It corresponds to \(\mu\) and
+\(\nu\) in the paper. We use an $\mathtt{OpenDuctive}$\;where the field $\mathtt{inOrCoin}$\;is $\mathtt{IsIn}$
+for \(\mu\) and an $\mathtt{OpenDuctive}$\;where the field $\mathtt{inOrCoin}$\;is $\mathtt{IsCoin}$\;for
+\(\nu\).  The Haskell type $\mathtt{StrDef}$\;ensures that the sigmas, as and gamma1s have the
+same length.  We omit the implementation details for the parser because we
+are mainly focused on type checking.
+
+\begin{listing}[htbp]
+\begin{minted}[fontsize=\scriptsize]{haskell}
+data Decl = ExprDef { name :: Text
+                    , tyParameterCtx :: TyCtx
+                    , exprParameterCtx :: Ctx
+                    , expr :: Expr
+                    , ty :: Maybe Type
+                    }
+          | TypeDef OpenDuctive
+          | Expression Expr
+
+data OpenDuctive = OpenDuctive { nameDuc :: Text
+                               , inOrCoin :: InOrCoin
+                               , parameterCtx :: TyCtx
+                               , gamma :: Ctx
+                               , strDefs :: [StrDef]
+                               }
+
+data StrDef = StrDef { sigma :: [Expr]
+                     , a :: TypeExpr
+                     , gamma1 :: Ctx
+                     , strName :: Text
+                     }
+\end{minted}
+\caption{\label{Abstract Syntax Tree for Declarations}
+Implementation of the abstract syntax of fig. \ref{syntax-for-declarations}}
+\end{listing}
+\subsection{Expressions}
+\label{sec:org07afe58}
+The abstract syntax for expression is given in figure \ref{syntax-for-expressions}.
+We will separate expressions in expressions for terms and expressions for
+types.  There are given as regular expressions in $\mathtt{Expr}$\;and $\mathtt{TypeExpr}$\;respectively.
+
+\begin{figure}
+ \begin{align*}
+   \begin{array}{llll}
+     ParInst &:= &\langle TypeExpr(\text{,}TypeExpr)*\rangle &\text{Instantiations for}\\
+                                                            &&&\text{paramter contexts}\\
+     ExprInst &:= &\text{(}Expr(\text{,}Expr)*\text{)} &\text{Instantiations for}\\
+                                                       &&&\text{expression contexts}\\
+     Expr &:= &\text{rec } N \; ParInst? \text{ to } TypeExpr \text{ where} &\text{expression}\\
+     &&\quad Match*&\\
+     &| &\text{corec } TypeExpr \text { to } N \; ParInst? \text{ where}&\\
+     &&\quad Match*&\\
+     &| &Expr\text{ @ }Expr &\\
+     &| &\lozenge&\\
+     &| &EV&\\
+     &| &n\; ParInst\; ExprInst&\\
+     Match &:= &N\; EV* = Expr &\text{match}\\
+     TypeExpr &:= &\text{(}EV\text{ : }TypeExpr\text{).}TypeExpr &\text{Type expressions}\\
+     &| &TypeExpr\text{ @ }Expr&\\
+     &| &\text{Unit} &\\
+     &| &TV&\\
+     &| &N\; ParInst? &\\
+  \end{array}
+\end{align*}
+\begin{lstlisting}
+\end{lstlisting}
+\caption{Syntax for expressions}
+\label{syntax-for-expressions}
+\end{figure}
+
+An $\mathtt{Expr}$\;is either a $\mathtt{rec}$, a $\mathtt{corec}$, a con/destructor, an application
+$\mathtt{@}$, the only primitive unit expression $\mathtt{\lozenge}$\;or a variable. With the
+keyword $\mathtt{rec}$\;we can destruct an inductive type. We write
+$\mathtt{N\;ParInst?\;to\;TypeExrp}$, where $\mathtt{N}$\;is a previously defined inductive type
+and $\mathtt{ParInst?}$\;the instantiation of its parameter context, after $\mathtt{rec}$\;to
+facilitate type checking. It says we want to destruct an inductive type to
+some other type. We have to list all the constructors above one another.
+For each constructor, we write an expression behind the equal sign, which
+should be of type $\mathtt{TypeExpr}$\;which we have given above. In this expression,
+we can use variables given in the match expression. The last one is the
+recursive occurrence. With the keyword $\mathtt{corec}$\;we can do the same thing to
+construct a coinductive type. Here, we have to swap the $\mathtt{N\;ParInst?}$\;and the
+$\mathtt{TypeExpr}$\;and list the destructors. All con/destructors have to be
+instantiated with all variables in the parameter contexts of their types.
+This is done by giving types of the expected kinds separated by ',' enclosed
+in $\mathtt{\langle}$\;and $\mathtt{\rangle}$. The variables are separated into local variables
+and global variables. Global variables refer to previously defined
+expressions. We have to fully instantiate their parameter contexts and their
+expression contexts. We can also apply an expression to another with $\mathtt{@}$.
+This application is left-associative.  So if we write $\mathtt{t\;@\;s\;@\;v}$\;we mean
+$\mathtt{(t\;@\;s)\;@\;v}$.
+
+The $\mathtt{typeExpr}$\;is either the unit type $\mathtt{Unit}$, a lambda abstraction on
+types, an application, or a variable. In the lambda expression, we have to
+give the type of the variable. We apply a type to a term (types can only
+depend on terms) with $\mathtt{@}$.  As in the case of term application, this is
+also left-associative.  The unit type is the only primitive type
+expression.
+
+The generated abstract syntax tree is given in listing
+\ref{abstract-syntax-tree-for-expressions}. The variables for expressions are
+separated in $\mathtt{LocalExprVar}$\;and $\mathtt{GlobalExprVar}$. $\mathtt{LocalExprVar}$\;should refer
+to variables that are only locally defined i.e. in $\mathtt{Rec}$\;and $\mathtt{Corec}$. We
+use de Bruijn indexes for them. This facilitates substitution which we will
+describe in section \ref{sec:org95a465a}. $\mathtt{GlobalExprVar}$\;refers to variables from
+definitions. Here, we just use names. We do the same thing for $\mathtt{LocalTypeVar}$
+and $\mathtt{GlobalTypeVar}$. In the abstract syntax tree, we use anonymous
+constructors like in the paper. We combine them with the Haskell constructor
+$\mathtt{Structor}$. We know from the field $\mathtt{ductive}$\;if it is a constructor or a
+destructor. The types in field $\mathtt{parameters}$\;are to fill in the parameter
+context of the field $\mathtt{ductive}$. The field $\mathtt{nameStr}$\;in $\mathtt{Constructor}$\;and
+$\mathtt{Destructor}$\;are just for printing. We combine $\mathtt{rec}$\;and $\mathtt{corec}$\;to $\mathtt{Iter}$.
+
+\begin{listing}[htbp]
+\begin{minted}[fontsize=\scriptsize]{haskell}
+data TypeExpr = UnitType
+              | TypeExpr :@ Expr
+              | LocalTypeVar Int Bool Text
+              | Parameter Int Bool Text
+              | GlobalTypeVar Text [TypeExpr]
+              | Abstr Text TypeExpr TypeExpr
+              | Ductive { openDuctive :: OpenDuctive
+                        , parametersTyExpr :: [TypeExpr]}
+
+data Expr = UnitExpr
+          | LocalExprVar Int Bool Text
+          | GlobalExprVar Text [TypeExpr] [Expr]
+          | Expr :@: Expr
+          | Structor { ductive :: OpenDuctive
+                     , parameters :: [TypeExpr]
+                     , num :: Int
+                     }
+          | Iter { ductive :: OpenDuctive
+                 , parameters :: [TypeExpr]
+                 , motive :: TypeExpr
+                 , matches :: [([Text],Expr)]
+                 }
+\end{minted}
+\caption{\label{abstract-syntax-tree-for-expressions}
+Implementation of the abstract syntax of fig. \ref{syntax-for-expressions}}
+\end{listing}
+
+\section{Substitution}
+\label{sec:org95a465a}
+In the following we will write \(t[s/x]\) for "substitute every free
+occurrences of \(x\) in \(t\) by \(s\)". Substitution is done in the module
+$\mathtt{Subst.hs}$. We use de Bruijn indexes \cite{de1972lambda} for bound variables to facilitate
+substitution. With this method, every bound variable is a number instead of a
+string. The number says where the variable is bound. To find the binder of a
+variable we go outwards from it and count every binder until we reach the
+number of the variable. For example, \(\lambda.\lambda.\lambda.1\) says that the
+variable is bound by the second binder (we start counting at zero). This
+would be the same as \(\lambda x.\lambda y. \lambda z.y\). This means we never
+have to generate fresh names. We just shift the free variables in the term
+with which we substitute by one, every time we encounter a binder. This
+shifting is done in the module $\mathtt{ShiftFreeVars.hs}$. We also want to be able to
+substitute multiple variables simultaneously. If we would just substitute one
+term after another we could substitute into a previous term. For example, the
+substitution \(x[y/x][z/y]\) would yield \(z\) if we substitute sequential and
+\(y\) if we substitute simultaneously.  To make simultaneous substitution
+possible every local variable has a boolean flag.  If this flag is set to
+true substitution won't substitute for that variable.  So for simultaneous
+substitutions, we just set this flag to true for all terms with which we want
+to substitute.  Then, we substitute with them.  In the last step, we just have
+to set the flags to false in the result.  This setting(marking of the
+variables) is done in the module $\mathtt{Mark.hs}$.
+
+\section{Typing rules}
+\label{sec:org04a42de}
+A typing rule says that some expression or declaration is of some type, given
+some premises. If we can for every declaration or expression form a tree of
+such rules with no open premises, our program type checks. We have to rewrite
+the typing rules of the paper, to get rules which are syntax-directed.
+Syntax-directed means we can infer from the syntax alone what we have to check next
+i.e. which rule with which premises we have to apply. In the paper, there are
+rules containing variables in the premises where their type isn't in the
+conclusion. So if we want to type-check something which is the conclusion of
+such a rule we have no way of knowing what these variables are.
+
+We don't need the weakening rules because we can look up a variable in a
+context.  So we ignore them in our implementation.
+
+The order in \textbf{TyCtx} isn't relevant so we can use a map for it. In the code, we
+use a list because the names of the variables are the index of their type in
+the context. The order of \textbf{Ctx} is relevant because types of later variables
+can refer to former variables and application instantiates the first variable
+in \textbf{Ctx}. We add a new context for data types. We also need a context for the
+parameters. \textbf{Ctx} can contain variables from this context, but not from
+\textbf{TyCtx}.
+
+We also rewrite the rules which are already syntax-directed to rules which
+work on our syntax.   We will mark semantic differences in the rewritten rules
+gray. We use variables \(\Phi,\Phi',\Phi_1,\Phi_2,\dots\) for parameter contexts,
+\(\Theta,\Theta',\Theta_1,\Theta_2,\dots\) for type variable contexts and
+\(\Gamma,\Gamma',\Gamma_1,\Gamma_2,\dots\) for term variable contexts.
+The judgments in our rules are of one of the following form.
+\begin{itemize}
+\item \(\Phi\mid\Theta\mid\Gamma\vdash\Theta'\) - The type variable context
+\(\Theta'\) is well-formed in the combined context \(\Phi\mid\Theta\mid\Gamma\).
+\item \(\Phi\mid\Theta\mid\Gamma\vdash\Gamma'\) - The term variable context
+\(\Gamma'\) is well-formed in the combined context \(\Phi\mid\Theta\mid\Gamma\).
+\item \(\Phi\mid\Theta\mid\Gamma\vdash\Phi'\) - The parameter variable context
+\(\Phi'\) is well-formed in the combined context \(\Phi\mid\Theta\mid\Gamma\).
+\item \(A\longrightarrow_T^* B\) - The type \(A\) fully evaluates to type \(B\).
+\item \(A \equiv_\beta B\) - The type \(A\) is computational equivalent to type \(B\).
+\item \(\Phi\mid\Theta\mid\Gamma\vdash A : \Gamma_2\rat*\) - The type
+\(A\) is well-formed in the combined context \(\Phi\mid\Theta\mid\Gamma\) and
+can be instantiated with arguments according to context \(\Gamma_2\).
+\item \(\Phi\mid\Theta\mid\Gamma\vdash t : \Gamma_2\rat A\) - The term \(t\) is
+well-formed in the combined context \(\Phi\mid\Theta\mid\Gamma\) and can be
+instantiated with arguments according to context \(\Gamma_2\).  After this
+instantiation, it is of type \(A\), where the arguments are substituted in \(A\).
+\item \(\Phi \vdash \sigma : \Gamma_1 \triangleright \Gamma_2\) - The context
+morphism \(\sigma\) is a well-formed substitution for \(\Gamma_2\) with terms
+in context \(\Gamma_1\) in parameter context \(\Phi\).
+\end{itemize}
+We will write \(\vdash\) for \(\Phi\mid\Theta\mid\Gamma\vdash\) where
+\(\Phi\),\(\Theta\), and \(\Gamma\) are arbitrary and aren't referred to by the
+right-hand side.
+
+In the module $\mathtt{TypeChecker}$\;we will implement the following rules.  It
+defines a monad $\mathtt{TI}$\;which can throw errors and has a reader on the contexts
+in which we are type checking.  To add something to a context we use the
+function $\mathtt{local}$.  This function gets a function to change the current
+content of the reader monad and executes a reader on this changed context in
+the current monad.
+
+\subsection{Context rules}
+\label{sec:org31bc4f9}
+The rules for valid contexts are already-syntax directed so we take
+just them.
+\begin{center}
+\AxiomC{}
+\UnaryInfC{$\vdash\emptyset$ \TyCtx}
+\DisplayProof
+\hskip 1.5em
+\AxiomC{$\vdash\Theta$ \TyCtx}
+\AxiomC{$\vdash\Gamma$ \Ctx}
+\BinaryInfC{$\vdash\Theta,X:\Gamma\rat*$ \TyCtx}
+\DisplayProof
+\vskip 0.5em
+\AxiomC{}
+\UnaryInfC{$\vdash\emptyset$ \Ctx}
+\DisplayProof
+\hskip 1.5em
+\AxiomC{$\mid\emptyset\mid\Gamma\vdash A:*$}
+\UnaryInfC{$\vdash\Gamma,x:A$ \Ctx}
+\DisplayProof
+\end{center}
+In the rules for valid contexts, we ensure that the types in the context can
+not depend on \textbf{TyCtx}.  Note however that they can depend on \textbf{ParCtx}.  This
+ensures that only strictly positive types are possible.
+
+We also need new rules for checking if a parameter context is valid.
+\begin{center}
+\AxiomC{}
+\UnaryInfC{$\vdash\emptyset$ \ParCtx}
+\DisplayProof
+\hskip 1.5em
+\AxiomC{$\vdash\Phi$ \ParCtx}
+\AxiomC{$\vdash\Gamma$ \Ctx}
+\BinaryInfC{$\vdash\Phi,X:\Gamma\rat*$ \ParCtx}
+\DisplayProof
+\end{center}
+These are structural the same rules like this for \textbf{TyCtx}.  The difference is that \textbf{ParCtx}
+and \textbf{TyCtx} are used differently in the other rules, as we have already seen
+in the rule for \textbf{Ctx}.
+
+We use the notation \(\Theta(X)\rightsquigarrow\Gamma\rat*\) for looking up
+the type variable \(X\) in type context \(\Theta\) yields type \(\Gamma\rat*\). We
+add 2 rules for looking up something in a type context. They are:
+\begin{center}
+  \AxiomC{$\vdash \Theta$ \TyCtx}
+  \AxiomC{$\vdash \Gamma$ \Ctx}
+  \BinaryInfC{$\Theta,X:\Gamma\rat*(X)\rightsquigarrow\Gamma\rat*$}
+  \DisplayProof
+  \hskip 1.5em
+  \AxiomC{$\vdash \Gamma_1$ \Ctx}
+  \AxiomC{$\Theta(X) \rightsquigarrow\Gamma_2\rat*$}
+  \BinaryInfC{$\Theta,Y:\Gamma_1\rat*(X)\rightsquigarrow\Gamma_2\rat*$}
+  \DisplayProof
+\end{center}
+Here, \(Y\) and \(X\) are different variables.
+
+The rules for looking up something in a parameter context are principally the
+same.
+\begin{center}
+  \AxiomC{$\vdash \Phi$ \ParCtx}
+  \AxiomC{$\vdash \Gamma$ \Ctx}
+  \BinaryInfC{$\Phi,X:\Gamma\rat*(X)\rightsquigarrow\Gamma\rat*$}
+  \DisplayProof
+  \hskip 1.5em
+  \AxiomC{$\vdash \Gamma_1$ \Ctx}
+  \AxiomC{$\Phi(X) \rightsquigarrow\Gamma_2\rat*$}
+  \BinaryInfC{$\Phi,Y:\Gamma_1\rat*(X)\rightsquigarrow\Gamma_2\rat*$}
+  \DisplayProof
+\end{center}
+
+Respectively the notation \(\Gamma(x)\rightsquigarrow A\) means looking
+up the term variable \(x\) in term context \(\Gamma\) yields type \(A\). The
+rules for term contexts are:
+\begin{center}
+  \AxiomC{$\vdash \Gamma$ \Ctx}
+  \AxiomC{$\Gamma\vdash A:*$}
+  \BinaryInfC{$\Gamma,x:A(x)\rightsquigarrow A$}
+  \DisplayProof
+  \hskip 1.5em
+  \AxiomC{$\Gamma(x) \rightsquigarrow A$}
+  \AxiomC{$\Gamma\vdash B:*$}
+  \BinaryInfC{$\Gamma,y:B(x)\rightsquigarrow A$}
+  \DisplayProof
+\end{center}
+
+\subsection{Beta-equivalence}
+\label{sec:org14c880e}
+Two types are beta equivalent if they evaluate to the same type. Because our
+language is deterministic this just means if we fully evaluate both of them
+they are alpha equivalent. Alpha equivalence means we can substitute some
+variables in both of them and get the same type. So we first need to define
+rules which say what full evaluation means. We write \(A \longrightarrow_T^*
+    B\) for evaluating \(A\) as long as it is possible yields \(B\).
+
+The rules are:
+\begin{center}
+\AxiomC{$\neg\exists B : A \longrightarrow_T B$}
+\UnaryInfC{$A \longrightarrow_T^* A$}
+\DisplayProof
+\hskip 1.5em
+\AxiomC{$A \longrightarrow_T B$}
+\AxiomC{$B \longrightarrow_T^* C$}
+\BinaryInfC{$A \longrightarrow_T^* C$}
+\DisplayProof
+\end{center}
+\(\longrightarrow_T\) is defined in section \ref{sec:orgbe03e8e}.
+
+We can then introduce a new rule for beta-equivalence.
+\begin{center}
+\AxiomC{$A\longrightarrow_T^* A'$}
+\AxiomC{$B\longrightarrow_T^* B'$}
+\AxiomC{$A'\equiv_\alpha B'$}
+\TrinaryInfC{$A\equiv_\beta B$}
+\DisplayProof
+\end{center}
+This rule says if \(A\) evaluates to \(A'\), \(B\) to \(B'\) and \(A'\) and \(B'\) are
+alpha equivalent, then \(A\) and \(B\) are beta equivalent. In the
+implementation \(\equiv_\alpha\) is trivial because we use \emph{de Bruijn
+indices}.
+
+We also add some rules to check if two contexts are the same.
+   \begin{center}
+   \AxiomC{}
+   \UnaryInfC{$\emptyset\equiv_\beta\emptyset$}
+   \DisplayProof
+   \hskip 1.5em
+   \AxiomC{$\Gamma_1\equiv_\beta \Gamma_2$}
+   \AxiomC{$A\equiv_\beta B$}
+   \BinaryInfC{$\Gamma_1,x:A\equiv_\beta\Gamma_2,y:B$}
+   \DisplayProof
+%   \vskip 0.5em
+%   \AxiomC{$\Theta_1\equiv_\beta \Theta_2$}
+%   \AxiomC{$\Gamma_1\equiv_\beta \Gamma_2$}
+%   \BinaryInfC{$\Theta_1,X:\Gamma_1\rat*\equiv_\beta\Theta_2,X:\Gamma_2\rat*$}
+%   \DisplayProof
+   \end{center}
+
+\subsection{Unit type and expression introduction}
+\label{sec:org69e73ce}
+The paper defines one rule for the unit type and one for the unit value.
+These are.
+\begin{center}
+  \AxiomC{}
+  \RightLabel{\textbf{($\top$-I)}}
+  \UnaryInfC{$\vdash\top:*$}
+  \DisplayProof
+  \hskip 1.5em
+  \AxiomC{}
+  \topI{$\vdash\lozenge:\top$}
+  \DisplayProof
+\end{center}
+The first rule says that the type \(\top\) has always an empty context.  The
+second rule says its value \(\lozenge\) is always of type \(\top\). These rules
+get rewritten to.
+\begin{center}
+  \AxiomC{}
+  \RightLabel{\textbf{(Unit-I)}}
+  \UnaryInfC{\graybox{$\Phi\mid\Theta\mid\Gamma$}$\vdash$Unit:$*$}
+  \DisplayProof
+  \hskip 1.5em
+  \AxiomC{}
+  \topI{\graybox{$\Phi\mid\Theta\mid\Gamma$}$\vdash\lozenge$:Unit}
+  \DisplayProof
+\end{center}
+We change the syntax "\(\top\)" to "Unit" and add the contexts \(\Phi\),
+\(\Theta\), \(\Gamma\). We will do this for every rule which has empty contexts
+to subsume the weakening rules of the paper. The unit term always has the
+unit type as its type.
+
+\subsection{Variable lookup}
+\label{sec:org68bd925}
+We have three kinds of variables we can lookup. They are type variables,
+term variables, and parameters.  The paper already has rules for the type and
+term variables.  We need to rewrite them.  We add a new rule for looking up
+a parameter.
+
+The rule:
+ \begin{prooftree}
+  \AxiomC{$\vdash \Theta$ \TyCtx}
+  \AxiomC{$\vdash \Gamma$ \Ctx}
+  \TyVarI{$\Theta,X:\Gamma\rat*\mid\emptyset\vdash X : \Gamma \rat *$}
+\end{prooftree}
+gets rewritten to:
+\begin{prooftree}
+  \AxiomC{\graybox{$\Theta(X)\rightsquigarrow\Gamma\rat*$}}
+  \AxiomC{\graybox{$\vdash \Gamma_1$ \Ctx}}
+  \TyVarI{\graybox{$\Phi$}$\mid\Theta\mid$\graybox{$\Gamma_1$}$\vdash X : \Gamma \rat *$}
+\end{prooftree}
+The rule:
+\begin{center}
+  \AxiomC{$\Gamma\vdash A:*$}
+  \RightLabel{\textbf{(Proj)}}
+  \UnaryInfC{$\Gamma,x:A\vdash x:A$}
+  \DisplayProof
+\end{center}
+gets rewritten to:
+\begin{center}
+  \AxiomC{\graybox{$\Gamma(x)\rightsquigarrow A$}}
+  \RightLabel{\textbf{(Proj)}}
+  \UnaryInfC{\graybox{$\Phi\mid\Theta\mid$}$\Gamma\vdash x:A$}
+  \DisplayProof
+\end{center}
+The rule for looking something up in the parameter context is:
+\begin{prooftree}
+  \AxiomC{$\Phi(X)\rightsquigarrow\Gamma\rat*$}
+  \AxiomC{$\vdash \Gamma_1$ \Ctx}
+  \TyVarI{$\Phi\mid\Theta\mid$$\Gamma_1$$\vdash X : \Gamma \rat *$}
+\end{prooftree}
+
+In the rule from the paper, we can only infer the type or kind of the last variable in the
+context.  In our rules, we just look up the variable in the context.  These
+rules can check the same thing if we take the weakening rules into account.
+With them, we can just weaken the context until we get to the desired
+variable.
+
+\subsection{Type and expression instantiation}
+\label{sec:org5dc2da5}
+We can instantiate types and terms.  The rule:
+\begin{prooftree}
+  \AxiomC{$\Theta\mid\Gamma_1\vdash A:(x:B,\Gamma_2)\rat*$}
+  \AxiomC{$\Gamma_1\vdash t:B$}
+  \TyInst{$\Theta\mid\Gamma_1\vdash A@t:\Gamma_2[t/x]\rat*$}
+\end{prooftree}
+for instantiating types gets rewritten to:
+ \begin{prooftree}
+  \AxiomC{\graybox{$\Phi$}$\mid\Theta\mid\Gamma_1\vdash A:(x:B,\Gamma_2)\rat*$}
+  \AxiomC{\graybox{$\Phi\mid\Theta$}$\mid\Gamma_1\vdash t:$\graybox{$B'$}}
+  \AxiomC{\graybox{$B\equiv_\beta B'$}}
+  \TyInstTrinary{\graybox{$\Phi$}$\mid\Theta\mid\Gamma_1\vdash A@t:\Gamma_2[t/x]\rat*$}
+\end{prooftree}
+For this rule, we have to check if \(t\) has the expected type for the first
+variable in the context of \(A\).  In our version, we just infer the type for \(A\) and \(t\).
+Then, we check if the first variable in the context is beta-equal to the type
+of \(t\).  If that isn't the case type checking fails.  Otherwise, we just
+substitute in the remaining context.
+
+We also have a rule to instantiate terms.  This rule:
+\begin{center}
+  \AxiomC{$\Gamma_1\vdash t:(x:A,\Gamma_2)\rat B$}
+  \AxiomC{$\Gamma_1\vdash s:A$}
+  \RightLabel{\textbf{(Inst)}}
+  \BinaryInfC{$\Gamma_1\vdash t@s:\Gamma_2[s/x]\rat B[s/x]$}
+  \DisplayProof
+\end{center}
+gets rewritten to:
+\begin{center}
+  \AxiomC{\graybox{$\Phi\mid\Theta$}$\mid\Gamma_1\vdash t:(x:A,\Gamma_2)\rat B$}
+  \AxiomC{\graybox{$\Phi\mid\Theta$}$\mid\Gamma_1\vdash s:$\graybox{$A'$}}
+  \AxiomC{\graybox{$A\equiv_\beta A'$}}
+  \RightLabel{\textbf{(Inst)}}
+  \TrinaryInfC{\graybox{$\Phi\mid\Theta$}$\mid\Gamma_1\vdash t@s:\Gamma_2[s/x]\rat B[s/x]$}
+  \DisplayProof
+\end{center}
+These rules are similar to the rule for type instantiation.  Here, we have to
+check (or infer) a term instead of a type.  We also have to substitute \(s\) in
+the result type of \(t\) (in the case of types it's always \(*\), which obviously
+has no free variables).
+
+\subsection{Parameter abstraction}
+\label{sec:org051e5c4}
+The rule:
+\begin{center}
+  \AxiomC{$\Theta\mid\Gamma_1,x:A\vdash B:\Gamma_2\rat*$}
+  \ParamAbstr{$\Theta\mid\Gamma_1\vdash(x).B:(x:A,\Gamma_2)\rat*$}
+  \DisplayProof
+\end{center}
+gets rewritten to:
+\begin{center}
+  \AxiomC{\graybox{$\Phi$}$\mid\Theta\mid\Gamma_1,x:A\vdash B:\Gamma_2\rat*$}
+  \ParamAbstr{\graybox{$\Phi$}$\mid\Theta\mid\Gamma_1\vdash(x$\graybox{$:A$}$).B:(x:A,\Gamma_2)\rat*$}
+  \DisplayProof
+\end{center}
+Here, we just add the argument of the lambda to the expression context.  Then
+we check the body of the lambda.  In the syntax-directed version we have to
+annotate the variable with its type, so we know which type we have to add to
+the context.
+
+\subsection{(co)inductive types}
+\label{sec:org35a4228}
+We have to separate the rule:
+\begin{prooftree}
+\AxiomC{$\sigma_k:\Gamma_k\triangleright\Gamma$}
+\AxiomC{$\Theta,X:\Gamma\rat*\mid\Gamma_k\vdash A_k:*$}
+\FPTy
+\BinaryInfC{$\Theta \mid \emptyset \vdash \rho(X : \Gamma \rat *;\vv{\sigma};\vv{A}):\Gamma\rat *$}
+\end{prooftree}
+into multiple rules.  First, we need rules to check the definitions of
+(co)inductive types.  These are:
+\begin{prooftree}
+\AxiomC{$\sigma_k:\Gamma_k\triangleright\Gamma$}
+\AxiomC{\graybox{$\Phi$}$\mid X:\Gamma\rat*\mid\Gamma_k\vdash A_k:*$}
+\AxiomC{\graybox{$\vdash \phi$ \ParCtx}}
+\FPTy
+\TrinaryInfC{$\vdash$ data X$\langle\Phi\rangle$ $\Gamma \rat $ Set where; $\vv{Constr_k : \Gamma_k\rat A_k\rat X \sigma_k}$}
+\end{prooftree}
+\begin{prooftree}
+\AxiomC{$\sigma_k:\Gamma_k\triangleright\Gamma$}
+\AxiomC{\graybox{$\Phi$}$\mid X:\Gamma\rat*\mid\Gamma_k\vdash A_k:*$}
+\AxiomC{\graybox{$\vdash \phi$ \ParCtx}}
+\FPTy
+\TrinaryInfC{$\vdash$ codata X$\langle\Phi\rangle$ : $\Gamma \rat$ Set where; $\vv{Destr_k : \Gamma_k \rat  X \sigma_k \rat  A_k}$}
+\end{prooftree}
+Because we only allow top-level definitions of (co)inductive types our rules
+have empty contexts.  We first have to check if \(\sigma_k\) is  a context
+morphism from \(\Gamma_k\) to \(\Gamma\).  This basically means that the terms
+in \(\sigma_k\) are of the types in \(\Gamma\), if we check them in \(\Gamma_k\).
+After that, we have to check if the \(\vv{A}\) (the arguments where we can have
+a recursive occurrence) are of kind \(*\).  Because this is a top-level
+definition the context \(\phi\) is provided by the code.  So we have to check
+if it is valid.  We will now have to rewrite the rules for context morphism.
+Here, we just add the parameter context to the rules of the paper.
+\begin{center}
+\AxiomC{}
+\UnaryInfC{\graybox{$\Phi\vdash$}$() : \Gamma_1 \triangleright \emptyset$}
+\DisplayProof
+\hskip 1.5em
+\AxiomC{\graybox{$\Phi\vdash$}$\sigma : \Gamma_1 \triangleright \Gamma_2$}
+\AxiomC{\graybox{$\Phi\mid$}$\Gamma_1\vdash t : A[\sigma]$}
+\BinaryInfC{\graybox{$\Phi\vdash$}$(\sigma,t):\Gamma_1\triangleright(\Gamma_2,x:A)$}
+\DisplayProof
+\end{center}
+We also need a rule for the cases in which we are using these defined
+variables.  This is:
+\begin{prooftree}
+\AxiomC{$\Phi\mid\Theta\mid\Gamma'\vdash \vv{A}:\Gamma_i \rat *$}
+\UnaryInfC{$\Phi\mid\Theta\mid\Gamma'\vdash X\langle\vv{A}\rangle : \Gamma[\vv{A}]\rat *$}
+\end{prooftree}
+Here, \(X\) is a data or codata definition.  The parser can decide if a variable
+is such a definition or a local definition. Because we are type checking
+on the abstract syntax tree we also know \(\Gamma\) and \(\Phi'\). \(\Gamma\) is
+just the context from the definition and \(\Phi\) is the parameter context.
+Because we already typed checked this definition we just have to check if
+the types given for the parameters have the right kind.  Then, we substitute
+these parameters in its type.  We will now give the rules for checking if a
+list of parameters matches a parameter context.
+\begin{center}
+\AxiomC{}
+\UnaryInfC{$\Phi\mid\Theta\mid\Gamma\vdash () : ()$}
+\DisplayProof
+\hskip 1.5em
+\AxiomC{$\Phi\mid\Theta\mid\Gamma\vdash A : \Gamma'\rat*$}
+\AxiomC{$\Phi\mid\Theta\mid\Gamma\vdash \vv{A} : \Phi'[A/X]$}
+\BinaryInfC{$\Phi\mid\Theta\mid\Gamma\vdash A,\vv{A} : (X:\Gamma'\rat*,\Phi'$)}
+\DisplayProof
+\end{center}
+We just check every variable for the kinds in \(\Phi'\) one after the other.
+We also have to substitute the type into the context.  Because kinds in
+a parameter context can depend on variables previously defined in this context.
+
+\subsection{Constructor and Destructor}
+\label{sec:orga22211d}
+The rule for constructors:
+\begin{center}
+  \AxiomC{$\mu(X:\Gamma\rat*;\vv{\sigma};\vv{A}):\Gamma\rat*$}
+  \AxiomC{$1\leq k\leq\mid\vv{A}\mid$}
+  \IndIBinary{$\vdash\alpha_k^{\mu(X:\Gamma\rat*;\vv{\sigma};\vv{A})}:(\Gamma_k,y:A_k[\mu/X])\rat\mu@\sigma_k$}
+  \DisplayProof
+\end{center}
+gets rewritten to:
+\begin{center}
+  \AxiomC{\graybox{$\Phi\mid\Theta\mid\Gamma\vdash \vv{B} : \Phi'$}}
+  \IndI{\graybox{$\Phi\mid\Theta\mid\Gamma$}$\vdash$Constr\graybox{$\langle\vv{B}\rangle$}$:(\Gamma_k\graybox{$\graybox{$[\vv{B}]$}$},y:A_k[\mu/X]\graybox{$\graybox{$[\vv{B}]$}$})\rat\mu@\sigma_k\graybox{$\graybox{$[\vv{B}]$}$}$}
+  \DisplayProof
+\end{center}
+The rule for destructors:
+\begin{center}
+  \AxiomC{$\nu(X:\Gamma\rat*;\vv{\sigma};\vv{A}):\Gamma\rat*$}
+  \AxiomC{$1\leq k\leq\mid\vv{A}\mid$}
+  \RightLabel{\textbf{(Coind-E)}}
+  \BinaryInfC{$\vdash\xi_k^{\nu(X;\Gamma\rat*;\vv{\sigma};\vv{A})}:(\Gamma_k,y:\nu@\sigma_k)\rat
+    A_k[\nu/X]$}
+  \DisplayProof
+\end{center}
+gets rewritten to:
+\begin{center}
+  \AxiomC{\graybox{$\Phi\mid\Theta\mid\Gamma\vdash \vv{B} : \Phi'$}}
+  \RightLabel{\textbf{(Ind-I)}}
+  \UnaryInfC{\graybox{$\Phi\mid\Theta\mid\Gamma$}$\vdash$Destr\graybox{$\langle\vv{B}\rangle$}$:(\Gamma_k$\graybox{$[\vv{B}]$}$,y:\nu@\sigma_k)$\graybox{$[\vv{B}]$}$\rat
+    A_k[\nu/X]$\graybox{$[\vv{B}]$}$$}
+  \DisplayProof
+\end{center}
+In the paper de/constructors are anonymous.  They come together with their
+type. Therefore, we have to check if this type is valid. Constructors
+construct their type. So their output value is their type \(\mu\) applied to
+the context morphism \(\sigma_k\), where \(k\) is the number of the constructor.
+They become as input the context \(\Gamma_k\), which is implicit in the paper,
+and a value of type \(A_k[\mu/X]\), which is the type, which can contain the
+recursive occurrence. Destructors are destructing their type so we get their
+type \(\nu\) applied to \(\sigma_k\) as input and \(A_k[\nu/X]\) as output.
+
+In our rules, in contrast to the paper, the de/constructors refer to some
+type which we have already type-checked. We just have to check the
+parameters. Every term we need is in the Haskell representation of the
+de/constructor. The de/constructor has the type which we have defined in the
+data definition. We just substitute the type itself for the free variable.
+At last, we need to substitute the parameters for the respective variables.
+
+\subsection{Recursion and Corecursion}
+\label{sec:org90de3da}
+The rule:
+\begin{center}
+  \AxiomC{$\vdash C:\Gamma\rat*$}
+  \AxiomC{$\Delta,\Gamma_k,y_k:A_k[C/X]\vdash g_k:(C@\sigma_k)$}
+  \AxiomC{$\forall k=1,\dots,n$}
+  \RightLabel{\textbf{(Ind-E)}}
+  \TrinaryInfC{$\Delta\vdash$ rec
+    $\vv{(\Gamma_k,y_k).g_k}:(\Gamma,y:\mu@id_\Gamma)\rat C@id_\Gamma$}
+  \DisplayProof
+\end{center}
+gets rewritten to:
+\begin{scprooftree}{0.95}
+  \AxiomC{$\vdash C:\Gamma\rat*$}
+  \AxiomC{\graybox{$\vdash\Gamma\equiv_\beta \Gamma'[\vv{D}]$}}
+  \noLine
+  \UnaryInfC{\graybox{$\vv{\vdash B_k\equiv_\beta(C@\sigma_k[\vv{D}])}$}}
+  \AxiomC{\graybox{$\Phi\mid\Theta\mid\Delta\vdash \vv{D}:\Phi'$}}
+  \noLine
+  \UnaryInfC{$\vv{$\graybox{$\Phi\mid\mid$}$\Delta,\Gamma_k$\graybox{$[\vv{D}]$}$,y_k:A_k$\graybox{$[\vv{D}]$}$[C/X]\vdash g_k:\text{\graybox{$B_k$}}}$}
+  \RightLabel{\textbf{(Ind-E)}}
+  \TrinaryInfC{\graybox{$\Phi\mid\Theta\mid$}$\Delta\vdash$ rec \graybox{$\mu\langle\vv{D}\rangle$ to C};
+    $\vv{\text{Constr}_k\vv{x_k}\text{ } y_k = g_k}:(\Gamma,y:\mu$\graybox{$[\vv{D}]$}$@id_\Gamma)\rat C@id_\Gamma$}
+ \end{scprooftree}
+
+We are recursing over some previously inductively defined type \(\mu\) to some
+type \(C\).  These types must have the same context.  Recursing is done by
+listing each constructor with the result, which the whole expression should
+have if we apply it to this constructor.  This result can refer to the
+arguments of the constructor via the variables \(\vv{x_k},y_k\).  The type
+must be the result type \(C\) applied to the \(\sigma_k\) of this constructor.
+In the syntax-directed version, we also have to check the parameters.  We
+check if the types match by inferring them and compare them on beta
+equality.
+
+We have a similar rule for corecursion.  It:
+\begin{center}
+  \AxiomC{$\vdash C:\Gamma\rat*$}
+  \AxiomC{$\Delta,\Gamma_k,y_k:(C@\sigma_k)\vdash g_k:A_k[C/X]$}
+  \AxiomC{$\forall k=1,\dots,n$}
+  \RightLabel{\textbf{(Coind-I)}}
+  \TrinaryInfC{$\Delta\vdash$ corec
+    $\vv{(\Gamma_k,y_k).g_k}:(\Gamma,y:C@id_\Gamma)\rat \nu@id_\Gamma$}
+  \DisplayProof
+\end{center}
+gets rewritten to:
+\begin{scprooftree}{0.95}
+  \AxiomC{$\vdash C:\Gamma\rat*$}
+  \AxiomC{\graybox{$\vdash\Gamma\equiv_\beta \Gamma'[\vv{D}]$}}
+  \noLine
+  \UnaryInfC{\graybox{$\vv{\vdash B_k\equiv_\beta A_k[\vv{D}][C/X]}$}}
+  \AxiomC{\graybox{$\Phi\mid\Theta\mid\Delta\vdash \vv{D}:\Phi'$}}
+  \noLine
+  \UnaryInfC{$\vv{$\graybox{$\Phi\mid\mid$}$\Delta,\Gamma_k$\graybox{$[\vv{D}]$}$,y_k:(C@\sigma_k$\graybox{$[\vv{D}]$}$)\vdash g_k:\text{\graybox{$B_k$}}}$}
+  \RightLabel{\textbf{(Coind-I)}}
+  \TrinaryInfC{\graybox{$\Phi\mid\Theta\mid$}$\Delta\vdash$ corec \graybox{C to $\nu\langle\vv{D}\rangle$};
+    $\vv{\text{Destr}_k\vv{x_k}\text{ } y_k = g_k}:(\Gamma,y:C@id_\Gamma)\rat \nu$\graybox{$[\vv{D}]$}$@id_\Gamma$}
+ \end{scprooftree}
+
+A corecursion produces a coinductive type \(\nu\).  We have to give it a type
+\(C\) and list the destructors together with the expression they should be
+destructed to. We get the syntax-directed rule analog as in the case of
+recursion.
+
+\section{Evaluation}
+\label{sec:orgbe03e8e}
+There are two kinds of reduction steps in this system. The implementation of
+this is in $\mathtt{Eval.hs}$. Will give the formal definition in the following.
+
+The first is a reduction on the type level (written $\mathtt{\longrightarrow}$). It is defined
+as follows:
+\begin{align*}
+  ((x).A) @ t \longrightarrow_p A[t/x]\\
+\end{align*}
+It is standard beta reduction. If we apply a lambda \((x).A)\) to a term \(t\) we
+substitute this term for the binding variable \(x\) in the body. This body is
+then the result of the reduction.
+
+The other is the reduction on the term level, $\mathtt{\succ}$. To define this
+reduction, we need a action on types (written \(\widehat{C}(A)\)) and terms
+(written \(\widehat{C}(t)\)), where the following holds.
+\begin{prooftree}
+  \AxiomC{$X : \Gamma_1\rat*\mid\Gamma_2'\vdash C:\Gamma_2\rat*$}
+  \AxiomC{$\Gamma_1, x:A\vdash t:B$}
+  \BinaryInfC{$\Gamma_2',\Gamma_2,x:\widehat{C}(A)\vdash\widehat{C}(t):\widehat{C}(B)$}
+\end{prooftree}
+Here, we have a type \(C\) with a free type variable \(X\) and a term \(t\) of type
+\(B\) with a free term variable \(x\) of type \(A\). If we use the action of this
+type on \(t\) we get a term with a type of this action on \(B\). This term
+contains a free term variable \(x\) of type, the action applied to \(A\). The
+type action is implemented in the module $\mathtt{TypeAction.hs}$. Both the type
+action and the evaluation are done in the $\mathtt{Eval}$\;monad. This monad has access
+to the previously defined declarations. We will now define the type action.
+
+\begin{definition}
+  \text{Let} $n \in \mathbb{N}$ \text{and} $1 \leq i \leq n$.
+  \text{Let:}
+  \begin{align*}
+    X_1 : \Gamma_1 \rat \ast,\ldots,X_n : \Gamma_n \rat \ast\ \mid\ \Gamma' \vdash C : \Gamma \rat \ast \\
+    \Gamma_i \vdash A_i : \ast \\
+    \Gamma_i \vdash B_i : \ast \\
+    \Gamma_i, x : A_i \vdash t_i : B_i
+  \end{align*}
+  \text{Then, we define the type action on terms inductively over $C$.}
+  \begin{align*}
+    \begin{array}{ll}
+      \widehat{C}(\vv{t},t_{n+1}) = \widehat{C}(\vv{t})
+      &\text{for \textbf{(TyVarWeak)}}\\
+      \widehat{X_i}(\vv{t})=t_i\\
+      \widehat{C'@s}(\vv{t})=\widehat{C'}(\vv{t})[s/y],
+      &\text{for }\Theta\mid\Gamma'\vdash C':(y,\Gamma)\rat*\\
+      \widehat{(y).C'}(\vv{t})=\widehat{C'}(\vv{t}),
+      &\text{for }\Theta\mid(\Gamma',y)\vdash C':\Gamma\rat*\\
+      \widehat{\mu(Y:\Gamma\rat*;\vv{\sigma};\vv{D})} =\text{rec}^{R_A}\vv{(\Delta_k,x).g_k}@\id{\Gamma}@x
+      &\text{for } \Theta,Y:\Gamma\rat*\mid\Delta_k\vdash D_k:*\\
+      \quad\text{with } g_k = \alpha_k^{R_B}@\id{\Delta_k}@\left(\widehat{D_k}(\vv{t},x)\right)\\
+      \quad\text{and } R_A=\mu(Y:\Gamma\rat*;\vv{\sigma};\vv{D}[\vv{(\Gamma_i).A}/\vv{X}])\\
+      \quad\text{and } R_B=\mu(Y:\Gamma\rat*;\vv{\sigma};\vv{D}[\vv{(\Gamma_i).B}/\vv{X}])\\
+      \widehat{\nu(Y:\Gamma\rat*;\vv{\sigma};\vv{D})} =\text{corec}^{R_B}\vv{(\Delta_k,x).g_k}@\id{\Gamma}@x
+      &\text{for } \Theta,Y:\Gamma\rat*\mid\Delta_k\vdash D_k:*\\
+      \quad\text{with } g_k = \widehat{D_k}(\vv{t},x)[(\xi_k^{R_A}@\id{\Delta_k}@x)/x]\\
+      \quad\text{and } R_A=\mu(Y:\Gamma\rat*;\vv{\sigma};\vv{D}[\vv{(\Gamma_i).A}/\vv{X}])\\
+      \quad\text{and } R_B=\mu(Y:\Gamma\rat*;\vv{\sigma};\vv{D}[\vv{(\Gamma_i).B}/\vv{X}])\\
+    \end{array}
+  \end{align*}
+  \text{And the type action on types as follows:}
+  \begin{equation*}
+    \widehat{C}(\vv{A})=C[\vv{(\Gamma_i).A}/\vv{X}]@\id{\Gamma}
+  \end{equation*}
+\end{definition}
+
+The type action generates a term with a free variable \(x\).  In the type of
+this term, we have changed all the free variables to the types of \(\vv{t}\).
+We will show the proof in appendix \ref{sec:org5142527}.
+
+The reduction on terms  is subdivided into a reduction on recursion and one
+on corecursion. Here, \(\sigma_k \bullet\tau\) is a context morphism, where we
+first substitute with \(\tau\) and then with \(\sigma_k\).
+
+The reduction on recursion is defined as follows:
+\begin{align*}
+  \rec \vv{(\Gamma_k,y_k).g_k}@(\sigma_k\bullet\tau)@(\alpha_k@\tau@u)\succ g_k\left[ \widehat{A_k}(\rec\vv{(\Gamma_k,y_k).g_k}@\id{\Gamma}@x)/y_k \right][\tau,u]\\
+\end{align*}
+If we apply a recursion \(\rec \vv{(\Gamma_k,y_k).g_k}\) to this context
+morphism and a constructor \(\alpha_k@\tau@u\), which is fully applied, we
+lookup the case for this constructor. In this case, we substitute \(\tau\) for
+the variables from \(\Gamma_k\) and \(u\), where we apply the recursion to all
+recursive occurrences, for \(y_k\). For this application, we need the type
+action. So a recursion is destructing an inductive type and all its recursive
+occurrences to another type, while we use different cases for the different
+constructors of the type.
+
+On the contrary, corecursion is constructing a coinductive type. It is defined
+as follows:
+\begin{align*}
+  \xi_k@\tau@(\corec \vv{(\Gamma_k,y_k).g_k}@(\sigma_k\bullet\tau)@u)\succ \widehat{A_k}(\corec\vv{(\Gamma_k,y_k).g_k}@\id{\Gamma}@x)[g_k/x] [\tau,u]
+\end{align*}
+If we apply a destructor together with its arguments for its context
+,\(\xi_k@\tau\), on such a construction \((\corec
+   \vv{(\Gamma_k,y_k).g_k}@(\sigma_k\bullet\tau)@u)\), we are taking the case of
+this destructor. In this case, we are applying the corecursion to all
+recursive occurrences. \(\tau\) and \(u\) are substituted as in recursion.
+
+\chapter{Examples}
+\label{sec:orgff2417f}
+
+In this section, we reiterate the example types from the paper.  We use our
+syntax, which is defined in \ref{sec:org949bf11}.  We will also show some functions
+on these types.  On some of them, we will show the reduction steps in detail.
+
+\section{Terminal and Initial Object}
+\label{sec:orgd7679c2}
+
+The terminal object is a type that has exactly one value. In category
+theory, every object in the category has a unique morphism to it. We define
+it as a coinductive type $\mathtt{Terminal}$\;with no destructors. It gets
+a terminal and returns a terminal. To get a terminal value we use
+corecursion on the unit type, which is the first-class terminal object.
+\begin{lstlisting}
+codata Terminal : Set where
+terminal = corec Unit to Terminal where @ $\lozenge$
+\end{lstlisting}
+Contrary to the definition in the paper there is no destructor $\mathtt{Terminal}$.
+In the paper definitions of coinductive or inductive types need at least one
+de/constructor.  Therefore, our definition wouldn't work.
+
+The initial object is a type that has no values. In category theory it is
+the object which has a unique morphism to every other object in the category.
+We define it inductively as $\mathtt{Intial}$\;with no constructor. In the paper, it is
+defined with one constructor. This constructor want's one value of the same
+type. We can't have a value of this type, because to get one we already need
+one. Our way of defining it is shorter and more clear. We can't construct a
+value of this type because we have no constructors. If we could get something
+of type $\mathtt{Intial}$, we could generate with $\mathtt{exfalsum}$\;a value of arbitrary type
+$\mathtt{C}$.
+\begin{lstlisting}
+data Initial : Set where
+exfalsum$\langle$C : Set$\rangle$ = rec Initial to C where
+\end{lstlisting}
+
+
+
+\section{Natural Numbers and Extended Naturals}
+\label{sec:orgba3bc01}
+
+We use the approach of Peano to define natural numbers.  Therefore, we use
+the inductive type $\mathtt{Nat}$\;with the constructors $\mathtt{Zero}$\;and $\mathtt{Suc}$. $\mathtt{Zero}$\;is
+just the number zero. Every constructor has to have an argument, which can
+contain a recursive occurrence. Every Type $\mathtt{A}$\;is isomorphic to the
+function type $\mathtt{Terminal\;\rat\;A}$. So we use $\mathtt{Terminal}$\;for this occurrence.
+$\mathtt{Suc}$\;is the successor. So the meaning of $\mathtt{Suc\;n}$\;is \(n+1\).
+\begin{lstlisting}
+data Nat : Set where
+   Zero : Terminal $\rat$ Nat
+   Suc : Nat $\rat$ Nat
+zero = Zero @ $\lozenge$
+one = Suc @ zero
+\end{lstlisting}
+We can then define an identity recursion on it to see how reduction works.
+It's a recursion that goes from $\mathtt{Nat}$\;to $\mathtt{Nat}$\;and gives back in every
+case its input.
+\begin{lstlisting}
+id = rec Nat to Nat where
+       Zero u = Zero @ u
+       Succ n = Succ @ n
+\end{lstlisting}
+
+We use it on one to see all cases.
+\begin{lstlisting}
+id @ one = id @ (Succ @ zero)
+         $\succ$ Succ @ n[$\widehat{X}$(id @ x)/n] [zero]
+         = Succ @ $\widehat{X}$(id @ x) [zero]
+         = Succ @ (id @ x)[zero]
+         = Succ @ (id @ zero)
+         = Succ @ (id @ (Zero @ $\lozenge$))
+         $\succ$ Succ @ (Zero @ u[$\widehat{\text{Unit}}$(id @ x)/u][$\lozenge$])
+         = Succ @ (Zero @ u[$\widehat{\text{Unit}}$(id @ x)/u][$\lozenge$])
+         = Succ @ (Zero @ $\widehat{\text{Unit}}$(id @ x)[$\lozenge$])
+         = Succ @ (Zero @ x)[$\lozenge$]
+         = Succ @ (Zero @ x) = Succ @ zero = one
+\end{lstlisting}
+As expected the identity recursion applied to one gives back one.
+
+We will now define extended naturals. There are also called co-natural numbers.
+There are natural numbers with an additional value, infinity. We define it
+coinductively with the predecessor as its only destructor. The predecessor is
+either not defined or another natural number. We use the type $\mathtt{Maybe}$\;to
+describe something which is either present (the constructor $\mathtt{Just}$) or
+absent(the constructor $\mathtt{Nothing}$). We can define the successor as a
+corecursion. The predecessor of the successor of $\mathtt{x}$\;is just $\mathtt{x}$. So the only
+case of $\mathtt{corec}$\;returns a $\mathtt{Just\;x}$\;(remember $\mathtt{Prec}$\;returns a $\mathtt{Maybe\langle\;Conat\rangle}$
+not a $\mathtt{Conat}$).
+\begin{lstlisting}
+data Maybe$\langle$A : Set$\rangle$ : Set where
+  Nothing : Unit $\rat$ Maybe
+  Just : A $\rat$ Maybe
+nothing$\langle$A$\rangle$ = Nothing$\rangle$A$\rangle$ @ $\lozenge$
+codata Conat : Set where
+  Prec : Conat $\rat$ Maybe$\langle$Conat$\rangle$
+succ = corec Conat to Conat where
+         Prec x = Just$\langle$Conat$\rangle$ @ x
+\end{lstlisting}
+We now define the values zero and infinity.
+\begin{lstlisting}
+zero = (corec Unit to Conat where
+          {Prev x = nothing$\langle$Unit$\rangle$}) @ $\lozenge$
+infinity = (corec Unit to Conat where
+              {Prev x = Just$\langle$Conat$\rangle$ @ x}) @ $\lozenge$
+\end{lstlisting}
+For $\mathtt{zero}$\;the predecessor is absent, there is no predecessor of 0 in the
+natural numbers, so we give pack $\mathtt{Nothing}$.  We then have to apply the
+$\mathtt{corec}$\;to $\mathtt{\lozenge}$\;to get the value.  The predecessor of $\mathtt{infinity}$\;should also
+be $\mathtt{infinity}$.  We apply the $\mathtt{corec}$\;to another $\mathtt{Conat}$, so the $\mathtt{x}$\;is also a
+$\mathtt{Conat}$.  We will now see that the predecessor on these values gives back the
+right value.
+{\scriptsize
+\begin{flalign*}
+  \Prev \apply \zero &\succ \widehat{\Maybe\langle X\rangle} \left(\underbrace{
+     \begin{subarray}{l}
+       \corecT{\Unit}{\Conat}\\
+       \quad\{\;\Prev\; x = \nothing\langle\Unit\rangle\;\}
+     \end{subarray}}_{t_1}\apply x\right) [\nothing\langle\Unit\rangle/x][\lozenge]&\\
+              &= \recT{\Maybe\langle\Unit\rangle}{\Maybe\langle\Conat\rangle}&\\
+              &\quad\quad \{ \Nothing\; u = \Nothing\langle\Conat\rangle \apply \widehat{\Unit}(t_1,u)&\\
+              &\quad\quad  \;\Just\; c = \Just\langle\Conat\rangle \apply \widehat{X}(t_1,c)\} \apply x [\nothing\langle\Unit\rangle/x][\lozenge]&\\
+              &= \underbrace{\begin{subarray}{l}
+                \recT{\Maybe\langle\Unit\rangle}{\Maybe\langle\Conat\rangle} \\
+                \quad \{\; \Nothing\; u = \Nothing\langle\Conat\rangle \apply u \\
+                \quad \;\;\Just\; c = \Just\langle\Conat\rangle \apply t_1 \}
+               \end{subarray}}_{t_2} \apply \nothing\langle\Unit\rangle&\\
+              &\succ \Nothing\langle\Conat\rangle \apply u[\widehat{\Unit}(t_2 \apply x)/u][\lozenge]&\\
+              &= \Nothing\langle\Conat\rangle \apply u[x/u][\lozenge]&\\
+              &= \Nothing\langle\Conat\rangle \apply \lozenge&
+\end{flalign*}                     
+\begin{flalign*}
+  \Prev \apply \infinity &\succ \widehat{\Maybe\langle X\rangle} \left(\underbrace{
+     \begin{subarray}{l}
+       \corecT{\Unit}{\Conat}\\
+       \quad\{\; \Prev\; x = \Just\langle\Unit\rangle \apply x\; \}
+     \end{subarray}}_{t_1} \apply x \right) [\Just\langle\Unit\rangle\apply/x][\lozenge]&\\
+                  &= \recT{\Maybe\langle\Unit\rangle}{\Maybe\langle\Conat\rangle}&\\
+                  &\quad\quad \{\; \Nothing\; u = \Nothing\langle\Conat\rangle \apply \widehat{\Unit}(t_1,u)&\\
+                  &\quad\quad \;\;\Just\; c = \Just\langle\Conat\rangle \apply \widehat{X}(t_1,c)\;\} \apply x [\Just\langle\Unit\rangle\apply/x][\lozenge]&\\
+                  &= \underbrace{\begin{subarray}{l}
+                    \recT{\Maybe\langle\Unit\rangle}{\Maybe\langle\Conat\rangle} \\
+                    \quad \{\; \Nothing\; u = \Nothing\langle\Conat\rangle \apply u \\
+                    \quad \;\;\Just\; c = \Just\langle\Conat\rangle \apply t_1\; \}
+                   \end{subarray}}_{t_2} \apply \Just\langle\Unit\rangle\apply&\\
+                  &\succ \Just\langle\Conat\rangle \apply t_1[\widehat{\Unit}(t_2 \apply x)/x][\lozenge]&\\
+                  &= \Just\langle\Conat\rangle \apply t_1[x/x][\lozenge]&\\
+                  &= \Just\langle\Conat\rangle \apply \infinity&
+\end{flalign*}}
+
+\section{Binary Product and Coproduct}
+\label{sec:org2b9310e}
+
+The product is defined as a coinductive type.  It has two destructors. The
+first gives back the first element. And the second the second. To use this
+type, the types A and B have to be instantiated to concrete types. We don't
+have type polymorphism in our language. We also define a pair expression
+which generates a pair over corecursion.
+\begin{lstlisting}
+codata Product$\langle$A : Set, B : Set$\rangle$ : Set where
+   Fst : Product $\rat$ A
+   Snd : Product $\rat$ B
+pair$\langle$A : Set, B : Set$\rangle$ (x:A, y:B) = corec Unit where
+                                      { Fst u $\rat$ x
+                                      ; Snd u $\rat$ y} @ $\lozenge$
+\end{lstlisting}
+For types with other contexts, we have to define different product types.  For
+example, if $\mathtt{B}$\;depends on $\mathtt{Nat}$, we define the product like the following:
+\begin{lstlisting}
+codata Pair$\langle$A : Set, B : (n : Nat) $\rat$ Set$\rangle$ : (n : Nat) $\rat$ Set where
+  First : (n : Nat) $\rat$ Pair n $\rat$ A
+  Second : (n : Nat) $\rat$ Pair n $\rat$ B @ n
+\end{lstlisting}
+Here, the product also depends on $\mathtt{Nat}$. If $\mathtt{A}$\;or $\mathtt{B}$\;depends on values the
+product must also depend on these values. This is the product, which is used
+for the definition of vectors in \cite{basold2016type}.
+
+On $\mathtt{Product}$\;we can define the swap function.
+\begin{lstlisting}
+swap$\langle$A : Set, B : Set$\rangle$ =
+  corec Product$\langle$A,B$\rangle$ to Product$\langle$B,A$\rangle$ where
+         Fst x $\rat$ Snd x
+         Snd x $\rat$ Fst x
+\end{lstlisting}
+This is a well-typed function as shown by the following proof
+\begin{scprooftree}{0.95}
+\AxiomC{$(A : *, B : *)\mid\mid\vdash$ Product$\langle$A,B$\rangle$ : $*$}
+\AxiomC{$(A : *, B : *)\mid\mid(x:A) \vdash$ Snd @ x : Product$\langle$A,B$\rangle$ \circled{a}}
+ \noLine
+ \UnaryInfC{$(A : *, B : *)\mid\mid(y : B) \vdash$ Fst @ y : Product$\langle$A,B$\rangle$ \circled{b}}
+ \BinaryInfC{$(A : *, B : *)\mid\mid \vdash$ swap : (p : Product$\langle$A,B$\rangle$) $\rat$ Product$\langle$B,A$\rangle$}
+ \end{scprooftree}
+We show \circled{a} in the following proof.  \circled{b} works analog.
+\begin{prooftree}
+\AxiomC{$(A : *, B : *)\mid\mid(x : A) \vdash$ Snd : $(x : A) \rat$ Product$\langle$A,B$\rangle$}
+\AxiomC{$(x : A )(x)\rightsquigarrow A$}
+\UnaryInfC{$(x : A) \vdash x : A$}
+\BinaryInfC{$(A : *, B : *)\mid\mid(x : A) \vdash$ Snd @ x : Product$\langle$A,B$\rangle$}
+\end{prooftree}
+For brevity, we omitted the beta equality premises and the checking for of
+the parameters. The beta equality premises wouldn't be interesting because
+they all already syntactically identical.
+
+The Binary Coproduct corresponds to the $\mathtt{Either}$\;type in Haskell.  It is defined
+as an inductive type.  It is either $\mathtt{A}$\;or $\mathtt{B}$.  We have one constructor $\mathtt{Left}$
+for $\mathtt{A}$\;and one constructor Right for $\mathtt{B}$.
+\begin{lstlisting}
+data Coproduct$\langle$A,B$\rangle$ : Set where
+   Left : A $\rat$ Coproduct
+   Right : B $\rat$ Coproduct
+\end{lstlisting}
+
+\section{Sigma and Pi Type}
+\label{sec:org040750a}
+
+The sigma type is a dependent pair of two types.  The second type can depend on
+the value of the first type.  It corresponds to exists in logic.  We define
+it as an inductive type and call the constructor $\mathtt{Exists}$.
+\begin{lstlisting}
+data Sigma$\langle$A : Set,B : (x : A) $\rat$ Set$\rangle$ : Set where
+   Exists : (x:A) $\rat$ B x $\rat$ Sigma
+\end{lstlisting}
+
+The pi type is a generalization of the function type to dependent types.
+The type of the codomain or result of a function can depend on the value
+We define it as a coinductive type.  To destruct a function we just apply
+it to a value.  So the destructor is $\mathtt{Apply}$.
+
+\begin{lstlisting}
+codata Pi$\langle$A : Set,B : (x : A) $\rat$ Set$\rangle$ : Set where
+   Apply : (x : A) $\rat$ Pi x $\rat$ B
+\end{lstlisting}
+
+To construct a function we use corecursion on $\mathtt{Unit}$. The identity function
+is defined like this
+\begin{lstlisting}
+id$\langle$A : Set$\rangle$ = corec Unit to Pi$\langle$A,(v:A).A$\rangle$ where
+       { Apply v p = v } @ $\lozenge$
+\end{lstlisting}
+
+Evaluation on one goes as follows:
+
+\begin{lstlisting}
+apply = Apply$\langle$Nat,(v : Nat).Nat$\rangle$
+one = S @ (Z @ )
+apply @ id$\langle$Nat$\rangle$ @ one
+= apply @ one @ ((corec Unit to Pi$\langle$Nat,(x:Nat).Nat$\rangle$ where
+                    Apply v p = v ) @ $\lozenge$)
+$\succ \widehat{\text{Nat}} \left(\underbrace{
+   \begin{subarray}{c}
+     \text{corec Unit to Pi where} \\
+     \text{  \{Apply' v \_ = v\} @ x}
+   \end{subarray}}_t\right)$[v/x][one,$\lozenge$]
+= (rec Nat to Nat where
+     Zero x = Zero @ ($\widehat{\text{Unit}}$(t,x))
+     Succ x = Suc @ ($\widehat{Y}$(t,x)))@x[v/x][one,$\lozenge$]
+= (rec Nat to Nat where
+     Zero x = Zero @ ($\widehat{\text{Unit}}$(t))
+     Succ x = Suc @ x)@x[v/x][one,$\lozenge$]
+= (rec Nat to Nat where
+     Zero x = Zero @ ($\widehat{\text{Unit}}$())
+     Succ x = Suc @ x) @ x[v/x][one,$\lozenge$]
+= (rec Nat to Nat where
+     Zero x = Zero @ x
+     Succ x = Suc @ x) @ x[v/x][one,$\lozenge$]
+= (rec Nat to Nat where
+     Zero x = Zero @ x
+     Succ x = Suc @ x) @ v[one,$\lozenge$]
+= (rec Nat to Nat where
+     Zero x = Zero @ x
+     Succ x = Suc @ x) @ one
+= one
+\end{lstlisting}
+
+\section{Vectors and Streams}
+\label{sec:orgf756134}
+
+Vectors are a standard example for dependent types. They are like lists,
+except their type depends on their length. For example, a vector $\mathtt{[1;2]}$\;has
+type $\mathtt{Vector\langle\;Nat\rangle\;2}$, because its length is 2. It has 2
+constructors $\mathtt{Nil}$\;and $\mathtt{Cons}$\;like lists. $\mathtt{Nil}$\;gives back the empty vector.
+Because the length of the empty vector is zero its return type is $\mathtt{Vector\;0}$.
+The second constructor $\mathtt{Cons}$\;takes a natural number $\mathtt{k}$, a value of type $\mathtt{A}$
+and a vector of length $\mathtt{k}$, a $\mathtt{Vector\;k}$. It returns a new vector. Its head
+is the first argument and its tail the second. So the length of the result is one
+more than the second argument. Therefore, it is $\mathtt{Vector\;(Suc\;k)}$.  In
+\cite{basold2016type} the head and tail are encoded in a pair.
+
+\begin{lstlisting}
+data Vector$\langle$A : Set$\rangle$ : (n:Nat) $\rat$ Set where
+  Nil : Unit $\rat$ Vector zero
+  Cons : (k:Nat, v:A) $\rat$ Vector @ k $\rat$ Vector (Suc @ k)
+nil$\langle$A : Set$\rangle$ = Nil$\langle$A : Set$\rangle$ @ $\lozenge$
+\end{lstlisting}
+
+The function $\mathtt{extend}$\;takes a value $\mathtt{x}$\;and extends it to a vector.
+\begin{lstlisting}
+extend$\langle$A : Set$\rangle$ =
+  rec Vec$\langle$A$\rangle$ to ((x).Vec$\langle$ A$\rangle$ @ (Suc x) where
+    Nil u = Cons$\langle$A$\rangle$ @ x @ nil$\langle$A$\rangle$
+    Cons k v = Cons$\langle$A$\rangle$ @ (Suc @ k) @ v
+\end{lstlisting}
+The type checking of this function goes as follows:
+\begin{scprooftree}{0.75}
+\AxiomC{(A : Set)$\mid\mid\vdash$ (x).(Vec$\langle$A$\rangle$ @ (Suc @ x)) : (k: Nat) $\rat$ *}
+\noLine
+\UnaryInfC{(A: Set)$\mid\mid$(u : A) $\vdash$ Cons$\langle$A$\rangle$ @ 0 @ (Nil$\langle$A$\langle$ @ ) : (x).(Vec$\langle$A$\rangle$ @ (Suc @ x)) @ 0}
+\noLine
+\UnaryInfC{(k : Nat, v : (x).(Vec @ (Suc @ x)) @ k) $\vdash$ Cons$\rangle$A$\langle$ @ (Suc @ k) @ v : (x).(Vec @ (Suc @ x)) @ (Suc @ k)}
+\UnaryInfC{$\vdash$ extend$\langle$A$\rangle$ : (k:Nat,y : Vec$\langle$A$\rangle$ @ k) $\rat$ (x).(Vec$\langle$A$\rangle$ @ (Suc x)) @ k}
+\end{scprooftree}
+As an example, we evaluate a vector of length 1 with this function.  We choose length one
+to see all $\mathtt{rec}$\;cases.
+{\scriptsize
+\begin{flalign*}
+  &\extend\langle\Nat\rangle \apply 1 \apply (\Cons\langle\Nat\rangle \apply 0 \apply 0 \apply \nil\langle\Nat\rangle)&\\
+  &= \extend\langle\Nat\rangle\apply(\Suc \apply k \bullet 0) \apply (\Cons\langle\Nat\rangle \apply 0 \apply 0 \apply \nil\langle\Nat\rangle)&\\
+  &\succ \Cons\langle\Nat\rangle \apply (\Suc \apply k) \apply v \left[ \widehat{X\apply k}(\extend\langle\Nat\rangle \apply n \apply x)/v \right][0,\nil\langle\Nat\rangle]&\\
+  &= \Cons\langle\Nat\rangle \apply (\Suc \apply k) \apply v \left[ \widehat{X}(\extend\langle\Nat\rangle \apply n \apply x)[k/n]/v \right][0,\nil\langle\Nat\rangle]&\\
+  &= \Cons\langle\Nat\rangle \apply (\Suc \apply k) \apply v \left[ \extend \apply n \apply x[k/n]/v \right][0, \nil\langle\Nat\rangle]&\\
+  &= \Cons\langle\Nat\rangle \apply (\Suc \apply k) \apply v \left[ \extend \apply k \apply x/v \right][0, \nil\langle\Nat\rangle]&\\
+  &= \Cons\langle\Nat\rangle \apply (\Suc \apply k) \apply (\extend \apply k \apply x) [0,\nil\langle\Nat\rangle]&\\
+  &= \Cons\langle\Nat\rangle \apply (\Suc \apply 0) \apply (\extend \apply 0 \apply (\nil\langle\Nat\rangle))&\\
+  &= \Cons\langle\Nat\rangle \apply 1 \apply (\extend \apply 0 \apply (\Nil\langle\Nat\rangle \apply ))&\\
+  &\succ \Cons\langle\Nat\rangle \apply 1 \apply (\Cons\langle\Nat\rangle \apply 0 \apply (\Nil\langle\Nat\rangle \apply ))\left[ \widehat{\Unit}(\extend \apply k \apply x) / u  \right][\lozenge]&\\
+  &= \Cons\langle\Nat\rangle \apply 1 \apply (\Cons\langle\Nat\rangle \apply 0 \apply (\Nil\langle\Nat\rangle \apply x))[\lozenge]&\\
+  &= \Cons\langle\Nat\rangle \apply 1 \apply (\Cons\langle\Nat\rangle \apply 0 \apply (\Nil\langle\Nat\rangle \apply ))&
+\end{flalign*}}
+Here, we write \(1\) for $\mathtt{Suc\;@\;(Zero\;@\;)}$\;and \(0\) for $\mathtt{Zero\;@\;\lozenge}$.
+
+With the help of extended naturals, we can define partial streams. Those are
+streams that depend on their definition depth. Like non-dependent streams,
+they are coinductive and have 2 destructors for head and tail.
+\begin{lstlisting}
+codata PStr$\langle$A : Set$\rangle$: (n: ExNat) $\rat$ Set where
+   hd : (k : ExNat) $\rat$ PStr$\langle$A$\rangle$ (succE k) $\rat$ A
+   tl : (k : ExNat) $\rat$ PStr$\langle$A$\rangle$ (succE k) $\rat$ PStr$\langle$A$\rangle$ @ k
+\end{lstlisting}
+These streams are like vectors except they also can be infinite long. This is
+in contrary to non-dependent streams.  A non-dependent stream could not be of
+length zero.  Because then a call of $\mathtt{hd}$\;and $\mathtt{tl}$\;on it wouldn't be defined.  In the
+dependent case, the type checker wouldn't allow such a call because $\mathtt{hd}$\;and
+$\mathtt{tl}$\;expect streams which are at least of length one.  We can then define
+$\mathtt{repeat}$.
+\begin{lstlisting}
+repeat$\langle$A : Set$\rangle$(x : A, n : Conat) =
+  corec (n : Conat).Unit to PStr$\langle$A$\rangle$ where
+    { Hd k s = x
+    ; Tl k s = $\lozenge$ } @ n @ $\lozenge$
+\end{lstlisting}
+This function gets a value and an extended natural number. It generates a
+constant partial stream of that value with the number as its length.
+
+
+\chapter{Conclusion}
+\label{sec:org16f2935}
+We have implemented a dependent type theory with inductive and coinductive types.
+In this theory, contrary to Coq and Agda, coinductive types can also depend on
+values. Contrary to the theory of the paper we can define schemata like
+$\mathtt{Maybe\langle\;A\;:\;Set\rangle}$\;\linebreak where $\mathtt{A}$\;can be an arbitrary type
+of kind $\mathtt{Set}$.
+
+One downside is that we don't have universes. This prevents type polymorphism.
+Further work needs to be done to solve this. Another problem is, that each
+constructor or destructor has at least one argument. The argument with the
+recursive occurrence. For example, we have to apply a unit to the constructors
+of a boolean type. We could allow recursive occurrences in the contexts of the
+constructors and destructors. This makes it possible to remove the argument
+with the recursive occurrence. Then we have to change the evaluation rules.
+
+Our system allowed us to define the (depended) function type. Therefore, we
+don't have it as a primitive expression. We are hopeful, that in the future we
+get a more mainstream language, like Coq or Agda, where the dependet function
+is definable. As already mentioned in the introduction this would lead to a
+symmetrical language.
+
+\appendix
+
+\chapter{Type action proof}
+\label{sec:org5142527}
+
+\begin{theorem}
+\((\Gamma).A@\id{\Gamma}\leftrightarrow_T A\)
+\label{abstrid}
+\end{theorem}
+\begin{proof}
+We show this by induction on the length of \(\Gamma\)
+\begin{itemize}
+\item \(\Gamma=\epsilon\):
+\begin{equation*}
+   A \longleftrightarrow_T A
+\end{equation*}
+\item \(\Gamma=x:B,\Gamma'\):
+\begin{equation*}
+  (x:B,\Gamma').A@x@\id{\Gamma'}
+  \longrightarrow_p(\Gamma').A@\id{\Gamma'}[x/x]
+  = (\Gamma').A@\id{\Gamma'} \overset{IdH.}{\longleftrightarrow_T}A
+\end{equation*}
+\end{itemize}
+\end{proof}
+\begin{theorem}
+The following rule holds
+\begin{prooftree}
+\AxiomC{$x:A\vdash t:B$}
+\AxiomC{$A\longleftrightarrow_TA'$}
+\BinaryInfC{$x:A'\vdash t:B$}
+\end{prooftree}
+\label{ctxconv}
+\end{theorem}
+\begin{proof}
+We show this by induction on t
+\end{proof}
+\begin{theorem}
+The typing rule (5) in the paper holds
+\begin{prooftree}
+  \AxiomC{$X:\Gamma_1\rat*\mid\Gamma'\vdash C:\Gamma\rat*$}
+  \AxiomC{$\Gamma_1,x:A\vdash t:B$}
+  \BinaryInfC{$\Gamma',\Gamma,x:\widehat{C}(A)\vdash\widehat{C}(t):\widehat{C}(B) $}
+\end{prooftree}
+\end{theorem}
+\begin{proof}
+First we will generalize the rule to
+\begin{prooftree}
+  \AxiomC{$X_1:\Gamma_1\rat*,\dots,X_n:\Gamma_n\rat*\mid\Gamma'\vdash C:\Gamma\rat*$}
+  \AxiomC{$\Gamma_i,x:A_i\vdash t_i:B_i$}
+  \BinaryInfC{$\Gamma',\Gamma,x:\widehat{C}(\vv{A})\vdash\widehat{C}(\vv{t}):\widehat{C}(\vv{B}) $}
+\end{prooftree}
+Then, we gonna show it by Induction on the derivation \(\mathcal{D}\) of \(C\)
+\begin{itemize}
+\item $\mathcal{D}$ =
+  \AxiomC{}
+  \topI{$\vdash\top:*$}
+  \DisplayProof
+
+Then, the type actions got calculated as follows
+\begin{align*}
+  &\widehat{\top}(\vv{A}) = \widehat{\top}() = \top\\
+  &\widehat{\top}(\vv{t}) = \widehat{\top}() = x\\
+  &\widehat{\top}(\vv{B}) = \widehat{\top}() = \top
+\end{align*}
+We than got the following prooftree
+\begin{prooftree}
+  \AxiomC{$\vdash\top:*$}
+  \RightLabel{\textbf{(Proj)}}
+  \UnaryInfC{$x:\top\vdash x:\top$}
+\end{prooftree}
+\item $\mathcal{D}$ =
+  \Di{1}
+  \UnaryInfC{$X_1:\Gamma_1\rat*,\dots,X_{n-1}:\Gamma_{n-1}$\TyCtx}
+  \Di{2}
+  \UnaryInfC{$\Gamma_n$\Ctx}
+  \TyVarI{$X_1:\Gamma_1\rat*,\dots,X_n:\Gamma_n\rat*\mid\emptyset\vdash X_n:\Gamma_n\rat*$}
+  \DisplayProof
+
+Again we calculate the type actions
+\begin{align*}
+  &\widehat{X_n}(\vv{A}) = X_n[\vv{(\Gamma_i).A}/\vv{X}]@\id{\Gamma_n}= X_n[(\Gamma_n).A_n/X_n]@\id{\Gamma_n} = (\Gamma_n).A_n@\id{\Gamma_n}\\
+  &\widehat{X_n}(\vv{t}) = t_n\\
+  &\widehat{X_n}(\vv{B}) = X_n[\vv{(\Gamma_i).B}/\vv{X}]@\id{\Gamma_n}= X_n[(\Gamma_n).B_n/X_n]@\id{\Gamma_n} = (\Gamma_n).B_n@\id{\Gamma_n}\\
+\end{align*}
+We know from the first premise that \(\Gamma=\Gamma_n\) and \(\Gamma'=\emptyset\)
+
+Here, we got the prooftree
+\begin{scprooftree}{0.9}
+\AxiomC{$\Gamma_n,x:A\vdash t:B$}
+\AxiomC{}
+\RightLabel{Thrm. \ref{abstrid}}
+\UnaryInfC{$A\longleftrightarrow_T(\Gamma_n).A@\id{\Gamma_n}$}
+\RightLabel{Thrm. \ref{ctxconv}}
+\BinaryInfC{$\Gamma_n,x:(\Gamma_n).A@\id{\Gamma_n}\vdash t:B$}
+\AxiomC{}
+\RightLabel{Thrm. \ref{abstrid}}
+\UnaryInfC{$B\longleftrightarrow_T(\Gamma_n).B@\id{\Gamma_n}$}
+\RightLabel{Conv}
+\BinaryInfC{$\Gamma_n,x:(\Gamma_n).A@\id{\Gamma_n}\vdash t_n:(\Gamma_n).B@\id{\Gamma_1}$}
+\end{scprooftree}
+
+\item $\mathcal{D}$ =
+  \Di{1}
+  \UnaryInfC{$X_1:\Gamma_1\rat*,\dots,X_n:\Gamma_n\mid\Gamma'\vdash C:\Gamma\rat*$}
+  \Di{2}
+  \UnaryInfC{$\Gamma_n$\Ctx}
+  \TyVarWeak{$X_1:\Gamma_1\rat*,\dots,X_{n+1}:\Gamma_{n+1}\rat*\mid\Gamma'\vdash C:\Gamma\rat*$}
+  \DisplayProof
+
+Here, we got the prooftree
+\begin{prooftree}
+  \AxiomC{$X_1:\Gamma_1\rat*,\dots,X_{n+1}:\Gamma_{n+1}\rat*\mid\Gamma'\vdash C:\Gamma\rat*$}
+  \RightLabel{(*)}
+  \UnaryInfC{$X_1:\Gamma_1\rat*,\dots,X_n:\Gamma_n\rat*\mid\Gamma'\vdash C:\Gamma\rat*$}
+  \AxiomC{$\Gamma_i,x:A_i\vdash t_i:B_i$}
+  \RightLabel{IdH.}
+  \BinaryInfC{$\Gamma',\Gamma,x:\underbrace{\widehat{C}(\vv{A})}_{\overset{(**)}{=}\widehat{C}(\vv{A},A_{n+1})}\vdash\underbrace{\widehat{C}(\vv{t})}_{\overset{(***)}{=}\widehat{C}(\vv{t},t_{n+1})}:\underbrace{\widehat{C}(\vv{B})}_{\overset{(**)}{=}\widehat{C}(\vv{B},B_{n+1})} $}
+\end{prooftree}
+
+(\texttt{*}) Here, we undo \textbf{(TyVar-Weak)}
+
+(\texttt{**}) \(X_{n+1}\) doesn't occur free in C, otherwise \(\mathcal{D}_1\) wouldn't be possible
+
+(\texttt{***}) Case for \textbf{(TyVar-Weak)} of type actions on terms
+
+\item $\mathcal{D}$ =
+  \begin{scprooftree}{0.8}
+  \Di{1}
+  \UnaryInfC{$X_1:\Gamma_1\rat*,\dots,X_n:\Gamma_n\mid\Gamma'\vdash C:\Gamma\rat*$}
+  \Di{2}
+  \UnaryInfC{$X_1:\Gamma_1\rat*,\dots,X_n:\Gamma_n\mid\Gamma'\vdash D:*$}
+  \TyWeak{$X_1:\Gamma_1\rat*,\dots,X_n:\Gamma_n\rat*\mid\Gamma',y:D\vdash C:\Gamma\rat*$}
+  \end{scprooftree}
+
+Here, we got the prooftree
+\begin{scprooftree}{0.6}
+  \AxiomC{$X_1:\Gamma_1\rat*,\dots,X_n:\Gamma_n\rat*\mid\Gamma',y:D\vdash C:\Gamma\rat*$}
+  \RightLabel{(*)}
+  \UnaryInfC{$X_1:\Gamma_1\rat*,\dots,X_n:\Gamma_n\rat*\mid\Gamma'\vdash C:\Gamma\rat*$}
+  \AxiomC{$\Gamma_i,x:A_i\vdash t_i:B_i$}
+  \RightLabel{IdH.}
+  \BinaryInfC{$\Gamma',\Gamma,x:\widehat{C}(\vv{A})\vdash\widehat{C}(\vv{t}):\widehat{C}(\vv{B})$}
+  \AxiomC{$X_1:\Gamma_1\rat*,\dots,X_n:\Gamma_n\mid\Gamma'\vdash D:*$}
+  \TermWeak{$\Gamma',\Gamma,x:\widehat{C}(\vv{A})y\vdash\widehat{C}(\vv{t}):\widehat{C}(\vv{B})$}
+\end{scprooftree}
+
+(\texttt{*}) Here, we undo \textbf{(Ty-Weak)}
+
+\item $\mathcal{D}= $
+\AxiomC{$X_1:\Gamma_1,\ldots,X_n:\Gamma_n\mid\Gamma'\vdash C':(y:D,\Gamma)\rat* $}
+\AxiomC{$\Gamma'\vdash s: D$}
+\TyInst{$X_1:\Gamma_1,\ldots,X_n:\Gamma_n\mid\Gamma'\vdash C'@s:\Gamma\rat* $}
+\DisplayProof
+
+Then, we got the following induction hypothesis
+\begin{prooftree}
+  \AxiomC{$X_1:\Gamma_1\rat*,\dots,X_n:\Gamma_n\rat*\mid\Gamma'\vdash C':(y:D,\Gamma)\rat*$}
+  \AxiomC{$\Gamma_i,x:A_i\vdash t_i:B_i$}
+  \BinaryInfC{$\Gamma',y:D,\Gamma,x:\widehat{C'}(\vv{A})\vdash\widehat{C'}(\vv{t}):\widehat{C'}(\vv{B}) $}
+\end{prooftree}
+
+Calculated type actions:
+\begin{align*}
+  &\widehat{C'@s}(\vv{A})=C'@s[\vv{(\Gamma_i).A}/\vv{X}]@\id{\Gamma}=C'[\vv{(\Gamma_i).A}/\vv{X}]@s@\id{\Gamma}
+  =\widehat{C'}(\vv{A})[s/y]\\
+  &\widehat{C'@s}(\vv{t})=\widehat{C'}(\vv{t})[s/y]\\
+  &\widehat{C'@s}(\vv{B})=C'@s[\vv{(\Gamma_i).B}/\vv{X}]@\id{\Gamma}=C'[\vv{(\Gamma_i).B}/\vv{X}]@s@\id{\Gamma}
+  =\widehat{C'}(\vv{B})[s/y]\\
+\end{align*}
+
+We then got the following prooftree
+\begin{scprooftree}{0.95}
+  \AxiomC{$X_1:\Gamma_1\rat*,\dots,X_n\rat*\mid\Gamma_2'\vdash C'@s:\Gamma_2[s/y]\rat*$}
+  \RightLabel{(*)}
+  \UnaryInfC{$X_1:\Gamma_1\rat*,\dots,X_n:\Gamma_n\rat*\mid\Gamma_2'\vdash C':(y:D,\Gamma_2)\rat*$}
+  \AxiomC{$\Gamma_i,x:A_i\vdash t_i:B_i$}
+  \RightLabel{IdH.}
+  \BinaryInfC{$\Gamma_2',y:D,\Gamma_2,x:\widehat{C'}(\vv{A})\vdash\widehat{C'}(\vv{t}):\widehat{C'}(\vv{B}) $}
+  \UnaryInfC{$\Gamma_2',\Gamma_2[s/y],x:\widehat{C'}(\vv{A})[s/y]\vdash\widehat{C'}(\vv{t})[s/y]:\widehat{C'}(\vv{B})[s/y] $}
+\end{scprooftree}
+(\texttt{*}) This is the reverse of \textbf{(Ty-Inst)}.
+
+\item $\mathcal{D}= $
+\AxiomC{$X_1:\Gamma_1,\ldots,X_n:\Gamma_n\mid\Gamma',y:D\vdash C':\Gamma\rat* $}
+\ParamAbstr{$X_1:\Gamma_1,\ldots,X_n:\Gamma_n\mid\Gamma'\vdash (y).C':(y:D,\Gamma)\rat* $}
+\DisplayProof
+
+Calculated type actions:
+\begin{align*}
+  \widehat{(y).C'}(\vv{A})&=(y).C'[\vv{(\Gamma_i.A)}/\vv{X}]@\id{\Gamma}\\
+                     &=(y).(C'[\vv{(\Gamma_i.A)}/\vv{X}])@y@\id{\Gamma}\\
+                     &\longleftrightarrow_T(C'[\vv{(\Gamma_i.A)}/\vv{X}])@\id{\Gamma}\\
+                     &=\widehat{C'}(\vv{A})\\
+  \widehat{(y).C'}(\vv{t})&=\widehat{C'}(\vv{t})\\
+  \widehat{(y).C'}(\vv{B})&=(y).C'[\vv{(\Gamma_i.B)}/\vv{X}]@\id{\Gamma}\\
+                     &=(y).(C'[\vv{(\Gamma_i.B)}/\vv{X}])@y@\id{\Gamma}\\
+                     &\longleftrightarrow_T(C'[\vv{(\Gamma_i.B)}/\vv{X}])@\id{\Gamma}\\
+                     &=\widehat{C'}(\vv{B})\\
+\end{align*}
+
+The prooftree then becomes the following
+\begin{scprooftree}{0.95}
+  \AxiomC{$X_1:\Gamma_1\rat*,\dots,X_n:\Gamma_n\rat*\mid\Gamma'\vdash (y).C':(y:D,\Gamma)\rat*$}
+  \RightLabel{(*)}
+  \UnaryInfC{$X_1:\Gamma_1\rat*,\dots,X_n:\Gamma_n\rat*\mid y:D,\Gamma'\vdash C':\Gamma\rat*$}
+  \AxiomC{$\Gamma_i,x:A_i\vdash t_i:B_i$}
+  \RightLabel{IdH.}
+  \BinaryInfC{$y:D,\Gamma',\Gamma,x:\widehat{C'}(\vv{A})\vdash\widehat{C'}(\vv{t}):\widehat{C'}(\vv{B})$}
+\end{scprooftree}
+(\texttt{*}) This is the reverse of \textbf{(Param-Abstr)}.
+
+\item \(\mathcal{D}\) =
+\begin{prooftree}
+    \Di{1}
+    \UnaryInfC{$\sigma_k:\Delta_k\triangleright\Gamma$}
+    \Di{2}
+    \UnaryInfC{$X_1:\Gamma_1\rat*,\dots,X_n\rat*,X:\Gamma\rat*\mid\Delta_k\vdash D_k:*$}
+    \FPTy
+    \BinaryInfC{$X_1:\Gamma_1\rat*,\dots,X_{n}\rat*\mid\emptyset\vdash\mu(Y:\Gamma\rat*;\vv{\sigma};\vv{D}):\Gamma\rat*$}
+\end{prooftree}
+From this we know \(\Gamma'=\emptyset\)
+
+Calculated type actions:
+\begin{align*}
+  &\widehat{\mu(Y:\Gamma\rat*;\vv{\sigma};\vv{D})}(\vv{A})\\
+  &=\mu(Y:\Gamma\rat*;\vv{\sigma};\vv{D})[\vv{(\Gamma_i).A}/\vv{X}]@\id{\Gamma}\\
+  &=\mu(Y:\Gamma\rat*;\vv{\sigma};\vv{D}[\vv{(\Gamma_i).A}/\vv{X}])@\id{\Gamma}\\
+  &\widehat{\mu(Y:\Gamma\rat*;\vv{\sigma};\vv{D})}(\vv{t})\\
+  &=\text{rec}^{\mu(Y:\Gamma\rat*;\vv{\sigma};\vv{D}[\vv{(\Gamma_i).A}/\vv{X}])}\vv{(\Delta_k,x).\alpha_k@\id{\Delta_k}@\widehat{D_k}(\vv{t},x)}@\id{\Gamma}@x\\
+  &\widehat{\mu(Y:\Gamma\rat*;\vv{\sigma};\vv{D})}(\vv{B})\\
+  &=\mu(Y:\Gamma\rat*;\vv{\sigma};\vv{D})[\vv{(\Gamma_i).B}/\vv{X}]@\id{\Gamma}\\
+  &=\mu(Y:\Gamma\rat*;\vv{\sigma};\vv{D}[\vv{(\Gamma_i).B}/\vv{X}])@\id{\Gamma}
+\end{align*}
+
+From the assumptions
+\begin{align*}
+&X_1:\Gamma_1\rat*,\dots,X_n:\Gamma_n\rat*\mid\emptyset\vdash \mu(Y:\Gamma\rat*;\vv{\sigma};\vv{D}):\Gamma\rat*\\
+&\Gamma_i,x:A_i\vdash t_i:B_i
+\end{align*}
+We have to proof that in \textbf{Ctx}
+\begin{equation*}
+ \Gamma,x:\mu(Y:\Gamma\rat*;\vv{\sigma};\vv{D}[\vv{(\Gamma_i).A}/\vv{B}])@\id{\Gamma}
+\end{equation*}
+the expression
+\begin{equation*}
+ \text{rec}^{\mu(Y:\Gamma\rat*;\vv{\sigma};\vv{D}[\vv{(\Gamma_i).A}/\vv{X}])}\vv{(\Delta_k,y).\alpha_k@\id{\Delta_k}@\widehat{D_k}(t,y)}@\id{\Gamma}@x
+\end{equation*}
+has type
+\begin{equation*}
+\mu(Y:\Gamma\rat*;\vv{\sigma};\vv{D}[\vv{(\Gamma_i).B}/\vv{X}])@\id{\Gamma}
+\end{equation*}
+We can use the induction hypothesis
+\begin{prooftree}
+  \AxiomC{$X_1:\Gamma_1\rat*,\dots,X_n:\Gamma_n\rat*,Y:\Gamma_{n+1}\rat*\mid\Delta_k\vdash D_k:*$}
+  \AxiomC{$\Gamma_i,x:A_i\vdash t_i:B_i$}
+  \BinaryInfC{$\Delta_k,x:\widehat{D_k}(\vv{A},A_{n+1})\vdash\widehat{D_k}(\vv{t},y):\widehat{D_k}(\vv{B},B_{n+1}) $}
+\end{prooftree}
+See \ref{sec:prc} for a proof of it.
+
+\item \(\mathcal{D}\) =
+\begin{prooftree}
+    \Di{1}
+    \UnaryInfC{$\sigma_k:\Delta_k\triangleright\Gamma$}
+    \Di{2}
+    \UnaryInfC{$X_1:\Gamma_1\rat*,\dots,X_n\rat*,X:\Gamma\rat*\mid\Delta_k\vdash D_k:*$}
+    \FPTy
+    \BinaryInfC{$X_1:\Gamma_1\rat*,\dots,X_{n}\rat*\mid\emptyset\vdash\nu(Y:\Gamma\rat*;\vv{\sigma};\vv{D}):\Gamma\rat*$}
+\end{prooftree}
+From this we know \(\Gamma'=\emptyset\).
+
+Calculated type actions:
+\begin{align*}
+  &\widehat{\nu(Y:\Gamma\rat*;\vv{\sigma};\vv{D})}(\vv{A})\\
+  &=\nu(Y:\Gamma\rat*;\vv{\sigma};\vv{D})[\vv{(\Gamma_i).A}/\vv{X}]@\id{\Gamma}\\
+  &=\nu(Y:\Gamma\rat*;\vv{\sigma};\vv{D}[\vv{(\Gamma_i).A}/\vv{X}])@\id{\Gamma}\\
+  &\widehat{\nu(Y:\Gamma\rat*;\vv{\sigma};\vv{D})}(\vv{t})\\
+  &=\text{corec}^{\nu(Y:\Gamma\rat*;\vv{\sigma};\vv{D}[(\vv{\Gamma_i).B}/\vv{X}])}\vv{(\Delta_k,x)\widehat{D_k}(\vv{t},x)[(\xi_k@\id{\Delta_k}@x)/x]}@\id{\Gamma}@x\\
+  &\widehat{\nu(Y:\Gamma\rat*;\vv{\sigma};\vv{D})}(\vv{B})\\
+  &=\nu(Y:\Gamma\rat*;\vv{\sigma};\vv{D})[\vv{(\Gamma_i).B}/\vv{X}]@\id{\Gamma}\\
+  &=\nu(Y:\Gamma\rat*;\vv{\sigma};\vv{D}[\vv{(\Gamma_i).B}/\vv{X}])@\id{\Gamma}
+\end{align*}
+
+From the assumptions
+\begin{align*}
+&X_1:\Gamma_1\rat*,\dots,X_n:\Gamma_n\rat*\mid\emptyset\vdash \nu(Y:\Gamma\rat*;\vv{\sigma};\vv{D}):\Gamma\rat*\\
+&\Gamma_i,x:A_i\vdash t_i:B_i
+\end{align*}
+We have to proof that in \textbf{Ctx}
+\begin{equation*}
+ \Gamma,x:\nu(Y:\Gamma\rat*;\vv{\sigma};\vv{D}[(\Gamma_1).A/X])@\id{\Gamma}
+\end{equation*}
+the expression
+\begin{equation*}
+ \text{corec}^{\nu(Y:\Gamma\rat*;\vv{\sigma};\vv{D}[(\vv{\Gamma_i).B}/\vv{X}])}\vv{(\Delta_k,x)\widehat{D_k}(\vv{t},x)[(\xi_k@\id{\Delta_k}@x)/x]}@\id{\Gamma}@x\\
+\end{equation*}
+has type
+\begin{equation*}
+\nu(Y:\Gamma\rat*;\vv{\sigma};\vv{D}[\vv{(\Gamma_i).B}/\vv{X}])@\id{\Gamma}
+\end{equation*}
+We can use the induction hypothesis
+\begin{prooftree}
+  \AxiomC{$X_1:\Gamma_1\rat*,\dots,X_n:\Gamma_n\rat*,Y:\Gamma_{n+1}\rat*\mid\Delta_k\vdash D_k:*$}
+  \AxiomC{$\Gamma_i,y_k:A_i\vdash t_i:B_i$}
+  \BinaryInfC{$\Delta_k,y_k:\widehat{D_k}(\vv{A},A_{n+1})\vdash\widehat{D_k}(\vv{t},y):\widehat{D_k}(\vv{B},B_{n+1}) $}
+\end{prooftree}
+See \ref{sec:prc} for this proof.
+\end{itemize}
+\end{proof}
+
+  \begin{landscape}
+  \section{Proofs for recursion and corecursion}
+  \label{sec:prc}
+\begin{prooftree}
+   \AxiomC{$\Gamma_1\vdash\sigma:\Gamma_2$}
+   \AxiomC{$\Gamma_3\vdash\tau:\Gamma_1$}
+   \RightLabel{($*$)}
+   \BinaryInfC{$\Gamma_3\vdash\sigma\circ\tau:\Gamma_2$}
+\end{prooftree}
+      \begin{prooftree}
+      \D
+      \UnaryInfC{$\Delta,\Gamma_k,y_k:A_k[C/X]\vdash g_k:C@\sigma_k$}
+      \RightLabel{TyAct}
+      \UnaryInfC{$\Delta,\Gamma_k,x:A_k[\mu/X]\vdash g_k[\widehat{A_k}(\rec^\mu\overline{(\Gamma_k,y_k).g_k}@\id{\Gamma}@x/y_k]$}
+      \D
+      \UnaryInfC{$\Delta\vdash\tau:\Gamma_k$}
+      \D
+      \UnaryInfC{$\Delta\vdash u:A_k[\mu/X]$}
+      \TrinaryInfC{$\Delta\vdash g_k[\widehat{A_k}(\rec^\mu\overline{(\Gamma_k,y_k).g_k}@\id{\Gamma}@x)/y_k][\tau,u]:C@\sigma_k$}
+    \end{prooftree}
+  \begin{scprooftree}{0.7}
+    \D
+    \UnaryInfC{$\Delta,\Gamma_k,y_k:\Delta_k[C/X]\vdash g_k: C@\sigma_k$}
+    \IndE
+    \UnaryInfC{$\Delta\vdash\rec^\mu\overline{(\Gamma_k,y_k).g_k}:(\Gamma,x:\mu@\sigma_k)\rat C@\sigma_k$}
+    \D
+    \UnaryInfC{$\Gamma_k\vdash\sigma_k:\Gamma$}
+    \D
+    \UnaryInfC{$\Delta\vdash\tau:\Gamma_k$}
+    \RightLabel{($*$)}
+    \BinaryInfC{$\Delta\vdash\sigma_k\circ\tau:\Gamma$}
+    \Inst{$\Delta\vdash(rec^\mu\overline{(\Gamma_k,y_k).g_k}@(\sigma_k\circ\tau)):(x:\mu@\sigma_k)\rat C@\sigma_k$}
+    \AxiomC{}
+    \IndI{$\Delta\vdash\alpha_k^\mu:(\Gamma_k,y:A_k[\mu/X])\rat\mu@\sigma_k$}
+    \D
+    \UnaryInfC{$\Delta\vdash\tau:\Gamma_k$}
+    \Inst{$\Delta\vdash\alpha_k^\mu @\tau: (y:A_k[\mu/X])\rat\mu@\sigma_k$}
+    \D
+    \UnaryInfC{$\Delta\vdash u:A_k[\mu/X])$}
+    \Inst{$\Delta\vdash\alpha_k^\mu @\tau@u:\mu@\sigma_k$}
+    \Inst{$\Delta\vdash(\rec^\mu\overline{(\Gamma_k,y_k).g_k}@(\sigma_k\circ\tau))@(\alpha_k^\mu @\tau@u):C@\sigma_k$}
+  \end{scprooftree}
+  \begin{scprooftree}{0.48}
+    \AxiomC{$\vdash\overbrace{\mu[\overline{(\Gamma_k).A_k}/\overline{X_k}]}^C:\Gamma\rat*$}
+    \AxiomC{}
+    \IndI{$\Gamma,x:\mu[\overline{(\Gamma_k).A_k}/\overline{X_k}]@\id{\Gamma},\Delta_k,y_k:A_k[\mu[\overline{(\Gamma_k).B_k}/\overline{X_k}]/X]\vdash\alpha_k^{\mu[\overline{(\Gamma_k).B_k}/\overline{X_k}]}:(\Delta_k,y_k:A_k[\overline{(\Gamma_k).B_k}/\overline{X_k}])\rat\mu[\overline{(\Gamma_k).B_k}/\overline{X_k}]@\sigma_k$}
+    \AxiomC{$\Gamma,x:\mu[\overline{(\Gamma_k).A_k}/\overline{X_k}]@\id{\Gamma},\Delta_k,y_k:\overbrace{A_k[\mu[\overline{(\Gamma_k).B_k}/\overline{X_k}]/X]}^{=\widehat{A_k}(\overline{B},?)}\vdash\widehat{A_k}(\overline{t},y_k):\overbrace{A_k[\mu[\overline{(\Gamma_k).B_k}/\overline{X_k}]/X]}^{=\widehat{A_k}(\overline{B},?)}$}
+    \Inst{$\Gamma,x:\mu[\overline{(\Gamma_k).A_k}/\overline{X_k}]@\id{\Gamma},\Delta_k,y_k:A_k[\mu[\overline{(\Gamma_k).B_k}/\overline{X_k}]/X]\vdash\alpha_k^{\mu[\overline{(\Gamma_k).B_k}/\overline{X_k}]}@\id{\Delta_k}@\widehat{A_k}(\overline{t},y_k):\mu[\overline{(\Gamma_k).B_k}/\overline{X_k}]@\sigma_k$}
+    \IndE
+    \BinaryInfC{$\Gamma,x:\mu[\overline{(\Gamma_k).A_k}/\overline{X_k}]@\id{\Gamma}\vdash\rec^{\mu[\overline{(\Gamma_k).A_k}/\overline{X_k}]}\overline{(\Delta_k,y_k).\alpha_k^{\mu[\overline{(\Gamma_k).B_k}/\overline{X_k}]}@\id{\Delta_k}@\widehat{A_k}(\overline{t},y_k)}:(\Gamma,x:\mu[\overline{(\Gamma_k).A_k}/\overline{X_k}]@\id{\Gamma})\rat\mu[\overline{(\Gamma_k).B_k}/\overline{X_k}]@\id{\Gamma}$}
+    \AxiomC{$\ldots$}
+    \Inst{$\Gamma,x:\mu[\overline{(\Gamma_k).A_k}/\overline{X_k}]@\id{\Gamma}\vdash\rec^{\mu[\overline{(\Gamma_k).A_k}/\overline{X_k}]}\overline{(\Delta_k,y_k).\alpha_k^{\mu[\overline{(\Gamma_k).B_k}/\overline{X_k}]}@\id{\Delta_k}@\widehat{A_k}(\overline{t},y_k)}@\id{\Gamma}@x:\mu[\overline{(\Gamma_k).B_k}/\overline{X_k}]@\id{\Gamma}$}
+  \end{scprooftree}
+  \begin{scprooftree}{0.78}
+    \AxiomC{$\vdash\overbrace{\nu[\overline{(\Gamma_k).A_k}/\overline{X_k}]}^C:\Gamma\rat*$}
+    \AxiomC{$\Gamma,x:\nu[\overline{(\Gamma_k).A_k}/\overline{X_k}]@\id{\Gamma},\Delta_k,y_k:\nu[\overline{(\Gamma_k).A_k}/\overline{X_k}]@\sigma_k\vdash\widehat{A_k}(\overline{t},y_k)[(\xi_k^{\nu[\overline{(\Gamma_k).A_k}/\overline{X_k}]}@\id{\Delta_k}@y_k)/y_k]:A_k[\nu[\overline{(\Gamma_k).A_k}/\overline{X_k}]/X]$}
+    \IndE
+    \BinaryInfC{$\Gamma,x:\nu[\overline{(\Gamma_k).A_k}/\overline{X_k}]@\id{\Gamma}\vdash\corec^{\nu[\overline{(\Gamma_k).B_k}/\overline{X_k}]}\overline{(\Delta_k,y_k).\widehat{A_k}(\overline{t},y_k)[(\xi_k^{\nu[\overline{(\Gamma_k).A_k}/\overline{X_k}]}@\id{\Delta_k}@y_k)/y_k]}:(\Gamma,x:\nu[\overline{(\Gamma_k).A_k}/\overline{X_k}]@\id{\Gamma})\rat\nu[\overline{(\Gamma_k).B_k}/\overline{X_k}]$}
+    \AxiomC{$\ldots$}
+    \Inst{$\Gamma,x:\nu[\overline{(\Gamma_k).A_k}/\overline{X_k}]@\id{\Gamma}\vdash\corec^{\nu[\overline{(\Gamma_k).B_k}/\overline{X_k}]}\overline{(\Delta_k,y_k).\widehat{A_k}(\overline{t},y_k)[(\xi_k^{\nu[\overline{(\Gamma_k).A_k}/\overline{X_k}]}@\id{\Delta_k}@y_k)/y_k]}@\id{\Gamma}@x:\nu[\overline{(\Gamma_k).B_k}/\overline{X_k}]$}
+  \end{scprooftree}
+ \end{landscape}
+
+
+\bibliographystyle{alpha}
+\bibliography{references}
+\end{document}
