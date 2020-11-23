@@ -859,6 +859,12 @@
    #+end_src
    None of the used function is destructing the stream, so this definition gets
    accepted.
+
+   With sized types, we can define many total algorithm, which don't have a
+   structurally decreasing argument, in a total language. In contrary to the
+   Bove Capretta method cite:bove2005modelling, we don't have to change the structure of the
+   algorithm.
+
 * Type Theory based on dependent Inductive and Coinductive Types
   In the paper cite:basold2016type a type theory, where inductive types and
   coinductive types can depend on values, is developed. For example, we can, in

@@ -1,4 +1,4 @@
-% Created 2020-11-23 Mon 17:49
+% Created 2020-11-23 Mon 20:31
 % Intended LaTeX compiler: pdflatex
 \documentclass[a4paper,cleardoubleempty,BCOR1cm]{scrbook}
 \usepackage[utf8]{inputenc}
@@ -50,7 +50,7 @@ languages.
 \tableofcontents
 
 \chapter{Introduction}
-\label{sec:orgdf5c36b}
+\label{sec:orga618d4e}
 In functional programming, we have functions that get input and produce
 output. These functions don't depend on multiple values i.e. if there is no IO
 involved, they produce for the same input always the same output. For example,
@@ -133,21 +133,21 @@ codata Pi$\langle$A : Set, B : (x : A) $\rat$ Set$\rangle$ : Set where
 The rest of this thesis is structured as follows:
 
 \begin{itemize}
-\item Chapter \ref{sec:org5d34b3c} shows how coinductive types can be defined.
+\item Chapter \ref{sec:orge9b9d99} shows how coinductive types can be defined.
 Here, we will define the stream and function type, as well as some
 functions on the stream.
 
-\item We will see in Chapter \ref{sec:orgb5a19f8} how
+\item We will see in Chapter \ref{sec:orgdf2cbe6} how
 coinductive types are defined in the dependently typed languages Coq and Agda.
 We will see that we can define them positive or negative. We will show why
 defining them positive leads to problems.
 
-\item In Chapter \ref{sec:org33f714d} we
+\item In Chapter \ref{sec:org8e5771f} we
 see how they are defined by \cite{basold2016type}. With this theory we can then
 define coinductive types which depend on values.  But we can not define types
 that depend on types.
 
-\item We will then in Chapter \ref{sec:org8542692} explain how this theory is
+\item We will then in Chapter \ref{sec:org6e38a45} explain how this theory is
 implemented. Therefore, we need to rewrite the typing rules. It will also be
 possible to define type schemata.
 
@@ -158,7 +158,7 @@ coinductive type that depends on a value.
 \end{itemize}
 
 \chapter{Coinductive Types}
-\label{sec:org5d34b3c}
+\label{sec:orge9b9d99}
 Inductive types are defined via their constructors.  Coinductive types on
 the other hand are defined via their destructors.  In the paper \cite{abel2013copatterns}
 functions, which have coinductive types as their output, are implemented via
@@ -222,7 +222,7 @@ So the first apply is the sole observer of type $\mathtt{Stream\;A\;\rat\;A}$\;a
 of type $\mathtt{Nat\;\rat\;(Stream\;A\;\rat\;A)}$.
 
 \chapter{Coinductive Types in dependent languages}
-\label{sec:orgb5a19f8}
+\label{sec:orgdf2cbe6}
 In this section, we will look at how coinductive types are implemented in
 dependently typed languages. In dependently typed languages types can depend on
 values. The classical example of such a type is the type for vectors. Vectors are like
@@ -316,26 +316,26 @@ For coinductive types termination means that functions that produce them
 should be productive. If a function is productive it produces in each step a
 new part of the infinitely large coinductive type.
 
-In Section \ref{sec:org5d9a58e} we will look at the implementation in Coq.
+In Section \ref{sec:org1a8da02} we will look at the implementation in Coq.
 There are two ways to define them. The older way uses positive coinductive
 types. This is known to violate subject reduction. Therefore, it is highly
 discouraged to use them. To fix this the new way uses negative coinductive
-types. In Section \ref{sec:org9447cd3} we look at the implementation in
+types. In Section \ref{sec:org182dbb5} we look at the implementation in
 Agda. Agda also has these two ways of defining such types. One special thing
 about it, is that it implements copattern matching. To help Agda with
 termination checking we can use sized types.  We will explain them in Section
-\ref{sec:org5ddc9c0}.
+\ref{sec:org9ed665f}.
 \section{Coinductive Types in Coq}
-\label{sec:org5d9a58e}
+\label{sec:org1a8da02}
 There are two approaches to define coinductive types in Coq. The older one is
-described in \ref{sec:org1db9e9e}. It works over constructors. Therefore
+described in \ref{sec:orgc201b43}. It works over constructors. Therefore
 they are called positive coinductive types. The newer and recommended one is
-described in Section \ref{sec:orgf9d728b}. They are defined over
+described in Section \ref{sec:org529cd58}. They are defined over
 primitive records (a relatively new feature of Coq). Therefore, they are
 called negative coinductive Types.
 
 \subsection{Positive Coinductive Types}
-\label{sec:org1db9e9e}
+\label{sec:orgc201b43}
 Positive coinductive types are defined over constructors in Coq.  The keyword
 \linebreak $\mathtt{CoInductive}$\;is used to indicate that we about to define a coinductive type.
 This is the only syntactical difference from the definition of inductive
@@ -484,7 +484,7 @@ definitional equal if they are exactly the same.  The next section will
 solve this problem through negative coinductive types.
 
 \subsection{Negative Coinductive Types}
-\label{sec:orgf9d728b}
+\label{sec:org529cd58}
 In Coq 8.5. primitive records were introduced. With this, it is now possible
 to define types over their destructors. So we can have negative, especially
 negative coinductive, types in Coq. With primitive records we can define
@@ -600,16 +600,16 @@ is the length of the input vector and the output vector is this length plus
 two.
 
 \section{Coinductive Types in Agda}
-\label{sec:org9447cd3}
+\label{sec:org182dbb5}
 In Agda coinductive types were first also introduced as positive types. In
-Section \ref{sec:org6e1a082} we will look at them in
-detail. In Section \ref{sec:orgda75ba9} we describe the correct
+Section \ref{sec:org8c80141} we will look at them in
+detail. In Section \ref{sec:orgff39744} we describe the correct
 way to implement coinductive types in Agda. There are functions which
 terminate but are rejected by the type checker.   To allow more functions we can use a unique feature of Agda, sized
-types. They are described in Section \ref{sec:org5ddc9c0}.
+types. They are described in Section \ref{sec:org9ed665f}.
 
 \subsection{Positive Coinductive Types in Agda}
-\label{sec:org6e1a082}
+\label{sec:org8c80141}
 Agda doesn't have a special keyword to define coinductive types like Coq.  It
 uses the symbol $\mathtt{\infty}$\;to mark arguments to constructors as coinductive.
 This symbol says that the computation of arguments of this type are suspended.
@@ -661,7 +661,7 @@ Productivity on coinductive types like stream is checked by only allowing non
 decreasing recursive calls behind the $\mathtt{\sharp}$\;constructor.
 
 \subsection{Negative Coinductive Types in Agda}
-\label{sec:orgda75ba9}
+\label{sec:orgff39744}
 In Agda we can also define negative coinductive types.  This is the
 recommended way.  Agda implements the previously mentioned copattern matching.
 We can define a record with the keyword $\mathtt{record}$.  We use the keyword $\mathtt{coinductive}$
@@ -762,7 +762,7 @@ This function gives back a vector with the length of the input, where every elem
 is unit.
 
 \subsection{Termination Checking with Sized Types}
-\label{sec:org5ddc9c0}
+\label{sec:org9ed665f}
 They are many functions which are total but are not accepted by Agda's
 termination checker. In fact, in any total language, there have to be such
 functions. We can show that by trying to list all total functions. The
@@ -897,8 +897,14 @@ tl ham = (merge (map (_*_ 2) ham) (map (_*_ 3) ham))
 \end{minted}
 None of the used function is destructing the stream, so this definition gets
 accepted.
+
+With sized types, we can define many total algorithm, which don't have a
+structurally decreasing argument, in a total language. In contrary to the
+Bove Capretta method \cite{bove2005modelling}, we don't have to change the structure of the
+algorithm.
+
 \chapter{Type Theory based on dependent Inductive and Coinductive Types}
-\label{sec:org33f714d}
+\label{sec:org8e5771f}
 In the paper \cite{basold2016type} a type theory, where inductive types and
 coinductive types can depend on values, is developed. For example, we can, in
 contrast to the coinductive types of Coq and Agda, define streams which depend
@@ -935,7 +941,7 @@ In this theory, we can define partial streams on some type \(A\) like the follow
 &\text{with } \Gamma_1 = (n:\text{Conat}) \text{ and } \Gamma_2 = (n:\text{Conat})
 \end{align*}
 Here, $\mathtt{succ}$\;is the successor on co-natural numbers.  Co-natural numbers are
-natural numbers with one additional element, infinity. See \ref{sec:orgc62542e}
+natural numbers with one additional element, infinity. See \ref{sec:orgd0bc9d9}
 for their definition. Here, the first destructor is the head. It becomes a
 stream with length \(\text{succ} @ N\) and returns an \(A\). The second destructor
 is the tail. It becomes also a stream of length \(\text{succ} @ N\). It gives
@@ -957,11 +963,11 @@ We destruct them with destructors (written
 \(\xi_k^{\nu(X:\Gamma\rat*;\vv{\sigma};\vv{A})}\)) and construct them with
 corecursion (written $\mathtt{corec}$\;\(\vv{(\Gamma_k.y_k).g_k}\)).
 
-We will give the rules for the theory in Section \ref{sec:orga5d1bdb} and a detailed
-explanation of the reduction in \ref{sec:orgf9c7a7b}.
+We will give the rules for the theory in Section \ref{sec:orgeaeda0d} and a detailed
+explanation of the reduction in \ref{sec:org11a9f43}.
 
 \chapter{Implementation}
-\label{sec:org8542692}
+\label{sec:org6e38a45}
 In this section, we look at the implementation details.  We use the functional
 programming language Haskell for implementing the theory. Haskell is a pure
 language. This means functions which aren't in the IO monad have no side
@@ -969,29 +975,29 @@ effects. The only IO we are doing is reading a file and as the last step
 printing it. Because everything between this is pure, we can test it without
 bordering on side effects. Another feature of Haskell, which will get
 useful in our implementation is pattern matching. We will see its usefulness
-in Section \ref{sec:orga5d1bdb}.
+in Section \ref{sec:orgeaeda0d}.
 
-In Section \ref{sec:org9120160} we will develop the abstract syntax of our language
-from the raw syntax in the paper. Then, we rewrite the typing rules in \ref{sec:orga5d1bdb}. At last we look at the implementation of the reduction in \ref{sec:orgf9c7a7b}
+In Section \ref{sec:org86fd169} we will develop the abstract syntax of our language
+from the raw syntax in the paper. Then, we rewrite the typing rules in \ref{sec:orgeaeda0d}. At last we look at the implementation of the reduction in \ref{sec:org11a9f43}
 \section{Abstract Syntax}
-\label{sec:org9120160}
+\label{sec:org86fd169}
 In the following, we will scratch out the abstract syntax. In contrast to
 \cite{basold2016type} we can't write anonymous inductive and coinductive types.
 We will give every inductive and coinductive type a name. They will be
 defined via declarations. In these declarations, we will give, their
 constructors/destructors. They will also be given names. In \cite{basold2016type}
 they are anonymous. We can then refer to the previously defined types. We
-will describe declarations in Section \ref{sec:orgf762281}. We will also be able to
-bind expressions to names. In Section \ref{sec:orgdbcd04a} we will define the syntax
+will describe declarations in Section \ref{sec:org2ecf649}. We will also be able to
+bind expressions to names. In Section \ref{sec:org646636c} we will define the syntax
 of expressions. This will mostly be in one to one correspondence with the
 syntax of \cite{basold2016type}. Note however, that we use the names of the
 constructors instead of anonymous constructors together with their type and
 number. Also, the order of the matches in $\mathtt{rec}$\;and $\mathtt{corec}$\;is irrelevant. We use
 the names of the Con/Destructors to identify them. In the following Section
-\ref{sec:orgc5acffd}, we will see how the examples from the paper look in our concrete
+\ref{sec:orgb81c16c}, we will see how the examples from the paper look in our concrete
 syntax.
 \subsection{Declarations}
-\label{sec:orgf762281}
+\label{sec:org2ecf649}
 The abstract syntax is given in Figure \ref{syntax-for-declarations}. With the
 keywords data and codata we define inductive and coinductive types
 respectively. After that, we will write the name. We can only use names that
@@ -1093,7 +1099,7 @@ data StrDef = StrDef { sigma :: [Expr]
 Implementation of the abstract syntax of fig. \ref{syntax-for-declarations}}
 \end{listing}
 \subsection{Expressions}
-\label{sec:orgdbcd04a}
+\label{sec:org646636c}
 The abstract syntax for expression is given in Figure \ref{syntax-for-expressions}.
 We will separate expressions in expressions for terms and expressions for
 types.  There are given as regular expressions in $\mathtt{Expr}$\;and $\mathtt{TypeExpr}$\;respectively.
@@ -1161,7 +1167,7 @@ The generated abstract syntax tree is given in Listing
 separated in $\mathtt{LocalExprVar}$\;and $\mathtt{GlobalExprVar}$. $\mathtt{LocalExprVar}$\;should refer
 to variables that are only locally defined i.e. in $\mathtt{Rec}$\;and $\mathtt{Corec}$. We
 use de Bruijn indexes for them. This facilitates substitution which we will
-describe in Section \ref{sec:orgd528f7c}. $\mathtt{GlobalExprVar}$\;refers to variables from
+describe in Section \ref{sec:orgf47c22d}. $\mathtt{GlobalExprVar}$\;refers to variables from
 definitions. Here, we just use names. We do the same thing for $\mathtt{LocalTypeVar}$
 and $\mathtt{GlobalTypeVar}$. In the abstract syntax tree, we use anonymous
 constructors like in the paper. We combine them with the Haskell constructor
@@ -1200,7 +1206,7 @@ Implementation of the abstract syntax of fig. \ref{syntax-for-expressions}}
 \end{listing}
 
 \section{Substitution}
-\label{sec:orgd528f7c}
+\label{sec:orgf47c22d}
 In the following we will write \(t[s/x]\) for "substitute every free
 occurrences of \(x\) in \(t\) by \(s\)". Substitution is done in the module
 $\mathtt{Subst.hs}$. We use de Bruijn indexes \cite{de1972lambda} for bound variables to facilitate
@@ -1225,7 +1231,7 @@ to set the flags to false in the result.  This setting(marking of the
 variables) is done in the module $\mathtt{Mark.hs}$.
 
 \section{Typing rules}
-\label{sec:orga5d1bdb}
+\label{sec:orgeaeda0d}
 A typing rule says that some expression or declaration is of some type, given
 some premises. If we can for every declaration or expression form a tree of
 such rules with no open premises, our program type checks. We have to rewrite
@@ -1285,7 +1291,7 @@ content of the reader monad and executes a reader on this changed context in
 the current monad.
 
 \subsection{Context rules}
-\label{sec:orgb4333f6}
+\label{sec:org8fe7d08}
 The rules for valid contexts are already-syntax directed so we take
 just them.
 \begin{center}
@@ -1371,7 +1377,7 @@ rules for term contexts are:
 \end{center}
 
 \subsection{Beta-equivalence}
-\label{sec:org6ac2816}
+\label{sec:org3d48881}
 Two types are beta equivalent if they evaluate to the same type. Because our
 language is deterministic this just means if we fully evaluate both of them
 they are alpha equivalent. Alpha equivalence means we can substitute some
@@ -1390,7 +1396,7 @@ The rules are:
 \BinaryInfC{$A \longrightarrow_T^* C$}
 \DisplayProof
 \end{center}
-\(\longrightarrow_T\) is defined in Section \ref{sec:orgf9c7a7b}.
+\(\longrightarrow_T\) is defined in Section \ref{sec:org11a9f43}.
 
 We can then introduce a new rule for beta-equivalence.
 \begin{center}
@@ -1423,7 +1429,7 @@ We also add some rules to check if two contexts are the same.
    \end{center}
 
 \subsection{Unit type and expression introduction}
-\label{sec:org7f5ea3e}
+\label{sec:orgaa9506f}
 The paper defines one rule for the unit type and one for the unit value.
 These are.
 \begin{center}
@@ -1455,7 +1461,7 @@ to subsume the weakening rules of the paper. The unit term always has the
 unit type as its type.
 
 \subsection{Variable lookup}
-\label{sec:orgcfd2702}
+\label{sec:orgfc89643}
 We have three kinds of variables we can lookup. They are type variables,
 term variables, and parameters.  The paper already has rules for the type and
 term variables.  We need to rewrite them.  We add a new rule for looking up
@@ -1501,7 +1507,7 @@ With them, we can just weaken the context until we get to the desired
 variable.
 
 \subsection{Type and expression instantiation}
-\label{sec:org7ba5325}
+\label{sec:org0991059}
 We can instantiate types and terms.  The rule:
 \begin{prooftree}
   \AxiomC{$\Theta\mid\Gamma_1\vdash A:(x:B,\Gamma_2)\rat*$}
@@ -1544,7 +1550,7 @@ the result type of \(t\) (in the case of types it's always \(*\), which obviousl
 has no free variables).
 
 \subsection{Parameter abstraction}
-\label{sec:org451b259}
+\label{sec:org90b1b7e}
 The rule:
 \begin{center}
   \AxiomC{$\Theta\mid\Gamma_1,x:A\vdash B:\Gamma_2\rat*$}
@@ -1563,7 +1569,7 @@ annotate the variable with its type, so we know which type we have to add to
 the context.
 
 \subsection{(co)inductive types}
-\label{sec:orgd5ff63a}
+\label{sec:org4c57be7}
 We have to separate the rule:
 \begin{prooftree}
 \AxiomC{$\sigma_k:\Gamma_k\triangleright\Gamma$}
@@ -1635,7 +1641,7 @@ We also have to substitute the type into the context.  Because kinds in
 a parameter context can depend on variables previously defined in this context.
 
 \subsection{Constructor and Destructor}
-\label{sec:org3e1e65e}
+\label{sec:org905eb55}
 The rule for constructors:
 \begin{center}
   \AxiomC{$\mu(X:\Gamma\rat*;\vv{\sigma};\vv{A}):\Gamma\rat*$}
@@ -1683,7 +1689,7 @@ data definition. We just substitute the type itself for the free variable.
 At last, we need to substitute the parameters for the respective variables.
 
 \subsection{Recursion and Corecursion}
-\label{sec:org316efd2}
+\label{sec:orgfbdf3b2}
 The rule:
 \begin{center}
   \AxiomC{$\vdash C:\Gamma\rat*$}
@@ -1748,7 +1754,7 @@ destructed to. We get the syntax-directed rule analog as in the case of
 recursion.
 
 \section{Evaluation}
-\label{sec:orgf9c7a7b}
+\label{sec:org11a9f43}
 There are two kinds of reduction steps in this system. The implementation of
 this is in $\mathtt{Eval.hs}$. Will give the formal definition in the following.
 
@@ -1816,7 +1822,7 @@ to the previously defined declarations. We will now define the type action.
 
 The type action generates a term with a free variable \(x\).  In the type of
 this term, we have changed all the free variables to the types of \(\vv{t}\).
-We will show the proof in appendix \ref{sec:org421f57e}.
+We will show the proof in appendix \ref{sec:org7541cdb}.
 
 The reduction on terms  is subdivided into a reduction on recursion and one
 on corecursion. Here, \(\sigma_k \bullet\tau\) is a context morphism, where we
@@ -1847,14 +1853,14 @@ this destructor. In this case, we are applying the corecursion to all
 recursive occurrences. \(\tau\) and \(u\) are substituted as in recursion.
 
 \chapter{Examples}
-\label{sec:orgc5acffd}
+\label{sec:orgb81c16c}
 
 In this Section, we reiterate the example types from the paper.  We use our
-syntax, which is defined in \ref{sec:org9120160}.  We will also show some functions
+syntax, which is defined in \ref{sec:org86fd169}.  We will also show some functions
 on these types.  On some of them, we will show the reduction steps in detail.
 
 \section{Terminal and Initial Object}
-\label{sec:org32f8072}
+\label{sec:org2644ef9}
 
 The terminal object is a type that has exactly one value. In category
 theory, every object in the category has a unique morphism to it. We define
@@ -1886,7 +1892,7 @@ exfalsum$\langle$C : Set$\rangle$ = rec Initial to C where
 
 
 \section{Natural Numbers and Extended Naturals}
-\label{sec:orgc62542e}
+\label{sec:orgd0bc9d9}
 
 We use the approach of Peano to define natural numbers.  Therefore, we use
 the inductive type $\mathtt{Nat}$\;with the constructors $\mathtt{Zero}$\;and $\mathtt{Suc}$. $\mathtt{Zero}$\;is
@@ -2000,7 +2006,7 @@ right value.
 \end{flalign*}}
 
 \section{Binary Product and Coproduct}
-\label{sec:org9ca13e8}
+\label{sec:orga4c0e88}
 
 The product is defined as a coinductive type.  It has two destructors. The
 first gives back the first element. And the second the second. To use this
@@ -2062,7 +2068,7 @@ data Coproduct$\langle$A,B$\rangle$ : Set where
 \end{lstlisting}
 
 \section{Sigma and Pi Type}
-\label{sec:orgff15342}
+\label{sec:orga7bec04}
 
 The sigma type is a dependent pair of two types.  The second type can depend on
 the value of the first type.  It corresponds to exists in logic.  We define
@@ -2124,7 +2130,7 @@ $\succ \widehat{\text{Nat}} \left(\underbrace{
 \end{lstlisting}
 
 \section{Vectors and Streams}
-\label{sec:orgee29c18}
+\label{sec:orgfa99a4e}
 
 Vectors are a standard example for dependent types. They are like lists,
 except their type depends on their length. For example, a vector $\mathtt{[1;2]}$\;has
@@ -2204,7 +2210,7 @@ constant partial stream of that value with the number as its length.
 
 
 \chapter{Conclusion}
-\label{sec:org835b5ea}
+\label{sec:org15f5e84}
 We have implemented a dependent type theory with inductive and coinductive types.
 In this theory, contrary to Coq and Agda, coinductive types can also depend on
 values. Contrary to the theory of the paper we can define schemata like
@@ -2228,7 +2234,7 @@ symmetrical language.
 \appendix
 
 \chapter{Type action proof}
-\label{sec:org421f57e}
+\label{sec:org7541cdb}
 
 \begin{theorem}
 \((\Gamma).A@\id{\Gamma}\leftrightarrow_T A\)
