@@ -574,20 +574,7 @@
    Section [[Positive Coinductive Types in Agda]] we will look at them in
    detail. In Section [[Negative Coinductive Types in Agda]] we describe the correct
    way to implement coinductive types in Agda. There are functions which
-   terminate but are rejected by the type checker. In fact, in any total language,
-   there have to be such functions. We can show that by trying to list all total
-   functions. The following table lists functions per row. The columns say what
-   the output of the functions for the given input is.
-   |          |        1 |        2 |        3 |        4 | $\dots$  |
-   |----------+----------+----------+----------+----------+----------|
-   | $f_1$    |        2 |        7 |        8 |        6 | $\dots$  |
-   | $f_2$    |        4 |        4 |        6 |       19 | $\dots$  |
-   | $f_3$    |        6 |      257 |        1 |        2 | $\dots$  |
-   | $f_4$    |        7 |      121 |    23188 |     2313 | $\dots$  |
-   | $\vdots$ | $\vdots$ | $\vdots$ | $\vdots$ | $\vdots$ | $\ddots$ |
-   We can now define a function $g(n)=f_n(n)+1$ this function is total and not
-   in the list because it is different from any function in the list for at least
-   one input.  To allow more functions we can use a unique feature of Agda, sized
+   terminate but are rejected by the type checker.   To allow more functions we can use a unique feature of Agda, sized
    types. They are described in Section [[Termination Checking with Sized Types]].
 
 *** Positive Coinductive Types in Agda
@@ -702,7 +689,8 @@
    open Pi
    #+end_src
 
-   Like in Coq we are using the first-class pi type to define the pi type. We
+   Like in Coq we are using the first-class pi type to define the pi type. Agda
+   doesn't define the first-class pi type lkie that.  We
    can also define a function which adds 2 to a number ~plus2~ in Agda.
 
    #+begin_src agda
@@ -741,9 +729,22 @@
    is unit.
 
 *** Termination Checking with Sized Types
-    They are many functions which are total but are not accepted by Agda's
-    termination checker.  For example, we could try to define  division with
-    rest on natural numbers like the following:
+   They are many functions which are total but are not accepted by Agda's
+   termination checker. In fact, in any total language, there have to be such
+   functions. We can show that by trying to list all total functions. The
+   following table lists functions per row. The columns say what the output of
+   the functions for the given input is.
+   |          |        1 |        2 |        3 |        4 | $\dots$  |
+   |----------+----------+----------+----------+----------+----------|
+   | $f_1$    |        2 |        7 |        8 |        6 | $\dots$  |
+   | $f_2$    |        4 |        4 |        6 |       19 | $\dots$  |
+   | $f_3$    |        6 |      257 |        1 |        2 | $\dots$  |
+   | $f_4$    |        7 |      121 |    23188 |     2313 | $\dots$  |
+   | $\vdots$ | $\vdots$ | $\vdots$ | $\vdots$ | $\vdots$ | $\ddots$ |
+   We can now define a function $g(n)=f_n(n)+1$ this function is total and not
+   in the list because it is different from any function in the list for at
+   least one input. As an example of such a function, we could try to define
+   division with rest on natural numbers like the following:
 
    #+begin_src agda
    _/_ :  ℕ → ℕ → ℕ
@@ -2497,25 +2498,25 @@
         \D
         \UnaryInfC{$\Delta,\Gamma_k,y_k:A_k[C/X]\vdash g_k:C@\sigma_k$}
         \RightLabel{TyAct}
-        \UnaryInfC{$\Delta,\Gamma_k,x:A_k[\mu/X]\vdash g_k[\widehat{A_k}(\rec^\mu\overline{(\Gamma_k,y_k).g_k}@\id{\Gamma}@x/y_k]$}
+        \UnaryInfC{$\Delta,\Gamma_k,x:A_k[\mu/X]\vdash g_k[\widehat{A_k}(\rec^\mu\vv{(\Gamma_k,y_k).g_k}@\id{\Gamma}@x/y_k]$}
         \D
         \UnaryInfC{$\Delta\vdash\tau:\Gamma_k$}
         \D
         \UnaryInfC{$\Delta\vdash u:A_k[\mu/X]$}
-        \TrinaryInfC{$\Delta\vdash g_k[\widehat{A_k}(\rec^\mu\overline{(\Gamma_k,y_k).g_k}@\id{\Gamma}@x)/y_k][\tau,u]:C@\sigma_k$}
+        \TrinaryInfC{$\Delta\vdash g_k[\widehat{A_k}(\rec^\mu\vv{(\Gamma_k,y_k).g_k}@\id{\Gamma}@x)/y_k][\tau,u]:C@\sigma_k$}
       \end{prooftree}
     \begin{scprooftree}{0.7}
       \D
       \UnaryInfC{$\Delta,\Gamma_k,y_k:\Delta_k[C/X]\vdash g_k: C@\sigma_k$}
       \IndE
-      \UnaryInfC{$\Delta\vdash\rec^\mu\overline{(\Gamma_k,y_k).g_k}:(\Gamma,x:\mu@\sigma_k)\rat C@\sigma_k$}
+      \UnaryInfC{$\Delta\vdash\rec^\mu\vv{(\Gamma_k,y_k).g_k}:(\Gamma,x:\mu@\sigma_k)\rat C@\sigma_k$}
       \D
       \UnaryInfC{$\Gamma_k\vdash\sigma_k:\Gamma$}
       \D
       \UnaryInfC{$\Delta\vdash\tau:\Gamma_k$}
       \RightLabel{($*$)}
       \BinaryInfC{$\Delta\vdash\sigma_k\circ\tau:\Gamma$}
-      \Inst{$\Delta\vdash(rec^\mu\overline{(\Gamma_k,y_k).g_k}@(\sigma_k\circ\tau)):(x:\mu@\sigma_k)\rat C@\sigma_k$}
+      \Inst{$\Delta\vdash(rec^\mu\vv{(\Gamma_k,y_k).g_k}@(\sigma_k\circ\tau)):(x:\mu@\sigma_k)\rat C@\sigma_k$}
       \AxiomC{}
       \IndI{$\Delta\vdash\alpha_k^\mu:(\Gamma_k,y:A_k[\mu/X])\rat\mu@\sigma_k$}
       \D
@@ -2524,26 +2525,26 @@
       \D
       \UnaryInfC{$\Delta\vdash u:A_k[\mu/X])$}
       \Inst{$\Delta\vdash\alpha_k^\mu @\tau@u:\mu@\sigma_k$}
-      \Inst{$\Delta\vdash(\rec^\mu\overline{(\Gamma_k,y_k).g_k}@(\sigma_k\circ\tau))@(\alpha_k^\mu @\tau@u):C@\sigma_k$}
+      \Inst{$\Delta\vdash(\rec^\mu\vv{(\Gamma_k,y_k).g_k}@(\sigma_k\circ\tau))@(\alpha_k^\mu @\tau@u):C@\sigma_k$}
     \end{scprooftree}
     \begin{scprooftree}{0.48}
-      \AxiomC{$\vdash\overbrace{\mu[\overline{(\Gamma_k).A_k}/\overline{X_k}]}^C:\Gamma\rat*$}
+      \AxiomC{$\vdash\overbrace{\mu[\vv{(\Gamma_k).A_k}/\vv{X_k}]}^C:\Gamma\rat*$}
       \AxiomC{}
-      \IndI{$\Gamma,x:\mu[\overline{(\Gamma_k).A_k}/\overline{X_k}]@\id{\Gamma},\Delta_k,y_k:A_k[\mu[\overline{(\Gamma_k).B_k}/\overline{X_k}]/X]\vdash\alpha_k^{\mu[\overline{(\Gamma_k).B_k}/\overline{X_k}]}:(\Delta_k,y_k:A_k[\overline{(\Gamma_k).B_k}/\overline{X_k}])\rat\mu[\overline{(\Gamma_k).B_k}/\overline{X_k}]@\sigma_k$}
-      \AxiomC{$\Gamma,x:\mu[\overline{(\Gamma_k).A_k}/\overline{X_k}]@\id{\Gamma},\Delta_k,y_k:\overbrace{A_k[\mu[\overline{(\Gamma_k).B_k}/\overline{X_k}]/X]}^{=\widehat{A_k}(\overline{B},?)}\vdash\widehat{A_k}(\overline{t},y_k):\overbrace{A_k[\mu[\overline{(\Gamma_k).B_k}/\overline{X_k}]/X]}^{=\widehat{A_k}(\overline{B},?)}$}
-      \Inst{$\Gamma,x:\mu[\overline{(\Gamma_k).A_k}/\overline{X_k}]@\id{\Gamma},\Delta_k,y_k:A_k[\mu[\overline{(\Gamma_k).B_k}/\overline{X_k}]/X]\vdash\alpha_k^{\mu[\overline{(\Gamma_k).B_k}/\overline{X_k}]}@\id{\Delta_k}@\widehat{A_k}(\overline{t},y_k):\mu[\overline{(\Gamma_k).B_k}/\overline{X_k}]@\sigma_k$}
+      \IndI{$\Gamma,x:\mu[\vv{(\Gamma_k).A_k}/\vv{X_k}]@\id{\Gamma},\Delta_k,y_k:A_k[\mu[\vv{(\Gamma_k).B_k}/\vv{X_k}]/X]\vdash\alpha_k^{\mu[\vv{(\Gamma_k).B_k}/\vv{X_k}]}:(\Delta_k,y_k:A_k[\vv{(\Gamma_k).B_k}/\vv{X_k}])\rat\mu[\vv{(\Gamma_k).B_k}/\vv{X_k}]@\sigma_k$}
+      \AxiomC{$\Gamma,x:\mu[\vv{(\Gamma_k).A_k}/\vv{X_k}]@\id{\Gamma},\Delta_k,y_k:\overbrace{A_k[\mu[\vv{(\Gamma_k).B_k}/\vv{X_k}]/X]}^{=\widehat{A_k}(\vv{B},?)}\vdash\widehat{A_k}(\vv{t},y_k):\overbrace{A_k[\mu[\vv{(\Gamma_k).B_k}/\vv{X_k}]/X]}^{=\widehat{A_k}(\vv{B},?)}$}
+      \Inst{$\Gamma,x:\mu[\vv{(\Gamma_k).A_k}/\vv{X_k}]@\id{\Gamma},\Delta_k,y_k:A_k[\mu[\vv{(\Gamma_k).B_k}/\vv{X_k}]/X]\vdash\alpha_k^{\mu[\vv{(\Gamma_k).B_k}/\vv{X_k}]}@\id{\Delta_k}@\widehat{A_k}(\vv{t},y_k):\mu[\vv{(\Gamma_k).B_k}/\vv{X_k}]@\sigma_k$}
       \IndE
-      \BinaryInfC{$\Gamma,x:\mu[\overline{(\Gamma_k).A_k}/\overline{X_k}]@\id{\Gamma}\vdash\rec^{\mu[\overline{(\Gamma_k).A_k}/\overline{X_k}]}\overline{(\Delta_k,y_k).\alpha_k^{\mu[\overline{(\Gamma_k).B_k}/\overline{X_k}]}@\id{\Delta_k}@\widehat{A_k}(\overline{t},y_k)}:(\Gamma,x:\mu[\overline{(\Gamma_k).A_k}/\overline{X_k}]@\id{\Gamma})\rat\mu[\overline{(\Gamma_k).B_k}/\overline{X_k}]@\id{\Gamma}$}
+      \BinaryInfC{$\Gamma,x:\mu[\vv{(\Gamma_k).A_k}/\vv{X_k}]@\id{\Gamma}\vdash\rec^{\mu[\vv{(\Gamma_k).A_k}/\vv{X_k}]}\vv{(\Delta_k,y_k).\alpha_k^{\mu[\vv{(\Gamma_k).B_k}/\vv{X_k}]}@\id{\Delta_k}@\widehat{A_k}(\vv{t},y_k)}:(\Gamma,x:\mu[\vv{(\Gamma_k).A_k}/\vv{X_k}]@\id{\Gamma})\rat\mu[\vv{(\Gamma_k).B_k}/\vv{X_k}]@\id{\Gamma}$}
       \AxiomC{$\ldots$}
-      \Inst{$\Gamma,x:\mu[\overline{(\Gamma_k).A_k}/\overline{X_k}]@\id{\Gamma}\vdash\rec^{\mu[\overline{(\Gamma_k).A_k}/\overline{X_k}]}\overline{(\Delta_k,y_k).\alpha_k^{\mu[\overline{(\Gamma_k).B_k}/\overline{X_k}]}@\id{\Delta_k}@\widehat{A_k}(\overline{t},y_k)}@\id{\Gamma}@x:\mu[\overline{(\Gamma_k).B_k}/\overline{X_k}]@\id{\Gamma}$}
+      \Inst{$\Gamma,x:\mu[\vv{(\Gamma_k).A_k}/\vv{X_k}]@\id{\Gamma}\vdash\rec^{\mu[\vv{(\Gamma_k).A_k}/\vv{X_k}]}\vv{(\Delta_k,y_k).\alpha_k^{\mu[\vv{(\Gamma_k).B_k}/\vv{X_k}]}@\id{\Delta_k}@\widehat{A_k}(\vv{t},y_k)}@\id{\Gamma}@x:\mu[\vv{(\Gamma_k).B_k}/\vv{X_k}]@\id{\Gamma}$}
     \end{scprooftree}
     \begin{scprooftree}{0.78}
-      \AxiomC{$\vdash\overbrace{\nu[\overline{(\Gamma_k).A_k}/\overline{X_k}]}^C:\Gamma\rat*$}
-      \AxiomC{$\Gamma,x:\nu[\overline{(\Gamma_k).A_k}/\overline{X_k}]@\id{\Gamma},\Delta_k,y_k:\nu[\overline{(\Gamma_k).A_k}/\overline{X_k}]@\sigma_k\vdash\widehat{A_k}(\overline{t},y_k)[(\xi_k^{\nu[\overline{(\Gamma_k).A_k}/\overline{X_k}]}@\id{\Delta_k}@y_k)/y_k]:A_k[\nu[\overline{(\Gamma_k).A_k}/\overline{X_k}]/X]$}
+      \AxiomC{$\vdash\overbrace{\nu[\vv{(\Gamma_k).A_k}/\vv{X_k}]}^C:\Gamma\rat*$}
+      \AxiomC{$\Gamma,x:\nu[\vv{(\Gamma_k).A_k}/\vv{X_k}]@\id{\Gamma},\Delta_k,y_k:\nu[\vv{(\Gamma_k).A_k}/\vv{X_k}]@\sigma_k\vdash\widehat{A_k}(\vv{t},y_k)[(\xi_k^{\nu[\vv{(\Gamma_k).A_k}/\vv{X_k}]}@\id{\Delta_k}@y_k)/y_k]:A_k[\nu[\vv{(\Gamma_k).A_k}/\vv{X_k}]/X]$}
       \IndE
-      \BinaryInfC{$\Gamma,x:\nu[\overline{(\Gamma_k).A_k}/\overline{X_k}]@\id{\Gamma}\vdash\corec^{\nu[\overline{(\Gamma_k).B_k}/\overline{X_k}]}\overline{(\Delta_k,y_k).\widehat{A_k}(\overline{t},y_k)[(\xi_k^{\nu[\overline{(\Gamma_k).A_k}/\overline{X_k}]}@\id{\Delta_k}@y_k)/y_k]}:(\Gamma,x:\nu[\overline{(\Gamma_k).A_k}/\overline{X_k}]@\id{\Gamma})\rat\nu[\overline{(\Gamma_k).B_k}/\overline{X_k}]$}
+      \BinaryInfC{$\Gamma,x:\nu[\vv{(\Gamma_k).A_k}/\vv{X_k}]@\id{\Gamma}\vdash\corec^{\nu[\vv{(\Gamma_k).B_k}/\vv{X_k}]}\vv{(\Delta_k,y_k).\widehat{A_k}(\vv{t},y_k)[(\xi_k^{\nu[\vv{(\Gamma_k).A_k}/\vv{X_k}]}@\id{\Delta_k}@y_k)/y_k]}:(\Gamma,x:\nu[\vv{(\Gamma_k).A_k}/\vv{X_k}]@\id{\Gamma})\rat\nu[\vv{(\Gamma_k).B_k}/\vv{X_k}]$}
       \AxiomC{$\ldots$}
-      \Inst{$\Gamma,x:\nu[\overline{(\Gamma_k).A_k}/\overline{X_k}]@\id{\Gamma}\vdash\corec^{\nu[\overline{(\Gamma_k).B_k}/\overline{X_k}]}\overline{(\Delta_k,y_k).\widehat{A_k}(\overline{t},y_k)[(\xi_k^{\nu[\overline{(\Gamma_k).A_k}/\overline{X_k}]}@\id{\Delta_k}@y_k)/y_k]}@\id{\Gamma}@x:\nu[\overline{(\Gamma_k).B_k}/\overline{X_k}]$}
+      \Inst{$\Gamma,x:\nu[\vv{(\Gamma_k).A_k}/\vv{X_k}]@\id{\Gamma}\vdash\corec^{\nu[\vv{(\Gamma_k).B_k}/\vv{X_k}]}\vv{(\Delta_k,y_k).\widehat{A_k}(\vv{t},y_k)[(\xi_k^{\nu[\vv{(\Gamma_k).A_k}/\vv{X_k}]}@\id{\Delta_k}@y_k)/y_k]}@\id{\Gamma}@x:\nu[\vv{(\Gamma_k).B_k}/\vv{X_k}]$}
     \end{scprooftree}
    \end{landscape}
 
