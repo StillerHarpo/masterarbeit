@@ -101,11 +101,15 @@
     Hd : (k : Conat) $\rat$ PStr (succ @ k) $\rat$ A
     Tl : (k : Conat) $\rat$ PStr (succ @ k) $\rat$ PStr @ k
   #+end_example
-  And functions to the Pi type.
+  These streams depend on co-natural numbers.  These are like natural numbers
+  with one additional element, infinity.  Therefore, partial streams have
+  their length encoded in their type. We can generalize functions to the Pi type
+  as follows:
   #+begin_example
   codata Pi$\langle$A : Set, B : (x : A) $\rat$ Set$\rangle$ : Set where
     Inst : (x : A) $\rat$ Pi $\rat$ B @ x
   #+end_example
+  Here the result type can depend on the input value.
 
   The rest of this thesis is structured as follows:
 
