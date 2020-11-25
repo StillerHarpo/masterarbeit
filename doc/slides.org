@@ -60,9 +60,36 @@
          Cons A x (repeat A x).
      #+end_src
 * What is wrong about positve coinductive types
-  + Symmetry between witch inductive types not clear
+  + Symmetry with inductive types not clear
   + Breaks subject reduction
-  
+    + Subject reduction: types are preserved after reduction
+
+* Ourys Example
+   #+begin_src coq
+    CoInductive U : Set := In : U -> U.
+   #+end_src
+   #+begin_src coq
+     CoFixpoint u : U := In u.
+   #+end_src
+   #+begin_src coq
+     Definition force (x: U) : U :=
+       match x with
+         In y => In y
+       end.
+   #+end_src
+   #+begin_src coq
+     Definition eq (x : U) : x = force x :=
+       match x with
+         In y => eq_refl
+       end.
+   #+end_src
+   #+begin_src coq
+     Definition eq_u : u = In u := eq u
+   #+end_src
+
+
+
+   
 * negative coinductive types
   + defined over their destructors
   + functions use copattern matching
@@ -81,6 +108,28 @@
          ; Tl s = $\lozenge$ } @ $\lozenge$
      #+end_example
 
+* Symmetry with inductive types
+   #+begin_example
+   codata Product$\langle$A : Set, B : Set$\rangle$ : Set where
+      Fst : Product $\rat$ A
+      Snd : Product $\rat$ B
+   mkProduct$\langle$A : Set, B : Set$\rangle$ (x:A, y:B) =
+     corec Unit to Product<A,B> where
+       { Fst u $\rat$ x
+       ; Snd u $\rat$ y } @ $\lozenge$
+   #+end_example
+   #+begin_example
+   data Product$\langle$A,B$\rangle$ : Set where
+      MkProduct : (x : A) $\rat$ B $\rat$ Product
+   fst$\langle$A : Set, B : Set$\rangle$  =
+     rec Product<A,B> to A where
+        { MkProduct x y = x }
+   snd$\langle$A : Set, B : Set$\rangle$  =
+     rec Product<A,B> to B where
+        { MkProduct x y = y }
+   #+end_example
+   
+
 * Type Theory based on dependent Inductive and Coinductive Types
   + kinds: $(x_1:A_1,\dots,x_n:A_n)\rat*$
   + types: $(x_1:A_1,\dots,x_n:A_n)\rat B$
@@ -93,7 +142,19 @@
   + corecursion: corec $\vv{(\Gamma_k,y_k).g_k}$
 
 * Dependent coinductive types
-  
+  + Partial streams whitch depend on their defintion depth
+    #+begin_example
+    codata PStr$\langle$A : Set$\rangle$ : (n : Conat) $\rat$ Set where
+      Hd : (k : Conat) $\rat$ PStr (succ @ k) $\rat$ A
+      Tl : (k : Conat) $\rat$ PStr (succ @ k) $\rat$ PStr @ k
+    #+end_example
+  + Dependent funcitions 
+    #+begin_example
+    codata Pi$\langle$A : Set, B : (x : A) $\rat$ Set$\rangle$ : Set where
+      Inst : (x : A) $\rat$ Pi $\rat$ B @ x
+    #+end_example
+
+
 * 
   #+begin_center
   \Huge Demo
