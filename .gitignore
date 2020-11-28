@@ -1,6 +1,7 @@
 resources/
 **/dist-newstyle/
 **/_minted-masterarbeit/
+**/_minted-slides/
 README.pdf
 README.tex
 **/*.local
@@ -17,6 +18,9 @@ README.tex
 **/*.xml
 **/*.xdv
 **/*.toc
+**/*.vrb
+**/*.nav
+**/*.snm
 **/*~
 **/*.agdai
 **/.history
