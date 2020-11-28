@@ -4,5 +4,5 @@ emacs \
    --batch \
    --load "init.el" \
    masterarbeit.org \
-   -f org-latex-export-to-latex
-latexmk -shell-escape -bibtex -f -pdfxe masterarbeit.tex
+   -f org-latex-export-to-latex \
+    && latexmk -shell-escape -bibtex -f -pdfxe masterarbeit.tex

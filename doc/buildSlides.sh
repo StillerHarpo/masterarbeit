@@ -4,5 +4,5 @@ emacs \
     --batch \
     --load "init.el" \
     slides.org \
-    -f org-beamer-export-to-latex
-latexmk -shell-escape -bibtex -f -pdfxe slides.tex
+    -f org-beamer-export-to-latex \
+    && latexmk -shell-escape -bibtex -f -pdfxe slides.tex

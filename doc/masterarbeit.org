@@ -2,7 +2,7 @@
 #+LATEX_CLASS_OPTIONs: [a4paper,cleardoubleempty,BCOR1cm]
 #+LATEX_HEADER: \input{header}
 
-#+TITLE: Implementation of Type Theory based on dependent Inductive and Coinductive Types
+#+TITLE: Implementation of Type Theory based on Dependent Inductive and Coinductive Types
 #+AUTHOR: Florian Engel
 
 #+OPTIONS: toc:nil
@@ -10,31 +10,31 @@
 \input{teaser}
 
 \chapter*{Abstract}
-  Dependent types are a useful tool to restrict types even further than types of
+  Dependent types are a useful tool to restrict types even further than types in
   strongly typed languages like Haskell. This gives us further type safety. With
-  them, we can also prove theorems. Coinductive types allow us to define types by
+  dependent types, we can also prove theorems. Coinductive types allow us to define types by
   their observations rather than by their constructors. This is useful for
   infinite types like streams. In many common dependently typed languages, like
   Coq and Agda, we can define inductive types which depend on values and
   coinductive types but not coinductive types, which depend on values.
 
-  In this work, we will first give a survey of coinductive types in these
+  In this work, we will first give a survey of coinductive types in Coq and Agda
   languages and then implement the type theory from cite:basold2016type. This
   type theory has both dependent inductive types and dependent coinductive
-  types. In this type theory the dependent function space becomes definable.
-  This leads to a more symmetrical approach of coinduction in dependently typed
+  types. In this type theory, the dependent function space becomes definable.
+  This leads to a more symmetrical approach to coinduction in dependently typed
   languages.
 
 #+TOC: headlines 2
 
 * Introduction
-  In functional programming, we have functions that get input and produce
-  output. These functions don't depend on multiple values i.e. if there is no IO
-  involved, they produce for the same input always the same output. For example,
-  if we call a function ~or~ on the values ~true~ and ~false~ we always get
-  ~true~. This makes the code more predictable.
+  In functional programming, we use functions that consume input and produce
+  output. These functions don't depend on external values i.e. if there is no IO
+  involved, they always produce the same output for the same input. For
+  example, if we call a function ~or~ on the values ~true~ and ~false~ we always
+  get ~true~. This makes code more predictable.
 
-  The ~or~ function should only be working on Booleans. To call it on strings
+  The ~or~ function should only be working on booleans. To call ~or~ on strings
   ~'foo'~ and ~'bar'~ wouldn't make sense i.e. there is no defined output for
   these inputs. To prevent calls like these, some functional programming
   languages introduced types. Types contain only certain values. For example, the
@@ -44,7 +44,7 @@
   data Bool = True | False
   #+end_src
   This says we can construct values of type ~Bool~ with the constructors ~True~
-  and ~False~. These types which have constructors are called inductive types. We can
+  and ~False~. These types defined with constructors are called inductive types. We can
   then define ~or~ like this:
   #+begin_src haskell
   or :: Bool -> Bool -> Bool
@@ -68,25 +68,26 @@
   contrary to inductive types, defined over their destruction. So we could define
   ~Bool~ over its destructors. These would be or, and, etc.
 
-  Through this work, we will explain coinductive types at the examples of streams
-  and functions. They will be generalized to partial streams and the Pi type in
-  dependently typed languages. Streams are lists that are infinitely long. They
-  are useful for modeling many IO interactions. For example, a chat of a text
-  messenger might be infinitely long. We can never know if the chat is finished.
-  This is of course limited by the hardware, but we are interested in abstract
-  models. Functions are used everywhere in functional programming. In most of
-  these languages, they are first-class objects. But in languages with
+  Through this work, we will explain coinductive types using the examples of streams
+  and functions. Streams and functions will be generalized to partial streams
+  and the Pi type in dependently typed languages. Streams are lists that are
+  infinitely long. They are useful for modeling many IO interactions. For
+  example, a chat of a text messenger might be infinitely long. We can never
+  know if the chat is finished. This is of course limited by the hardware, but
+  we are interested in abstract models. Functions are used everywhere in
+  functional programming. In most of these languages, they are first-class
+  objects which are hardwired into the language. But in languages with
   coinductive types, we can define them. If we only have inductive and
-  coinductive types, we get a symmetrical language. This is useful because
-  then we can change an inductive type to a coinductive one and vice versa. It
-  is straight forward to add functions which destruct an inductive type by
+  coinductive types, we get a symmetrical language. This is useful because then
+  we can change an inductive type to a coinductive one and vice versa. It is
+  straight forward to add functions which destruct an inductive type by
   pattern matching on the constructor. But it is hard to add a new constructor.
   Then, we add this constructor to every pattern matching on that type.
   For coinductive types it's the other way around. For more on this, see
   cite:binder2019decomposition. In the implemented syntax we can define streams
   like the following:
   #+begin_example
-  codata Stream$\langle$A : Set$\rangle$ : Set where Hd : Stream (succ @ k)
+  codata Stream$\langle$A : Set$\rangle$ : Set where
     Hd : Stream $\rat$ A
     Tl : Stream $\rat$ Stream
   #+end_example
@@ -117,46 +118,52 @@
     Here, we will define the stream and function type, as well as some
     functions on the stream.
 
-  - We will see in Chapter [[Coinductive Types in dependent languages]] how
-    coinductive types are defined in the dependently typed languages Coq and Agda.
-    We will see that we can define them positive or negative. We will show why
-    defining them positive leads to problems.
+  - We will see in Chapter [[Coinductive Types in Dependently Typed Languages]] how
+    coinductive types are defined in the dependently typed languages Coq and
+    Agda. We will see that we can define them as positive or negative
+    coinductive types. We will show why positive coinductive types lead to
+    problems.
 
-  - In Chapter [[Type Theory based on dependent Inductive and Coinductive Types]] we
-    see how they are defined by cite:basold2016type. With this theory we can then
-    define coinductive types which depend on values.  But we can not define types
-    that depend on types.
+  - In Chapter [[Type Theory based on Dependent Inductive and Coinductive Types]] we
+    see how they are defined by cite:basold2016type. With this theory we can
+    then define coinductive types which depend on values. But this theory does
+    not allow to define types that depend on types because the theory does not
+    include a type universe
 
   - We will then in Chapter [[*Implementation]] explain how this theory is
-    implemented. Therefore, we need to rewrite the typing rules. It will also be
-    possible to define type schemata.
+    implemented. Implementing this type theory requires us to rewrite rules from
+    a declarative to an algorithmic form. It will also be possible to define
+    types depending on types.
 
-  - At last, we look at the examples from this paper cite:basold2016type in the implemented syntax.
+  - At last, we implement the examples from cite:basold2016type in our syntax.
     Here, we will see the reduction steps for recursion and corecursion. We will
     conclude this section with the example of partial streams, which is a
     coinductive type that depends on a value.
 
 * Coinductive Types
-  Inductive types are defined via their constructors.  Coinductive types on
-  the other hand are defined via their destructors.  In the paper cite:abel2013copatterns
-  functions, which have coinductive types as their output, are implemented via
-  copattern matching.  In that paper streams are defined like the following:
+  Inductive types are defined via their constructors. Functions taking an
+  inductive type as an input can be defined via pattern-matching. Coinductive
+  types on the other hand are defined via their destructors. Functions that
+  have coinductive types as their output are implemented via copattern matching,
+  which was introduced in the paper cite:abel2013copatterns. In that paper
+  streams are defined like the following:
 
   #+begin_example
   record Stream A = { head : A,
                       tail : Stream A }
   #+end_example
 
-  The ~A~ in the definition should be a concrete type. The type system in the
-  paper doesn't have dependent types. What differentiates this from regular record
-  types (for example in Haskell) is the recursive field tail. So they call it a
-  recursive record. In a strict language without coinductive types we could never
-  instantiate such a type because to do this we already need something of type
-  ~Stream A~ to fill in the field ~tail~. The paper defines
-  copattern matching to remedy this. With the help of copattern matching, we can define functions
-  that output expressions of type ~Stream A~. As an example, we look at the
-  definition of repeat. This function takes in a value of type ~Nat~ and
-  generates a stream that just infinitely repeats it.
+  The ~A~ in the definition should be a concrete
+  type\footnote{The type system in the paper doesn't have dependent types.}.
+  What differentiates this from regular record types (for example in Haskell) is
+  the recursive field tail. So they call it a recursive record. In a strict
+  language without coinductive types we could never instantiate such a type
+  because to do this we already need something of type ~Stream A~ to fill in the
+  field ~tail~. The paper defines copattern matching to remedy this. With the
+  help of copattern matching, we can define functions that output expressions of
+  type ~Stream A~. As an example, we look at the definition of repeat. This
+  function takes in a value of type ~Nat~ and generates a stream that just
+  infinitely repeats it.
 
   #+begin_example
   repeat : Nat $\rat$ Stream Nat
@@ -164,14 +171,13 @@
   tail (repeat x) = repeat x
   #+end_example
 
-  As we can see copattern matching works via observations i.e. we define what
-  should be the output of the fields applied to the result of the function. These
-  fields are also called observers because we observe parts of the type.
+  As we can see, copattern matching works via observations i.e. we define what
+  should be the output of the fields applied to the result of the function.
   Because inhabitants of ~Stream~ are infinitely long we can't print out a
-  stream. Because of this we also consider each expression which has a type,
-  which is coinductive, as a value. To get a subpart of this value we use
-  observers. For example, we can look at the third value of ~repeat 2~ via ~head
-  (tail (tail (repeat 2)))~ which should evaluate to 2. We can also implement a
+  stream. Because of this we also consider each expression which has a
+  coinductive type as a value. To get a subpart of this value we use observers.
+  For example, we can look at the third value of ~repeat 2~ via ~head (tail (tail (repeat 2)))~
+  which should evaluate to 2. We can also implement a
   function that looks at the nth. value. Here it is:
 
   #+begin_example
@@ -180,8 +186,8 @@
   nth (S n) x = nth n (tail x)
   #+end_example
 
-  As you can see we use ordinary pattern matching on the left-hand side and
-  observers on the right-hand side. ~nth 3 (repeat 2)~ will output ~2~ as expected.
+  In the implementation of ~nth~, we use ordinary pattern matching on the left-hand side and
+  destructors on the right-hand side. ~nth 3 (repeat 2)~ will output ~2~ as expected.
   Functions can also be defined via a recursive record.  It is defined as the
   following:
 
@@ -191,7 +197,7 @@
 
   Here, we differentiate between our defined function ~A \rat B~ and ~\leadsto~ in the
   destructor. Constructor applications or, as is the case here, destructor
-  applications are not the same as function applications, like in Haskell. In the
+  applications are not the same as function applications. In the
   paper ~f x~ means ~apply f x~. We will also use this convention in the
   following. In fact, we already used it in the definitions of the functions
   ~repeat~ and ~nth~. ~nth 0 x = head x~ is just a nested copattern. We can also write it
@@ -199,7 +205,7 @@
   So the first apply is the sole observer of type ~Stream A \rat A~ and the second
   of type ~Nat \rat (Stream A \rat A)~.
 
-* Coinductive Types in dependent languages
+* Coinductive Types in Dependently Typed Languages
   In this section, we will look at how coinductive types are implemented in
   dependently typed languages. In dependently typed languages types can depend on
   values. The classical example of such a type is the type for vectors. Vectors are like
@@ -218,13 +224,13 @@
   element at the front of a vector called ~Cons~. ~Nil~ just returns a vector
   of length ~0~. And ~Cons~ gets an ~A~ and a vector of length ~k~. It returns a
   vector of length ~S k~ (~S~ is just the successor of k). This type can also be
-  defined in agda as follows:
+  defined in Agda as follows:
   #+begin_src agda
   data Vec (A : Set) : ℕ → Set where
     Nil : Vec A 0
     Cons : {k : ℕ} → A → Vec A k → Vec A (suc k)
   #+end_src
-  One advantage of vectors in comparison to lists is that we can define a total function
+  One advantage of vectors compared to lists is that we can define a total function
   (a function which is defined for every input) that takes the head of a
   vector. This function can't be total for lists, because we cannot know if the
   input list is empty. An empty list has no head. For vectors, we can enforce this
@@ -242,15 +248,15 @@
   hd : {A : Set} {k : ℕ} → Vec A (suc k) → A
   hd (cons x _) = x
   #+end_src
-  That types can depent on terms makes it necessary to ensure that function
-  \linebreak terminate. Otherwise, type checking wouldn't be decidable. If we have a
+  That types can depend on terms makes it necessary to ensure that functions
+  \linebreak terminate. Otherwise, type checking wouldn't be guaranted to terminate. If we have a
   function \linebreak ~f : Nat \rat Nat~ and we want to check a value ~a~ against a type
   ~Vec (f 1)~ we have to know what ~f 1~ evaluates to. So ~f~ has to terminate.
-  We check termination in Coq via a structural decreasing argument. An argument
-  is structural decreasing if it is structural smaller in a recursive call.
-  Structural smaller means it is a recursive occurrence in a constructor. As an
-  example, we look at the definition of the natural numbers and the function for addition
-  on them. We define the natural numbers in Coq like follows:
+  We check termination in Coq via a structurally decreasing argument. An argument
+  is structurally decreasing if it is structurally smaller in a recursive call.
+  Structurally smaller means it is a recursive occurrence in a constructor. As an
+  example, we look at addition of natural numbers. Natural numbers are defined
+  in Coq like follows:
   #+begin_src coq
   Inductive nat : Set :=
   | O : nat
@@ -266,11 +272,11 @@
   | S p => S (add p m)
   end.
   #+end_src
-  In the recursive call, the first argument is structural decreasing. The
+  In the recursive call, the first argument is structurally decreasing. The
   expression ~p~ is smaller than the expression ~s p~. So Coq accepts this
   definition. The classical example of a function where an argument is
-  decreasing but not structural decreasing is Quicksort. A naive implementation
-  would be the following:
+  decreasing but not structurally decreasing is Quicksort. A naive implementation
+  of Quicksort in Coq would be the following:
   #+begin_src coq
   Fixpoint quicksort (l : list nat) : list nat :=
   match l with
@@ -287,32 +293,32 @@
   than the input list. So ~lower~ and ~upper~ can't be longer than ~xs~. Here
   ~xs~ is structurally smaller than the input ~cons x xs~. So ~lower~ and ~upper~
   are smaller than the input. Therefore, we know that ~quicksort~ is terminating.
-  But Coq won't accept our code, because no argument is structural decreasing.
+  But Coq won't accept this definition, because no argument is structurally decreasing.
 
   For coinductive types termination means that functions that produce them
-  should be productive. If a function is productive it produces in each step a
+  should be productive. Productive functions produce in each step a
   new part of the infinitely large coinductive type.
 
-  In Section [[Coinductive Types in Coq]] we will look at the implementation in Coq.
-  There are two ways to define them. The older way uses positive coinductive
-  types. This is known to violate subject reduction. Therefore, it is highly
-  discouraged to use them. To fix this the new way uses negative coinductive
-  types. In Section [[Coinductive Types in Agda]] we look at the implementation in
-  Agda. Agda also has these two ways of defining such types. One special thing
-  about it, is that it implements copattern matching. To help Agda with
-  termination checking we can use sized types.  We will explain them in Section
-  [[Termination Checking with Sized Types]].
+  In Section [[Coinductive Types in Coq]] we will look at the implementation of
+  coinductive types in Coq. There are two ways to define coinductive types in
+  Coq. The older way uses positive coinductive types. This is known to violate
+  subject reduction. Therefore, it is highly discouraged to use them. To fix
+  this the new way uses negative coinductive types. In Section [[Coinductive Types in Agda]]
+  we look at the implementation of coinductive types in Agda. Agda also has these two ways of
+  defining such types. One special thing about it, is that Agda implements
+  copattern matching. To help Agda with termination checking we can use sized
+  types. We will explain them in Section [[Termination Checking with Sized Types]].
 ** Coinductive Types in Coq
-   There are two approaches to define coinductive types in Coq. The older one is
-   described in [[Positive Coinductive Types]]. It works over constructors. Therefore
-   they are called positive coinductive types. The newer and recommended one is
-   described in Section [[Negative Coinductive Types]]. They are defined over
+   There are two approaches to define coinductive types in Coq. The older one,
+   positve coinductive types which are defined via constructors, is
+   described in section [[Positive Coinductive Types]]. The newer and recommended one is
+   described in Section [[Negative Coinductive Types]]. They are defined using
    primitive records (a relatively new feature of Coq). Therefore, they are
    called negative coinductive Types.
 
 *** Positive Coinductive Types
    Positive coinductive types are defined over constructors in Coq.  The keyword
-   \linebreak ~CoInductive~ is used to indicate that we about to define a coinductive type.
+   \linebreak ~CoInductive~ is used to mark the definition as a coinductive type.
    This is the only syntactical difference from the definition of inductive
    types. For example, streams are defined like the following:
 
@@ -321,25 +327,25 @@
        Cons : A -> Stream A -> Stream A.
    #+end_src
 
-   If this was an inductive type we couldn't generate a value of this type. To
-   generate values of coinductive types Coq uses guarded recursion. This checks
-   if the recursive call to the function occurs as an argument to a coinductive
-   constructor. In addition to the guard condition, the constructor can only be
-   nested in other constructors, fun or match expressions. With all of this in
-   mind we can define ~repeat~ like the following:
+   If this were an inductive type we couldn't generate a value of this type. To
+   generate values of coinductive types Coq uses guarded recursion. Guarded
+   recursion checks if the recursive call to the function occurs as an argument
+   to a coinductive constructor. In addition to the guard condition, the
+   constructor can only be nested in other constructors, fun or match
+   expressions. With all of this in mind we can define ~repeat~ like the
+   following:
 
    #+begin_src coq
      CoFixpoint repeat (A : Set) (x : A) : Stream A := Cons A x (repeat A x).
    #+end_src
 
    Then, we can produce the constant zero stream with ~repeat nat 0~. If we used
-   a normal Coq function i.e. write ~Fixpoint~ instead of ~CoFixpoint~ Coq
-   wouldn't accept our code. It rejects it because there is no argument which is
-   structural decreasing. ~x~ stays always the same. Functions defined with
-   ~CoFixpoint~ on the other hand only check the previously mentioned
-   conditions. It sees the recursive call ~repeat A x~ occurs as an argument to
-   constructor ~Cons~ of the coinductive type ~Stream~. This constructor is also
-   not nested. So our definition is accepted.
+   ~Fixpoint~ instead of ~CoFixpoint~ Coq wouldn't accept our code. It rejects
+   it because there is no argument which is structural decreasing. ~x~ stays
+   always the same. Functions defined with ~CoFixpoint~ on the other hand only
+   check the previously mentioned conditions. It sees that the recursive call ~repeat A x~
+   occurs as an argument to the constructor ~Cons~ of the coinductive type
+   ~Stream~. This constructor is also not nested. So our definition is accepted.
 
    We can use the normal pattern matching of Coq to destruct a coinductive type.
    We define ~nth~ like the following:
@@ -363,8 +369,7 @@
    condition is violated. With this definition the expression ~nth 0 loop~
    wouldn't terminate. The function ~nth~ would try to pattern match on ~loop~. But to
    succeed in that ~loop~ has to unfold to something of the form ~Cons a ?~
-   which it never does. So ~nth 0 loop~ will never evaluate to a value. This
-   would lead to undecidable type checking.
+   which it never does. So ~nth 0 loop~ will never evaluate to a value.
 
    We illustrate the purpose of the other conditions on an example taken from
    cite:chlipala2013certified.  First, we implement the function ~tl~ like so:
@@ -408,21 +413,21 @@
    An important property of typed languages is subject reduction. Subject
    reduction says if we evaluate an expression $e_1$ of type $t$ to an expression
    $e_2$, $e_2$ should also be of type $t$. With positive coinductive types subject
-   reduction is no longer valid. We illustrate this by Oury's counterexample
+   reduction no longer holds. We illustrate this by Oury's counterexample
    cite:oury2008. First, we define the codata type ~U~ as follows:
 
    #+begin_src coq
     CoInductive U : Set := In : U -> U.
    #+end_src
 
-   We can now define a value of u with the following ~Cofixpoint~ like so:
+   We can now define a value of ~U~ with the following ~CoFixpoint~ like so:
 
    #+begin_src coq
      CoFixpoint u : U := In u.
    #+end_src
 
    This generates an infinite succession of ~In~.  We use the function ~force~
-   to force ~U~ to evaluate one step i.e. ~x~ becomes ~In y~.
+   to force ~u~ to evaluate one step i.e. ~u~ becomes ~In u~.
 
    #+begin_src coq
      Definition force (x: U) : U :=
@@ -432,7 +437,7 @@
    #+end_src
 
    The same trick will be used to define ~eq~ which states that ~x~ is
-   definitional equal to ~force x~.
+   propositionally equal to ~force x~.
 
    #+begin_src coq
      Definition eq (x : U) : x = force x :=
@@ -441,9 +446,9 @@
        end.
    #+end_src
 
-   This first matches on ~x~ to force it, to reduce to ~In y~. Then, the new goal
-   becomes ~In y = force (In y)~. ~force (In y)~ evaluates to just ~In y~, as it
-   is just pattern matching on ~In y~. So the final goal is ~In y = In y~ which
+   The function ~eq~ matches on ~x~, reducing to ~In y~. Then, the new goal
+   becomes ~In y = force (In y)~. The term ~force (In y)~ evaluates to ~In y~, as ~force~
+   just pattern matches on ~In y~. So the final goal is ~In y = In y~ which
    can be shown by ~eq_refl~. The expression ~eq_refl~ is a constructor for ~=~
    where both sides of ~=~ are exactly the same. If we now instantiate ~eq~ with
    ~u~ we become ~eq u~.
@@ -454,7 +459,7 @@
 
    But ~u~ is not definitional equal to ~In u~.  As mentioned above expressions
    with a coinductive type are always values to prevent infinite evaluation.
-   So ~In u~ is a value and ~u~ is also a value.  But values are only
+   Both ~In u~ and ~u~ are values. But values are only
    definitional equal if they are exactly the same.  The next section will
    solve this problem through negative coinductive types.
 
@@ -477,10 +482,10 @@
     #+end_src
 
     To define ~repeat~ we must define what is the head of the constructed stream
-    and its tail.  The guard condition says now that corecursive
+    and its tail.  The guard condition now says that corecursive
     occurrences must be guarded by a record field.  We can see that the
     corecursive call ~repeat~ is a direct argument to the field ~tl~ of the
-    corecursive type ~Stream A~.  This means Coq accepts the above definition.
+    corecursive type ~Stream A~.  This means that Coq accepts the above definition.
     If we want to access parts of a stream we use the destructors ~hd~ and
     ~tl~.  With them, we can define ~nth~ again for the negative stream.
 
@@ -500,12 +505,12 @@
       CoInductive U := { out : U }.
     #+end_src
 
-    ~U~ is now defined over its destructor ~out~, instead of its constructor
+    ~U~ is now defined via its destructor ~out~, instead of its constructor
      ~in~. Then, ~in~ \linebreak becomes just a function. In fact, it's just a
-     definition because we don't recurse or corecurse on it.
+     definition because we don't recurse or corecurse on the argument ~y~.
 
     #+begin_src coq
-      Definition In (y : U) : U := {| out := y |}.
+      Definition in (y : U) : U := {| out := y |}.
     #+end_src
 
     We define it over the only field ~out~.  When we put a ~y~ in then we get
@@ -526,10 +531,10 @@
     on a value of ~Pi~ (which is a function) and an argument, we get the result
     i.e. we apply the value to the function.  It looks like the pi type becomes definable
     in Coq.  But we are cheating.  The type of ~Apply~ is already a pi type because
-    we identify constructors and destructors with functions.  We will see that the theory of
-    the paper avoids this identification. To define a function we use
-    ~CoFixpoint~.  As a simple nonrecursive, nondependent example we use the
-    function ~plus2~.
+    we identify constructors and destructors with functions. We will see that
+    the theory cite:basold2016type avoids this identification. To define a
+    function we use ~CoFixpoint~. As a simple nonrecursive, nondependent example
+    we use the function ~plus2~.
 
     #+begin_src coq
       CoFixpoint plus2 : Pi nat (fun _ => nat) :=
@@ -555,7 +560,7 @@
         |}.
     #+end_src
 
-    But Coq doesn't accept this definition. The guard condition is violated. The
+    But Coq doesn't accept this definition since it is violates the guard condition. The
     expression ~plus n'~ is not a direct argument of the field ~Apply~. The
     definition should terminate because we are decreasing ~n~ and the case for
     ~0~ is accepted. In the case of ~0~, there is no recursive call.
@@ -578,26 +583,26 @@
    Section [[Positive Coinductive Types in Agda]] we will look at them in
    detail. In Section [[Negative Coinductive Types in Agda]] we describe the correct
    way to implement coinductive types in Agda. There are functions which
-   terminate but are rejected by the type checker.   To allow more functions we can use a unique feature of Agda, sized
-   types. They are described in Section [[Termination Checking with Sized Types]].
+   terminate but are rejected by the type checker. To allow more functions we
+   can use a unique feature of Agda, sized types. They are described in Section
+   [[Termination Checking with Sized Types]].
 
 *** Positive Coinductive Types in Agda
    Agda doesn't have a special keyword to define coinductive types like Coq.  It
-   uses the symbol ~\infty~ to mark arguments to constructors as coinductive.
-   This symbol says that the computation of arguments of this type are suspended.
-   ~\infty~ is just a type constructor.  So Agda ensures productivity over type
-   checking. We define streams like so.
+   uses the type constructor ~\infty~ to mark arguments to constructors as coinductive.
+   This type constructor says that the computation of arguments of this type is suspended.
+   So Agda ensures productivity over type checking. We define streams like so.
 
    #+begin_src agda
      data Stream (A : Set) : Set where
        cons : A → ∞ (Stream A) → Stream A
    #+end_src
 
-   Here, the second argument to ~cons~ is marked with ~\infty~. This is the tail of
-   the stream. Because it is infinitely long (we don't have a constructor of an
-   empty stream) we can't compute it completely, so we suspend the computation.
-   We can delay a computation with the constructor ~\sharp~ and force it with
-   the function ~\flat~. Their types are given below.
+   Here, the tail of the stream. is marked with ~\infty~. Because the tail is
+   infinitely long (we don't have a constructor of an empty stream) we can't
+   compute it completely, so we suspend the computation. We can delay a
+   computation with the constructor ~\sharp~ and force it with the function
+   ~\flat~. Their types are given below.
 
    #+begin_src agda
      ♯_ : ∀ {a} {A : Set a} → A → ∞ A
@@ -628,8 +633,8 @@
 
    Here, we have to use ~\flat~ on the right-hand side of the second case, to
    force the computation of the tail of the input stream.  We have to do that
-   because ~nth~ wants a stream.  It doesn't want a suspended stream.
-   Productivity on coinductive types like stream is checked by only allowing non
+   because ~nth~ wants a stream, not a suspended stream.
+   Productivity on coinductive types like ~Stream~ is checked by only allowing non
    decreasing recursive calls behind the ~\sharp~ constructor.
 
 *** Negative Coinductive Types in Agda
@@ -650,10 +655,10 @@
     A Stream has 2 fields. The field ~hd~ is the head of the stream. It has type
     ~A~. The field ~tl~ is the tail of the stream. It is another stream, so it
     has type ~Stream A~. ~tl~ is a recursive field. So Agda wouldn't accept the
-    definition without ~coinductive~. A stream can never be empty. Every stream
-    has a head (a field ~hd~) and an empty stream wouldn't have a head. So the
-    tail of a stream can never be empty. Therefore, every stream is infinitely
-    long. We can now define ~repeat~ with copattern matching.
+    definition without ~coinductive~. A stream can never be empty. So every
+    stream has to have a head (a field ~hd~). So the tail of a stream can never
+    be empty. Therefore, every stream is infinitely long. We can now define
+    ~repeat~ with copattern matching.
 
     #+begin_src agda
       repeat : ∀ {A : Set} → A → Stream A
@@ -663,13 +668,11 @@
 
     We have to copattern match on every field of ~Stream~, namely ~hd~ and ~tl~.
     Because Agda is total it won't accept non-exhaustive (co)pattern matches
-    like Haskell.  First, we define what the head of ~repeat x~ is.  We just
-    repeat ~x~ infinitely often.  So every element of the steam is ~x~, including
-    the head.  Therefore, we just write ~x~.  In the second and last copattern we
-    define what the tail of the stream is.  The tail is just ~repeat x~.
-    Infinitely often repeated ~x~ is the same as x and then infinitely repeated
-    ~x~.  We can use normal pattern matching and the destructors for functions
-    that consume streams.  We define ~nth~ like the following:
+    like Haskell. In the first copattern we define what the head of ~repeat x~
+    is. It is ~x~ because we repeat ~x~ infinitely often. In the second
+    copattern we define what the tail of the stream is. The tail is just ~repeat
+    x~. We can use normal pattern matching and the destructors for functions
+    that consume streams. We define ~nth~ like the following:
 
    #+begin_src agda
      nth : ∀ {A : Set} → ℕ → Stream A → A
@@ -683,8 +686,7 @@
    ~tl s~.  Agda accepts this code because it is structural decreasing on the
    first (or second if we count the implicit) argument.
 
-   We can also define the pi type.  We use ~_$_~ as the apply operator.  This
-   operator is taken from Haskell.
+   We can also define the ~Pi~ type.  We use ~_$_~ as the apply operator.
 
    #+begin_src agda
    record Pi (A : Set) (B : A → Set) : Set where
@@ -695,7 +697,7 @@
 
    Like in Coq we are using the first-class pi type to define the pi type. Agda
    doesn't define the first-class pi type lkie that.  We
-   can also define a function which adds 2 to a number ~plus2~ in Agda.
+   can also define a function ~plus2~ in Agda.
 
    #+begin_src agda
     plus2 : ℕ →' ℕ
@@ -703,7 +705,8 @@
    #+end_src
 
    We just use copattern matching to define it. If we apply a ~x~ to ~plus2~ we
-   get \linebreak ~suc (suc x)~. ~\rightarrow'~ is just the non-dependent function it is defined
+   get \linebreak ~suc (suc x)~. The type ~\rightarrow'~ is the non-dependent
+   function which is is defined
    using our pi type. Here it is:
 
    #+begin_src agda
@@ -869,7 +872,7 @@
    Bove Capretta method cite:bove2005modelling, we don't have to change the structure of the
    algorithm.
 
-* Type Theory based on dependent Inductive and Coinductive Types
+* Type Theory based on Dependent Inductive and Coinductive Types
   In the paper cite:basold2016type a type theory, where inductive types and
   coinductive types can depend on values, is developed. For example, we can, in
   contrast to the coinductive types of Coq and Agda, define streams which depend
@@ -928,7 +931,7 @@
   $\xi_k^{\nu(X:\Gamma\rat*;\vv{\sigma};\vv{A})}$) and construct them with
   corecursion (written ~corec~ $\vv{(\Gamma_k.y_k).g_k}$).
 
-  We will give the rules for the theory in Section [[Typing rules]] and a detailed
+  We will give the rules for the theory in Section [[Typing Rules]] and a detailed
   explanation of the reduction in [[Evaluation]].
 
 * Implementation
@@ -939,11 +942,11 @@
   printing it. Because everything between this is pure, we can test it without
   bordering on side effects. Another feature of Haskell, which will get
   useful in our implementation is pattern matching. We will see its usefulness
-  in Section [[Typing rules]].
+  in Section [[Typing Rules]].
 
   In Section [[Abstract Syntax]] we will develop the abstract syntax of our language
   from the raw syntax in the paper. Then, we rewrite the typing rules in [[*Typing
-  rules]]. At last we look at the implementation of the reduction in [[*Evaluation]]
+  Rules]]. At last we look at the implementation of the reduction in [[*Evaluation]]
 ** Abstract Syntax
    In the following, we will scratch out the abstract syntax. In contrast to
    cite:basold2016type we can't write anonymous inductive and coinductive types.
@@ -1185,7 +1188,7 @@
    to set the flags to false in the result.  This setting(marking of the
    variables) is done in the module ~Mark.hs~.
 
-** Typing rules
+** Typing Rules
    A typing rule says that some expression or declaration is of some type, given
    some premises. If we can for every declaration or expression form a tree of
    such rules with no open premises, our program type checks. We have to rewrite
@@ -1378,7 +1381,7 @@
  %   \DisplayProof
     \end{center}
 
-*** Unit type and expression introduction
+*** Unit Type and Expression Introduction
     The paper defines one rule for the unit type and one for the unit value.
     These are.
     \begin{center}
@@ -1454,7 +1457,7 @@
     With them, we can just weaken the context until we get to the desired
     variable.
 
-*** Type and expression instantiation
+*** Type and Expression Instantiation
     We can instantiate types and terms.  The rule:
     \begin{prooftree}
       \AxiomC{$\Theta\mid\Gamma_1\vdash A:(x:B,\Gamma_2)\rat*$}
@@ -1514,7 +1517,7 @@
     annotate the variable with its type, so we know which type we have to add to
     the context.
 
-*** (co)inductive types
+*** (Co)inductive types
     We have to separate the rule:
     \begin{prooftree}
     \AxiomC{$\sigma_k:\Gamma_k\triangleright\Gamma$}
@@ -2496,7 +2499,7 @@
   #+end_proof
 
     \begin{landscape}
-    \section{Proofs for recursion and corecursion}
+    \section{Proofs for Recursion and Corecursion}
     \label{sec:prc}
   \begin{prooftree}
      \AxiomC{$\Gamma_1\vdash\sigma:\Gamma_2$}
