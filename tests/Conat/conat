@@ -5,9 +5,13 @@ zero = corec Unit to Conat where
          { Prev u = Nothing<Unit> @ () } @ ()
 
 succ = corec Conat to Conat where
-         { Prev n = rec Maybe<Conat> to Maybe<Conat> where
-                           { Nothing u = Just<Conat> @ zero
-                           ; Just n = Just<Conat> @ n } @ (Prev @ n) }
+         Prev n = Just<Conat> @ n
                                            
 one = succ @ zero
 two = succ @ one
+
+inf = corec Unit to Conat where
+        { Prev x = Just<Unit> @ () } @ ()
+
+inf2 = corec Conat to Conat where
+         { Prev x = Just<Conat> @ x } @ zero

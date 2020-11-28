@@ -1,0 +1,28 @@
+data Maybe<A : Set> : Set where
+  Nothing : Unit -> Maybe
+  Just : A -> Maybe
+
+codata Conat : Set where
+  Prev : Conat -> Maybe<Conat>
+
+zero = corec Unit to Conat where
+         { Prev u = Nothing<Unit> @ () } @ ()
+
+succ = corec Conat to Conat where
+         Prev n = Just<Conat> @ n
+
+one = succ @ zero
+two = succ @ one
+
+inf = corec Unit to Conat where
+        { Prev x = Just<Unit> @ () } @ ()
+
+
+codata PStr<A : Set> : (n : Conat) -> Set where
+  Hd : (k : Conat) -> PStr (succ @ k) -> A
+  Tl : (k : Conat) -> PStr (succ @ k) -> PStr @ k
+
+repeat<A : Set>(x : A, n : Conat) =
+  corec (n : Conat).Unit to PStr<A> where
+    { Hd k s = x
+    ; Tl k s = () } @ n @ ()

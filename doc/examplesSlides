@@ -1,0 +1,34 @@
+data Product<A : Set,B : Set> : Set where
+   MkProduct : (x : A, x : B) -> Unit -> Product
+fst<A : Set, B : Set>  =
+  rec Product<A,B> to A where
+        { MkProduct x y u = x }
+snd<A : Set, B : Set>  =
+  rec Product<A,B> to B where
+      { MkProduct x y u = y }
+
+codata Product1<A : Set, B : Set> : Set where
+  Fst : Product1 -> A
+  Snd : Product1 -> B
+mkProduct<A : Set, B : Set> (x:A, y:B) =
+  corec Unit to Product1<A,B> where
+    { Fst u = x
+    ; Snd u = y } @ ()
+
+data Maybe<A : Set> : Set where
+  Nothing : Unit -> Maybe
+  Just : A -> Maybe
+
+codata Conat : Set where
+  Prev : Conat -> Maybe<Conat>
+
+succ = corec Conat to Conat where
+         Prev n = Just<Conat> @ n
+
+codata PStr<A : Set> : (n : Conat) -> Set where
+  Hd : (k : Conat) -> PStr (succ @ k) -> A
+  Tl : (k : Conat) -> PStr (succ @ k) -> PStr @ k
+
+
+codata Pi<A : Set, B : (x : A) -> Set> : Set where
+  Inst : (x : A) -> Pi -> B @ x

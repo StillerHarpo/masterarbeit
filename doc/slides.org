@@ -1,4 +1,4 @@
-#+TITLE: Implementation of Type Theory based on dependent Inductive and Coinductive Types
+#+TITLE: Implementation of Type Theory based on Dependent Inductive and Coinductive Types
 #+AUTHOR: Florian Engel
 #+OPTIONS: toc:nil
 #+options: H:1
@@ -11,41 +11,48 @@
 #+beamer_outer_theme:
 #+beamer_header: \input{headerSlides}
 
-* Inductive types
+* Inductive Types in Coq
   + defined over their constructors
   + each constructor has to give back this type
 ** Examples
    + Booleans
-     #+begin_example
-     data Bool : Set where
-       True : Unit $\rat$ Bool
-       False : Unit $\rat$ Bool
-     #+end_example
+     #+begin_src coq 
+       Inductive bool : Set :=
+       | True : bool
+       | False : bool.
+     #+end_src
    + Natural numbers
-     #+begin_example
-     data Nat : Set where
-       Zero : Unit $\rat$ Nat
-       Succ : Nat $\rat$ Nat
-     #+end_example
-* Destructing inductive types
+     #+begin_src coq
+       Inductive nat : Set :=
+       | O : nat
+       | S : nat -> nat.
+     #+end_src
+* Destructing Inductive Types in Coq
   + also called recursion
   + pattern matches on the constructor
   + gives back values of same type in each match
 ** Examples
    + negation
-     #+begin_example
-     rec Bool to Bool where
-       True u = False @ $\lozenge$
-       False u = True @ $\lozenge$
-     #+end_example
+     #+begin_src coq 
+       Definition neg (b : bool) :=
+         match b with
+         | True => False
+         | False => True
+         end.
+     #+end_src
    + isZero
-     #+begin_example
-     rec Nat to Bool where
-       Zero u = True @ $\lozenge$
-       Succ n = False @ $\lozenge$ 
-     #+end_example
-* postive coinductive types
-  + treats recursive occurence like a value
+     #+begin_src coq 
+       Definition isZero (n : nat) :=
+         match n with
+         | O => True
+         | S _ => False
+         end.
+     #+end_src
+* Coinductive Types
+  + positive coinductive types
+  + negative coinductive types
+* Positive Coinductive Types
+  + treats recursive occurrence like a value
   + otherwise like inductive types
   + functions which produce such types have to be productive
 ** Example
@@ -59,12 +66,12 @@
        CoFixpoint repeat (A : Set) (x : A) : Stream A :=
          Cons A x (repeat A x).
      #+end_src
-* What is wrong about positve coinductive types
+* What is wrong about Positive Coinductive Types
   + Symmetry with inductive types not clear
   + Breaks subject reduction
     + Subject reduction: types are preserved after reduction
 
-* Ourys Example
+* Ourys Counterexample
    #+begin_src coq
     CoInductive U : Set := In : U -> U.
    #+end_src
@@ -77,6 +84,14 @@
          In y => In y
        end.
    #+end_src
+   #+begin_src coq 
+     Compute u.
+     > cofix Fcofix : U := In Fcofix : U
+   #+end_src
+   #+begin_src coq 
+     Compute (force u).
+     > In (cofix Fcofix : U := In Fcofix) : U
+   #+end_src
    #+begin_src coq
      Definition eq (x : U) : x = force x :=
        match x with
@@ -86,69 +101,68 @@
    #+begin_src coq
      Definition eq_u : u = In u := eq u
    #+end_src
-
-
-
    
-* negative coinductive types
+* Negative Coinductive Types
   + defined over their destructors
   + functions use copattern matching
 ** Examples
    + Stream
-     #+begin_example
-     codata Stream$\langle$A : Set$\rangle$ : Set where
-       Hd : Stream $\rat$ A
-       Tl : Stream $\rat$ Stream
-     #+end_example
+    #+begin_src coq
+      CoFixpoint repeat (A : Set) (x : A) : Stream A :=
+        {| hd := x; tl := repeat A x|}.
+    #+end_src
    + repeat function
-     #+begin_example
-     repeat$\langle$A : Set$\rangle$(x : A) =
-       corec Unit to Stream$\langle$A$\rangle$ where
-         { Hd s = x
-         ; Tl s = $\lozenge$ } @ $\lozenge$
-     #+end_example
+    #+begin_src coq
+      CoFixpoint repeat (A : Set) (x : A) : Stream A :=
+        {| hd := x; tl := repeat A x|}.
+    #+end_src
+  
 
-* Symmetry with inductive types
+* Type Theory Based on Dependent Inductive and Coinductive Types
+  + inductive types: $\mu(X:\Gamma\rat*;\vv{\sigma};\vec{A})$
+  + coinductive types $\nu(X:\Gamma\rat*;\vv{\sigma};\vec{A})$
+  + constructors: $\alpha_i^\mu$
+  + destructors: $\xi_i^\mu$
+  + recursion: rec $\vv{(\Gamma_k,y_k).g_k}$
+  + corecursion: corec $\vv{(\Gamma_k,y_k).g_k}$
+
+* Symmetry betweeen Inductive and Coinductive Types
+   $$\text{Product A B} = \mu(X:*;(());\top)$$
+   $$\Gamma_1 = (x:A,y:B)$$
+   #+begin_example
+   data Product$\langle$A : Set,B : Set$\rangle$ : Set where
+      MkProduct : (x : A, x : B) $\rat$ Unit $\rat$ Product
+   fst$\langle$A : Set, B : Set$\rangle$  =
+     rec Product<A,B> to A where
+        { MkProduct x y u = x }
+   snd$\langle$A : Set, B : Set$\rangle$  =
+     rec Product<A,B> to B where
+        { MkProduct x y u = y }
+   #+end_example
+   $$\text{Product A B} = \vu(X:*;((),());(A,B)$$
+   $$\Gamma_1 = \Gamma_2 = \emptyset$$
    #+begin_example
    codata Product$\langle$A : Set, B : Set$\rangle$ : Set where
       Fst : Product $\rat$ A
       Snd : Product $\rat$ B
    mkProduct$\langle$A : Set, B : Set$\rangle$ (x:A, y:B) =
      corec Unit to Product<A,B> where
-       { Fst u $\rat$ x
-       ; Snd u $\rat$ y } @ $\lozenge$
+       { Fst u = x
+       ; Snd u = y } @ $\lozenge$
    #+end_example
-   #+begin_example
-   data Product$\langle$A,B$\rangle$ : Set where
-      MkProduct : (x : A) $\rat$ B $\rat$ Product
-   fst$\langle$A : Set, B : Set$\rangle$  =
-     rec Product<A,B> to A where
-        { MkProduct x y = x }
-   snd$\langle$A : Set, B : Set$\rangle$  =
-     rec Product<A,B> to B where
-        { MkProduct x y = y }
-   #+end_example
-   
 
-* Type Theory based on dependent Inductive and Coinductive Types
-  + kinds: $(x_1:A_1,\dots,x_n:A_n)\rat*$
-  + types: $(x_1:A_1,\dots,x_n:A_n)\rat B$
-  + lambda abstraction: $(x).A$
-  + type application: $A@t$
-  + term application: $t@s$
-  + inductive types: $\mu(X:\Gamma\rat*;\vv{\sigma};\vec{A})$
-  + coinductive types $\nu(X:\Gamma\rat*;\vv{\sigma};\vec{A})$
-  + recursion: rec $\vv{(\Gamma_k,y_k).g_k}$
-  + corecursion: corec $\vv{(\Gamma_k,y_k).g_k}$
-
-* Dependent coinductive types
-  + Partial streams whitch depend on their defintion depth
+* Dependent Coinductive Types
+  + Partial streams which depend on their definition depth
+   $$\text{PStr A}= \nu(X:(k:Conat)\rat*;((succ @ k),(succ @ k));(A,X @ k)$$
+   $$\Gamma_1 = \Gamma_2 = (k : Conat)$$
     #+begin_example
     codata PStr$\langle$A : Set$\rangle$ : (n : Conat) $\rat$ Set where
       Hd : (k : Conat) $\rat$ PStr (succ @ k) $\rat$ A
       Tl : (k : Conat) $\rat$ PStr (succ @ k) $\rat$ PStr @ k
     #+end_example
-  + Dependent funcitions 
+  + Dependent functions 
+   $$\text{Pi A B} = \nu(X:*;(());(B @ x)$$
+   $$\Gamma_1 = (x : A)$$
     #+begin_example
     codata Pi$\langle$A : Set, B : (x : A) $\rat$ Set$\rangle$ : Set where
       Inst : (x : A) $\rat$ Pi $\rat$ B @ x
@@ -160,8 +174,10 @@
   \Huge Demo
   #+end_center
 
-* Other topics in the thesis
+* Other Topics in the Thesis
++ Comparison with Agda
 + Termination and productivity checking with sized types
-+ Implementation details
-  + Rules rewritting
++ Difference between paper and implementation
+  + Rules rewritten to syntax directed one
+  + Added type "polymorphism"
   + De-Brujin indexes
