@@ -13,7 +13,7 @@
 
 * Inductive Types in Coq
   + defined over their constructors
-  + each constructor has to give back this type
+  + each constructor has to give back the defined type
 ** Examples
    + Booleans
      #+begin_src coq 
@@ -108,8 +108,8 @@
 ** Examples
    + Stream
     #+begin_src coq
-      CoFixpoint repeat (A : Set) (x : A) : Stream A :=
-        {| hd := x; tl := repeat A x|}.
+      CoInductive Stream (A : Set) : Set :=
+        Seq { hd : A; tl : Stream A }.
     #+end_src
    + repeat function
     #+begin_src coq
@@ -139,7 +139,7 @@
      rec Product<A,B> to B where
         { MkProduct x y u = y }
    #+end_example
-   $$\text{Product A B} = \vu(X:*;((),());(A,B)$$
+   $$\text{Product A B} = \nu(X:*;((),());(A,B)$$
    $$\Gamma_1 = \Gamma_2 = \emptyset$$
    #+begin_example
    codata Product$\langle$A : Set, B : Set$\rangle$ : Set where
