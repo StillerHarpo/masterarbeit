@@ -75,29 +75,35 @@
    #+begin_src coq
     CoInductive U : Set := In : U -> U.
    #+end_src
+   #+BEAMER: \pause
    #+begin_src coq
      CoFixpoint u : U := In u.
    #+end_src
+   #+BEAMER: \pause
    #+begin_src coq
      Definition force (x: U) : U :=
        match x with
          In y => In y
        end.
    #+end_src
+   #+BEAMER: \pause
    #+begin_src coq 
      Compute u.
      > cofix Fcofix : U := In Fcofix : U
    #+end_src
+   #+BEAMER: \pause
    #+begin_src coq 
      Compute (force u).
      > In (cofix Fcofix : U := In Fcofix) : U
    #+end_src
+   #+BEAMER: \pause
    #+begin_src coq
      Definition eq (x : U) : x = force x :=
        match x with
          In y => eq_refl
        end.
    #+end_src
+   #+BEAMER: \pause
    #+begin_src coq
      Definition eq_u : u = In u := eq u
    #+end_src
